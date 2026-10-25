@@ -1,0 +1,62 @@
+import type { MessageLanguage, MessagePurpose, MessageTone } from "./message-templates";
+
+const KEY = "mfd-ms-prefs-v1";
+
+export interface StudioPrefs {
+  purpose: MessagePurpose;
+  language: MessageLanguage;
+  tone: MessageTone;
+  arn: string;
+  includeDisclosure: boolean;
+}
+
+export const DEFAULT_PREFS: StudioPrefs = {
+  purpose: "document-request",
+  language: "en",
+  tone: "professional",
+  arn: "",
+  includeDisclosure: false,
+};
+
+/** Loads non-sensitive UI prefs only. Never stores client names or message text. */
+export function loadPrefs(): StudioPrefs {
+  if (typeof window === "undefined") return DEFAULT_PREFS;
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return DEFAULT_PREFS;
+    const parsed = JSON.parse(raw) as Partial<StudioPrefs>;
+    return {
+      purpose:
+        parsed.purpose === "document-request" ||
+        parsed.purpose === "sip-confirmation" ||
+        parsed.purpose === "review-invite" ||
+        parsed.purpose === "kyc-reminder"
+          ? parsed.purpose
+          : DEFAULT_PREFS.purpose,
+      language: parsed.language === "hinglish" ? "hinglish" : "en",
+      tone: parsed.tone === "friendly" ? "friendly" : "professional",
+      arn: typeof parsed.arn === "string" ? parsed.arn.slice(0, 40) : "",
+      includeDisclosure: parsed.includeDisclosure === true,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+export function savePrefs(prefs: StudioPrefs): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(prefs));
+  } catch {
+    // Storage may be unavailable (private mode); the tool works without it.
+  }
+}
+
+export function clearPrefs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // ignore
+  }
+}
