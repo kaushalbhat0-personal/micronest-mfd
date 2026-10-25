@@ -11,6 +11,13 @@ const dummyAuth = process.env.SUPABASE_E2E === "dummy";
 test.describe("Workspace shell", () => {
   test.skip(dummyAuth, "Shell rendering asserts the default fail-open mode.");
 
+  test.beforeEach(async () => {
+    test.skip(
+      Boolean(process.env.SUPABASE_E2E),
+      "Shell placeholders assert the default unconfigured mode.",
+    );
+  });
+
   test("home presents the workspace as the product, not three tools", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
@@ -52,8 +59,10 @@ test.describe("Workspace shell", () => {
     await page.goto("/workspace/clients/not-a-client-id");
     await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
 
+    // A well-formed but unknown id resolves safely: with no backend in this
+    // mode it renders the same clean not-found state (never a raw error).
     await page.goto("/workspace/clients/123e4567-e89b-42d3-a456-426614174000");
-    await expect(page.getByRole("heading", { name: /^client$/i })).toBeVisible();
+    await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
     // The opaque id must not leak client data — and is not echoed back.
     expect(page.url()).not.toMatch(/name=|phone=|mobile=|note=/);
   });

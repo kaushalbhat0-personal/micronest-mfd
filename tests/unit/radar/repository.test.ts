@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  createClient,
+  deleteClient,
+  getClient,
   listClients,
   RadarStoreError,
   toClientRecord,
   toStoredClient,
+  updateClient,
   updateLastContacted,
   type StoredRadarClient,
 } from "@/features/radar/repository";
@@ -159,5 +163,107 @@ describe("radar repository update", () => {
     await expect(
       updateLastContacted(client as never, STORED.id, "2026-10-25"),
     ).rejects.toMatchObject({ code: "auth" });
+  });
+});
+
+describe("radar repository crud", () => {
+  const INPUT = {
+    name: "Aarav Mehta",
+    phone: "9876543210",
+    investmentType: "SIP",
+    lastInvested: "2026-10-12",
+    lastContacted: null,
+    isNewClient: false,
+    note: "Met at review camp",
+  } as const;
+
+  function stubTable(resolution: { data?: unknown; error?: { code?: string; message: string } }) {
+    const fns = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      order: vi.fn(),
+      insert: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    };
+    const chain = {
+      ...fns,
+      then: (resolve: (value: unknown) => void) => resolve(resolution),
+    };
+    Object.values(fns).forEach((fn) => fn.mockReturnValue(chain));
+    return { from: vi.fn(() => chain), calls: fns };
+  }
+
+  it("creates a client without ever sending user_id", async () => {
+    const table = stubTable({
+      data: [{ ...STORED, id: "new-id", mobile: "9876543210" }],
+    });
+    const created = await createClient(table as never, { ...INPUT });
+    expect(created).toMatchObject({ id: "new-id", name: "Aarav Mehta" });
+    expect(table.calls.insert).toHaveBeenCalledTimes(1);
+    const sent = table.calls.insert.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("user_id");
+    expect(sent).toMatchObject({
+      name: "Aarav Mehta",
+      mobile: "9876543210",
+      investment_type: "SIP",
+      last_invested: "2026-10-12",
+      last_contacted: null,
+      is_new_client: false,
+      note: "Met at review camp",
+    });
+  });
+
+  it("reads one owned client and rejects empty ids safely", async () => {
+    const table = stubTable({ data: [{ ...STORED, mobile: "9876543210" }] });
+    const found = await getClient(table as never, STORED.id);
+    expect(found).toMatchObject({ id: STORED.id, name: "Aarav Mehta" });
+    expect(table.calls.eq).toHaveBeenCalledWith("id", STORED.id);
+
+    await expect(getClient(table as never, "")).rejects.toMatchObject({ code: "load" });
+  });
+
+  it("treats zero rows as foreign-or-missing for read, update, and delete", async () => {
+    const empty = stubTable({ data: [] });
+    await expect(getClient(empty as never, "foreign-id")).rejects.toMatchObject({ code: "load" });
+    await expect(updateClient(empty as never, "foreign-id", { ...INPUT })).rejects.toMatchObject({
+      code: "update",
+    });
+    await expect(deleteClient(empty as never, "foreign-id")).rejects.toMatchObject({
+      code: "delete",
+    });
+  });
+
+  it("updates the seven fields and maps auth failures", async () => {
+    const table = stubTable({
+      data: [{ ...STORED, mobile: "9876543210", note: "Updated note" }],
+    });
+    const updated = await updateClient(table as never, STORED.id, {
+      ...INPUT,
+      note: "Updated note",
+    });
+    expect(updated.note).toBe("Updated note");
+    const sent = table.calls.update.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("user_id");
+
+    const authed = stubTable({ error: { message: "jwt expired" } });
+    await expect(updateClient(authed as never, STORED.id, { ...INPUT })).rejects.toMatchObject({
+      code: "auth",
+    });
+  });
+
+  it("deletes by id and verifies a row was removed", async () => {
+    const table = stubTable({ data: [{ id: STORED.id }] });
+    await expect(deleteClient(table as never, STORED.id)).resolves.toBeUndefined();
+    expect(table.calls.delete).toHaveBeenCalledTimes(1);
+    expect(table.calls.eq).toHaveBeenCalledWith("id", STORED.id);
+  });
+
+  it("maps create failures without leaking details", async () => {
+    const table = stubTable({ error: { code: "23505", message: "duplicate supersecret" } });
+    const error = await createClient(table as never, { ...INPUT }).catch((e) => e);
+    expect(error).toBeInstanceOf(RadarStoreError);
+    expect(error.code).toBe("create");
+    expect(error.message).not.toContain("supersecret");
   });
 });

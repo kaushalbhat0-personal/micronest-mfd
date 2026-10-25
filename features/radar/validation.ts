@@ -82,6 +82,115 @@ export interface RadarRowValidation {
   warnings: string[];
 }
 
+/**
+ * Raw client field values before validation. Dates are display strings
+ * (DD/MM/YYYY) or empty; the New Client flag is already an explicit boolean.
+ * Both the CSV pipeline and the Add/Edit form build this shape, so the rules
+ * below run exactly once.
+ */
+export interface ClientFieldInput {
+  name: string;
+  phone: string;
+  investmentType: string;
+  lastInvested: string;
+  lastContacted: string;
+  isNewClient: boolean;
+  note: string;
+}
+
+export type ClientInputContext = "csv" | "form";
+
+/**
+ * Form field that produced a validator error. Presentation mapping only —
+ * rule ownership stays in validateClientFields. Covered by unit tests
+ * alongside the validator so message drift breaks loudly.
+ */
+export type ClientFieldName =
+  "name" | "phone" | "investmentType" | "lastInvested" | "lastContacted" | "isNewClient" | "note";
+
+export function fieldForClientError(error: string | null): ClientFieldName | null {
+  if (!error) return null;
+  if (error.startsWith("Client name")) return "name";
+  if (error.startsWith("Last Invested")) return "lastInvested";
+  if (error.startsWith("Last Contacted")) return "lastContacted";
+  if (error.startsWith("Note")) return "note";
+  return null;
+}
+
+/** Single source of truth for the seven relationship fields. */
+export function validateClientFields(
+  input: ClientFieldInput,
+  todayYMD: string,
+  context: ClientInputContext = "csv",
+): RadarRowValidation {
+  const name = input.name.trim();
+  if (name.length === 0) return { row: null, error: "Client name is missing.", warnings: [] };
+  if (name.length > MAX_NAME_LENGTH) {
+    return {
+      row: null,
+      error: `Client name must be under ${MAX_NAME_LENGTH} characters.`,
+      warnings: [],
+    };
+  }
+
+  const investment = normalizeInvestmentType(input.investmentType);
+  const isNewClient = input.isNewClient;
+
+  const lastInvested = parseOptionalDate(input.lastInvested, "Last Invested", todayYMD);
+  if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
+  const lastContacted = parseOptionalDate(input.lastContacted, "Last Contacted", todayYMD);
+  if (lastContacted.error) return { row: null, error: lastContacted.error, warnings: [] };
+
+  const note = input.note.trim();
+  if (note.length > MAX_NOTE_LENGTH) {
+    return {
+      row: null,
+      error: `Note must be under ${MAX_NOTE_LENGTH} characters.`,
+      warnings: [],
+    };
+  }
+  if (note && detectSensitiveInput("Note", note)) {
+    return {
+      row: null,
+      error:
+        context === "form"
+          ? "Note looks like sensitive information — please remove it."
+          : "Note looks like sensitive information — remove it and re-upload.",
+      warnings: [],
+    };
+  }
+
+  const phone = input.phone.trim();
+  let phoneValid = false;
+  const warnings: string[] = [];
+  if (phone.length > 0) {
+    if (normalizePhone(phone).ok) {
+      phoneValid = true;
+    } else {
+      warnings.push("Phone number needs checking — Call and WhatsApp are disabled for this row.");
+    }
+  }
+  if (investment.warning) warnings.push(investment.warning);
+
+  return {
+    row: {
+      name,
+      phone,
+      phoneValid,
+      phoneWarning: warnings.some((w) => w.startsWith("Phone number")),
+      investmentType: investment.value,
+      investmentWarning: investment.warning,
+      lastInvested: lastInvested.date,
+      lastContacted: lastContacted.date,
+      isNewClient,
+      newClientWarning: null,
+      note,
+    },
+    error: null,
+    warnings,
+  };
+}
+
 /** Validates one data record. Phone/type/flag problems warn; the rest rejects the row. */
 export function validateRadarRow(
   fields: string[],
@@ -94,67 +203,26 @@ export function validateRadarRow(
     return (fields[index] ?? "").trim();
   };
 
-  const name = pick("Client Name");
-  if (name.length === 0) return { row: null, error: "Client name is missing.", warnings: [] };
-  if (name.length > MAX_NAME_LENGTH) {
-    return {
-      row: null,
-      error: `Client name must be under ${MAX_NAME_LENGTH} characters.`,
-      warnings: [],
-    };
-  }
-
-  const investment = normalizeInvestmentType(pick("Investment Type"));
+  // CSV-only concern: the free-text flag column. The form owns a real checkbox.
   const flag = parseNewClientFlag(pick("New Client"));
-
-  const lastInvested = parseOptionalDate(pick("Last Invested"), "Last Invested", todayYMD);
-  if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
-  const lastContacted = parseOptionalDate(pick("Last Contacted"), "Last Contacted", todayYMD);
-  if (lastContacted.error) return { row: null, error: lastContacted.error, warnings: [] };
-
-  const note = pick("Note");
-  if (note.length > MAX_NOTE_LENGTH) {
-    return {
-      row: null,
-      error: `Note must be under ${MAX_NOTE_LENGTH} characters.`,
-      warnings: [],
-    };
-  }
-  if (note && detectSensitiveInput("Note", note)) {
-    return {
-      row: null,
-      error: "Note looks like sensitive information — remove it and re-upload.",
-      warnings: [],
-    };
-  }
-
-  const phone = pick("Mobile");
-  let phoneValid = false;
-  const warnings: string[] = [];
-  if (phone.length > 0) {
-    if (normalizePhone(phone).ok) {
-      phoneValid = true;
-    } else {
-      warnings.push("Phone number needs checking — Call and WhatsApp are disabled for this row.");
-    }
-  }
-  if (investment.warning) warnings.push(investment.warning);
-  if (flag.warning) warnings.push(flag.warning);
-
-  return {
-    row: {
-      name,
-      phone,
-      phoneValid,
-      phoneWarning: warnings.some((w) => w.startsWith("Phone number")),
-      investmentType: investment.value,
-      investmentWarning: investment.warning,
-      lastInvested: lastInvested.date,
-      lastContacted: lastContacted.date,
+  const result = validateClientFields(
+    {
+      name: pick("Client Name"),
+      phone: pick("Mobile"),
+      investmentType: pick("Investment Type"),
+      lastInvested: pick("Last Invested"),
+      lastContacted: pick("Last Contacted"),
       isNewClient: flag.value,
-      newClientWarning: flag.warning,
-      note,
+      note: pick("Note"),
     },
+    todayYMD,
+    "csv",
+  );
+  if (!result.row) return result;
+  const warnings = [...result.warnings];
+  if (flag.warning) warnings.push(flag.warning);
+  return {
+    row: { ...result.row, newClientWarning: flag.warning },
     error: null,
     warnings,
   };

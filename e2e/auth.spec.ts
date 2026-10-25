@@ -32,7 +32,10 @@ test.describe("Auth foundation", () => {
   });
 
   test("workspace shells render without login when auth is not configured", async ({ page }) => {
-    test.skip(dummyAuth, "Fail-open applies only to the default (unconfigured) mode.");
+    test.skip(
+      dummyAuth || process.env.SUPABASE_E2E === "stub",
+      "Fail-open applies only to the default (unconfigured) mode.",
+    );
     // No Supabase credentials in this environment: proxy passes through and
     // the Phase A shells render (documented fail-open).
     await page.goto("/workspace/today");

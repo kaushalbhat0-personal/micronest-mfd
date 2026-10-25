@@ -1,8 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { isValidClientId } from "@/lib/workspace/params";
+import { getClient, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
+import { ClientDetail } from "@/features/radar/components/client-detail";
 
 export const metadata: Metadata = {
   title: "Client — MFD Relationship Workspace",
@@ -14,11 +19,10 @@ interface ClientDetailPageProps {
 }
 
 /**
- * Client detail shell (RCCF-MFD-18 Phase A).
- * The opaque radar_clients id is the only URL input. Invalid ids render a
- * clean not-found state — raw errors are never exposed and the full detail
- * implementation belongs to Phase B. Param resolution streams behind
- * Suspense so the shell prerenders (cacheComponents).
+ * Client detail page (RCCF-MFD-19). The opaque client id is the only URL
+ * input. The owned row loads server-side through the repository (RLS
+ * final); actions run client-side in ClientDetail. Resolution streams
+ * behind Suspense so the shell prerenders (cacheComponents).
  */
 export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   return (
@@ -34,7 +38,9 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       <Suspense
         fallback={
           <Card>
-            <p className="text-sm text-stone-500">Loading client…</p>
+            <p className="text-sm text-stone-500" role="status">
+              Loading client…
+            </p>
           </Card>
         }
       >
@@ -44,44 +50,52 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   );
 }
 
+function NotFoundCard({ copy }: { copy: string }) {
+  return (
+    <Card>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-xl font-semibold tracking-tight text-stone-900">
+          We couldn&apos;t find that client.
+        </h1>
+        <p className="text-sm leading-relaxed text-stone-600">{copy}</p>
+      </div>
+    </Card>
+  );
+}
+
 async function ClientDetailBody({ params }: ClientDetailPageProps) {
   const { id } = await params;
 
   if (!isValidClientId(id)) {
     return (
-      <Card>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-xl font-semibold tracking-tight text-stone-900">
-            We couldn&apos;t find that client.
-          </h1>
-          <p className="text-sm leading-relaxed text-stone-600">
-            The link may be outdated. Please return to your client list and try again.
-          </p>
-        </div>
-      </Card>
+      <NotFoundCard copy="The link may be outdated. Please return to your client list and try again." />
     );
   }
+  if (!isSupabaseConfigured()) {
+    return (
+      <NotFoundCard copy="Client sync isn't set up yet. Please sign in once authentication is configured." />
+    );
+  }
+  const supabase = await createServerSupabase();
+  if (!supabase) {
+    return (
+      <NotFoundCard copy="Client sync isn't set up yet. Please sign in once authentication is configured." />
+    );
+  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    // Proxy normally bounces signed-out sessions to /login first.
+    redirect("/login?next=%2Fworkspace%2Fclients");
+  }
 
-  return (
-    <>
-      <section className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Client</h1>
-        <p className="text-sm leading-relaxed text-stone-600">
-          Why this client matters — and what to do next.
-        </p>
-      </section>
-      <Card>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-stone-900">Client detail arrives next.</p>
-          <p className="text-sm leading-relaxed text-stone-600">
-            Contact history, why this client is surfaced, call and message actions, follow-ups, and
-            Mark Contacted will live here.
-          </p>
-          <p className="text-xs leading-relaxed text-stone-500">
-            No client data is shown yet. Nothing here is stored or sent anywhere.
-          </p>
-        </div>
-      </Card>
-    </>
-  );
+  let stored: StoredRadarClient | null = null;
+  try {
+    stored = await getClient(supabase, id);
+  } catch (error) {
+    const copy = error instanceof RadarStoreError ? error.message : "We couldn't find that client.";
+    return <NotFoundCard copy={copy} />;
+  }
+  return <ClientDetail stored={stored} />;
 }

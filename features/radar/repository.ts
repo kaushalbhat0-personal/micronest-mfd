@@ -18,6 +18,37 @@ import type { ClientRecord, InvestmentType } from "./types";
 
 const TABLE = "radar_clients";
 
+/** Columns the UI is allowed to read or write. Ownership stays in RLS. */
+const CLIENT_COLUMNS =
+  "id,name,mobile,investment_type,last_invested,last_contacted,is_new_client,note";
+
+/**
+ * Normalized client input for create/update — the same seven relationship
+ * fields the validator owns. Dates are YYYY-MM-DD or null. No id, no
+ * user_id, no timestamps, no signals: callers never supply those.
+ */
+export interface ClientInput {
+  name: string;
+  phone: string;
+  investmentType: InvestmentType;
+  lastInvested: string | null;
+  lastContacted: string | null;
+  isNewClient: boolean;
+  note: string;
+}
+
+function toDbRow(input: ClientInput): Record<string, unknown> {
+  return {
+    name: input.name,
+    mobile: input.phone,
+    investment_type: input.investmentType,
+    last_invested: input.lastInvested,
+    last_contacted: input.lastContacted,
+    is_new_client: input.isNewClient,
+    note: input.note,
+  };
+}
+
 /** Row shape as stored in Postgres (no derived data, no user_id exposure). */
 export interface StoredRadarClient {
   id: string;
@@ -30,7 +61,7 @@ export interface StoredRadarClient {
   note: string;
 }
 
-export type RadarStoreErrorCode = "auth" | "load" | "update";
+export type RadarStoreErrorCode = "auth" | "load" | "create" | "update" | "delete";
 
 export class RadarStoreError extends Error {
   readonly code: RadarStoreErrorCode;
@@ -131,7 +162,7 @@ export async function listClients(supabase: SupabaseClient): Promise<StoredRadar
   try {
     const result = await supabase
       .from(TABLE)
-      .select("id,name,mobile,investment_type,last_invested,last_contacted,is_new_client,note")
+      .select(CLIENT_COLUMNS)
       .order("created_at", { ascending: true })
       .order("id", { ascending: true });
     if (result.error) {
@@ -146,6 +177,118 @@ export async function listClients(supabase: SupabaseClient): Promise<StoredRadar
     throw toStoreError("load", "We couldn't load your Client Radar.");
   }
   return rows.map(toStoredClient);
+}
+
+/**
+ * Loads one owned client by id. Malformed ids and foreign/missing rows all
+ * surface as the same safe "not found" load error — never a raw DB message,
+ * and never a hint about which ids exist.
+ */
+export async function getClient(supabase: SupabaseClient, id: string): Promise<StoredRadarClient> {
+  if (typeof id !== "string" || id.length === 0) {
+    throw toStoreError("load", "We couldn't find that client.");
+  }
+  try {
+    const result = await supabase.from(TABLE).select(CLIENT_COLUMNS).eq("id", id);
+    if (result.error) {
+      if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("load", "We couldn't find that client.");
+    }
+    const rows = (result.data ?? []) as DbRow[];
+    if (rows.length === 0) {
+      throw toStoreError("load", "We couldn't find that client.");
+    }
+    return toStoredClient(rows[0]);
+  } catch (error) {
+    if (error instanceof RadarStoreError) throw error;
+    throw toStoreError("load", "We couldn't find that client.");
+  }
+}
+
+/**
+ * Creates one client for the authenticated user. Ownership is assigned by
+ * the database/RLS from the session — the caller supplies no user_id.
+ */
+export async function createClient(
+  supabase: SupabaseClient,
+  input: ClientInput,
+): Promise<StoredRadarClient> {
+  try {
+    const result = await supabase.from(TABLE).insert(toDbRow(input)).select(CLIENT_COLUMNS);
+    if (result.error) {
+      if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("create", "Couldn't add that client. Please try again.");
+    }
+    const rows = (result.data ?? []) as DbRow[];
+    if (rows.length === 0) {
+      throw toStoreError("create", "Couldn't add that client. Please try again.");
+    }
+    return toStoredClient(rows[0]);
+  } catch (error) {
+    if (error instanceof RadarStoreError) throw error;
+    throw toStoreError("create", "Couldn't add that client. Please try again.");
+  }
+}
+
+/**
+ * Replaces the seven relationship fields of one owned record, addressed by
+ * id only. RLS rejects rows the caller doesn't own (zero updated rows,
+ * surfaced as an error — never silently accepted).
+ */
+export async function updateClient(
+  supabase: SupabaseClient,
+  id: string,
+  input: ClientInput,
+): Promise<StoredRadarClient> {
+  try {
+    const result = await supabase
+      .from(TABLE)
+      .update(toDbRow(input))
+      .eq("id", id)
+      .select(CLIENT_COLUMNS);
+    if (result.error) {
+      if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("update", "Couldn't save those changes. Please try again.");
+    }
+    const rows = (result.data ?? []) as DbRow[];
+    if (rows.length === 0) {
+      throw toStoreError("update", "Couldn't save those changes. Please try again.");
+    }
+    return toStoredClient(rows[0]);
+  } catch (error) {
+    if (error instanceof RadarStoreError) throw error;
+    throw toStoreError("update", "Couldn't save those changes. Please try again.");
+  }
+}
+
+/**
+ * Deletes one owned record by id. The deleted row is selected back so an
+ * RLS denial (zero rows) surfaces as an error instead of a silent no-op.
+ * No undo-delete: the confirmation UI is the safety net.
+ */
+export async function deleteClient(supabase: SupabaseClient, id: string): Promise<void> {
+  try {
+    const result = await supabase.from(TABLE).delete().eq("id", id).select("id");
+    if (result.error) {
+      if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("delete", "Couldn't delete that client. Please try again.");
+    }
+    const rows = (result.data ?? []) as Array<{ id: unknown }>;
+    if (rows.length === 0) {
+      throw toStoreError("delete", "Couldn't delete that client. Please try again.");
+    }
+  } catch (error) {
+    if (error instanceof RadarStoreError) throw error;
+    throw toStoreError("delete", "Couldn't delete that client. Please try again.");
+  }
 }
 
 /**
@@ -164,7 +307,7 @@ export async function updateLastContacted(
       .from(TABLE)
       .update({ last_contacted: lastContacted })
       .eq("id", id)
-      .select("id,name,mobile,investment_type,last_invested,last_contacted,is_new_client,note");
+      .select(CLIENT_COLUMNS);
     if (result.error) {
       if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
         throw toStoreError("auth", "Sign-in expired. Please sign in again.");

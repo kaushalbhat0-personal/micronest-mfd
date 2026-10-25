@@ -21,6 +21,17 @@ export function filterRadarRecords(records: ClientRecord[], filter: RadarFilter)
   return records.filter((r) => r.signals.includes(filter));
 }
 
+/**
+ * Case-insensitive client-name search over the loaded list. Pure, local,
+ * and non-destructive: the full dataset is preserved by the caller.
+ * The query never leaves the device (never in the URL, never persisted).
+ */
+export function filterClientsByName(records: ClientRecord[], query: string): ClientRecord[] {
+  const needle = query.trim().toLowerCase();
+  if (needle.length === 0) return records;
+  return records.filter((record) => record.name.toLowerCase().includes(needle));
+}
+
 export interface RadarSummary {
   total: number;
   attention: number;

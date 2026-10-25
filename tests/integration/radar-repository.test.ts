@@ -11,9 +11,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
+  createClient as createStoredClient,
+  deleteClient as deleteStoredClient,
+  getClient as getStoredClient,
   listClients,
   RadarStoreError,
   toClientRecord,
+  updateClient as updateStoredClient,
   updateLastContacted,
 } from "@/features/radar/repository";
 
@@ -130,4 +134,103 @@ suite("radar repository persistence", () => {
       .single();
     expect(check.data!.last_contacted).toBeNull();
   }, 30000);
+});
+
+suite("radar client crud", () => {
+  let admin: SupabaseClient;
+  let clientA: SupabaseClient;
+  let clientB: SupabaseClient;
+
+  beforeAll(async () => {
+    admin = createClient(URL!, SERVICE!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const mkUser = async (email: string) => {
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
+        password: PASSWORD,
+        email_confirm: true,
+      });
+      if (error || !data.user) throw new Error(`setup createUser failed for ${email}`);
+      return data.user.id;
+    };
+    const signIn = async (email: string) => {
+      const c = createClient(URL!, ANON!, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { error } = await c.auth.signInWithPassword({ email, password: PASSWORD });
+      if (error) throw new Error(`setup signIn failed for ${email}`);
+      return c;
+    };
+    const crudStamp = `${stamp}-crud`;
+    await mkUser(`crud-a-${crudStamp}@example.invalid`);
+    await mkUser(`crud-b-${crudStamp}@example.invalid`);
+    clientA = await signIn(`crud-a-${crudStamp}@example.invalid`);
+    clientB = await signIn(`crud-b-${crudStamp}@example.invalid`);
+  }, 120000);
+
+  afterAll(async () => {
+    if (!CONFIGURED) return;
+    const { data } = await admin.auth.admin.listUsers();
+    for (const u of data.users) {
+      if (u.email?.includes(`${stamp}-crud`)) await admin.auth.admin.deleteUser(u.id);
+    }
+  }, 120000);
+
+  it("creates, reads, updates, and deletes an owned client", async () => {
+    const created = await createStoredClient(clientA, {
+      name: "Crud Alpha",
+      phone: "9876543210",
+      investmentType: "Both",
+      lastInvested: TODAY,
+      lastContacted: null,
+      isNewClient: true,
+      note: "crud",
+    });
+    expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
+
+    const found = await getStoredClient(clientA, created.id);
+    expect(found).toMatchObject({ name: "Crud Alpha", investmentType: "Both", isNewClient: true });
+
+    const updated = await updateStoredClient(clientA, created.id, {
+      name: "Crud Alpha Renamed",
+      phone: "",
+      investmentType: "SIP",
+      lastInvested: null,
+      lastContacted: TODAY,
+      isNewClient: false,
+      note: "",
+    });
+    expect(updated).toMatchObject({ name: "Crud Alpha Renamed", phone: "", note: "" });
+
+    await deleteStoredClient(clientA, created.id);
+    await expect(getStoredClient(clientA, created.id)).rejects.toMatchObject({ code: "load" });
+  }, 60000);
+
+  it("foreign rows are invisible and untouchable", async () => {
+    const created = await createStoredClient(clientA, {
+      name: "Crud Foreign",
+      phone: "",
+      investmentType: "Other",
+      lastInvested: null,
+      lastContacted: null,
+      isNewClient: false,
+      note: "",
+    });
+    await expect(getStoredClient(clientB, created.id)).rejects.toMatchObject({ code: "load" });
+    await expect(
+      updateStoredClient(clientB, created.id, {
+        name: "Hijacked",
+        phone: "",
+        investmentType: "Other",
+        lastInvested: null,
+        lastContacted: null,
+        isNewClient: false,
+        note: "",
+      }),
+    ).rejects.toMatchObject({ code: "update" });
+    await expect(deleteStoredClient(clientB, created.id)).rejects.toMatchObject({ code: "delete" });
+    expect((await getStoredClient(clientA, created.id)).name).toBe("Crud Foreign");
+    await deleteStoredClient(clientA, created.id);
+  }, 60000);
 });

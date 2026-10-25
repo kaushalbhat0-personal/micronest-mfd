@@ -30,7 +30,12 @@ async function stubLogin(page: Page, email: string): Promise<boolean> {
   return response.ok();
 }
 
-async function seedRows(userId: string) {
+interface SeedRow {
+  id: string;
+  name: string;
+}
+
+async function seedRows(userId: string): Promise<SeedRow[]> {
   const admin = adminClient();
   await admin.from("radar_clients").delete().eq("user_id", userId);
   const rows = [
@@ -47,16 +52,17 @@ async function seedRows(userId: string) {
     {
       user_id: userId,
       name: "Persist Riya",
-      mobile: "",
-      investment_type: "Lumpsum",
+      mobile: "9123456780",
+      investment_type: "Both",
       last_invested: ymd(5),
-      last_contacted: ymd(10),
-      is_new_client: false,
-      note: "",
+      last_contacted: null,
+      is_new_client: true,
+      note: "Seeded for persistence tests",
     },
   ];
-  const { error } = await admin.from("radar_clients").insert(rows);
+  const { data, error } = await admin.from("radar_clients").insert(rows).select("id,name");
   expect(error).toBeNull();
+  return (data ?? []) as SeedRow[];
 }
 
 async function clearRows(userId: string) {
@@ -73,19 +79,23 @@ async function userIdFor(email: string): Promise<string> {
   return found.id;
 }
 
+function idFor(rows: SeedRow[], name: string): string {
+  const found = rows.find((r) => r.name === name);
+  if (!found) throw new Error(`seed row missing: ${name}`);
+  return found.id;
+}
+
 /**
- * Authenticated persistence coverage (RCCF-MFD-16). Runs ONLY with
- * SUPABASE_E2E=stub plus SUPABASE_TEST_* credentials pointing at a dedicated
- * test project — never a production account, never real Google OAuth. The
- * stub route establishes a real Supabase session; every assertion then runs
- * through the same UI and RLS as production.
+ * Authenticated persistence coverage (RCCF-MFD-16, retargeted in MFD-19).
+ * Runs ONLY with SUPABASE_E2E=stub plus SUPABASE_TEST_* credentials pointing
+ * at a dedicated test project — never a production account, never real
+ * Google OAuth. The stub route establishes a real Supabase session; every
+ * assertion then runs through the same UI and RLS as production.
  *
- * RCCF-MFD-18 Phase A: skipped — the UI under test moved off
- * /tools/client-radar (now a redirect) and /workspace/today is a placeholder
- * shell until Phase B. Helpers and assertions below are preserved untouched
- * for Phase B re-activation against /workspace/today.
+ * Phase B moved the relationship actions from the retired standalone route
+ * to the Client Detail view; these specs assert the same intents there.
  */
-test.describe.skip("Client Radar persistence", () => {
+test.describe("Client Detail persistence", () => {
   test.skip(!stubConfigured, "Requires SUPABASE_E2E=stub with SUPABASE_TEST_* credentials.");
 
   const email = `e2e-radar-${Date.now()}@example.invalid`;
@@ -100,86 +110,72 @@ test.describe.skip("Client Radar persistence", () => {
     await clearRows(await userIdFor(email));
   });
 
-  test("authenticated radar loads seeded record with factual reason", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
+  test("detail shows factual reasons and working call handoffs", async ({ page }) => {
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
-    const dev = page.getByRole("article", { name: /persist dev/i });
-    await expect(dev).toBeVisible();
-    await expect(dev).toContainText(/follow-up due · 100 days since contact/i);
-    await expect(page.getByRole("article", { name: /persist riya/i })).toBeVisible();
-  });
-
-  test("loading state shows while fetching", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.route("**/rest/v1/radar_clients*", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue();
-    });
-    await page.goto("/tools/client-radar");
-
-    await expect(page.getByRole("status").first()).toContainText(/loading your client radar/i);
-    await expect(page.getByRole("article", { name: /persist dev/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /persist dev/i })).toBeVisible();
+    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /^call$/i })).toHaveAttribute("href", /^tel:/);
+    await expect(page.getByRole("link", { name: /^whatsapp$/i })).toHaveAttribute(
+      "href",
+      /^https:\/\/wa\.me\//,
+    );
   });
 
   test("mark contacted persists across reload", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
-    const dev = page.getByRole("article", { name: /persist dev/i });
-    await expect(dev).toBeVisible();
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
-    await dev.getByRole("button", { name: /mark contacted/i }).click();
+    await page.getByRole("button", { name: /mark contacted/i }).click();
     await expect(page.getByRole("status")).toContainText("Marked Persist Dev as contacted.");
 
     await page.reload();
-    await expect(page.getByRole("article", { name: /persist dev/i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /attention.*1/i })).toBeVisible();
+    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /undo/i })).toHaveCount(0);
   });
 
-  test("undo reverts the persisted change", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
-    const dev = page.getByRole("article", { name: /persist dev/i });
-    await expect(dev).toBeVisible();
+  test("undo restores the previous contacted date", async ({ page }) => {
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
-    await dev.getByRole("button", { name: /mark contacted/i }).click();
+    await page.getByRole("button", { name: /mark contacted/i }).click();
     await expect(page.getByRole("status")).toContainText("Marked Persist Dev as contacted.");
     await page.getByRole("button", { name: /undo/i }).click();
 
     // Banner dismissal proves the revert persisted; only then reload.
-    const restored = page.getByRole("article", { name: /persist dev/i });
-    await expect(restored).toBeVisible();
-    await expect(restored).toContainText(/follow-up due · 100 days since contact/i);
     await expect(page.getByRole("button", { name: /undo/i })).toHaveCount(0);
-
     await page.reload();
-    const reloaded = page.getByRole("article", { name: /persist dev/i });
-    await expect(reloaded).toBeVisible();
-    await expect(reloaded).toContainText(/follow-up due · 100 days since contact/i);
+    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toBeVisible();
   });
 
-  test("manual refresh keeps radar state", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
-    await expect(page.getByRole("article", { name: /persist dev/i })).toBeVisible();
+  test("undo of a never-contacted client restores null", async ({ page }) => {
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Riya")}`);
+    await expect(page.getByText(/never contacted|last contacted/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /refresh radar/i }).click();
-    await expect(page.getByRole("article", { name: /persist dev/i })).toBeVisible();
-    await expect(page.getByRole("article", { name: /persist riya/i })).toBeVisible();
+    await page.getByRole("button", { name: /mark contacted/i }).click();
+    await expect(page.getByRole("status")).toContainText("Marked Persist Riya as contacted.");
+    await page.getByRole("button", { name: /undo/i }).click();
+    await page.reload();
+    await expect(page.getByText(/recent investor/i)).toBeVisible();
   });
 
-  test("empty account shows the import empty state", async ({ page }) => {
-    await page.goto("/tools/client-radar");
-    await expect(page.getByRole("heading", { name: /client radar/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /download csv template/i })).toBeVisible();
+  test("invalid and unknown ids render cleanly without raw errors", async ({ page }) => {
+    await page.goto("/workspace/clients/not-a-client-id");
+    await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
+
+    await page.goto("/workspace/clients/123e4567-e89b-42d3-a456-426614174000");
+    await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
   });
 
-  test("no client data in localStorage or URL", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
-    await expect(page.getByRole("article", { name: /persist dev/i })).toBeVisible();
+  test("no client data in localStorage or URL on detail pages", async ({ page }) => {
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
+    await expect(page.getByRole("heading", { name: /persist dev/i })).toBeVisible();
 
     expect(page.url()).not.toContain("Persist");
+    expect(page.url()).not.toMatch(/name=|phone=|mobile=|note=/);
     const stored = await page.evaluate(() => {
       const out: Record<string, string> = {};
       for (let i = 0; i < window.localStorage.length; i++) {
@@ -192,10 +188,10 @@ test.describe.skip("Client Radar persistence", () => {
     expect(stored).not.toContain("9876543210");
   });
 
-  test("axe passes on the persisted dashboard", async ({ page }) => {
-    await seedRows(await userIdFor(email));
-    await page.goto("/tools/client-radar");
-    await expect(page.getByRole("article", { name: /persist dev/i })).toBeVisible();
+  test("axe passes on the client detail view", async ({ page }) => {
+    const rows = await seedRows(await userIdFor(email));
+    await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
+    await expect(page.getByRole("heading", { name: /persist dev/i })).toBeVisible();
     const results = await new AxeBuilder({ page }).analyze();
     const blocking = results.violations.filter(
       (v) => v.impact === "critical" || v.impact === "serious",
