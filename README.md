@@ -1,10 +1,25 @@
-# MicroNest — MFD Microtools
+# MicroNest — MFD Relationship Workspace
 
-Small operational microtools for Mutual Fund Distributors. Each tool does one job,
-opens fast on a phone, and works **alongside** the distributor's existing financial
-software. Nothing here replaces the system of record.
+One focused workspace that helps Mutual Fund Distributors maintain client
+relationships every day. It works **alongside** the distributor's existing
+financial software. Nothing here replaces the system of record.
 
-### Follow-up Workspace (`/tools/followups`)
+### Routes
+
+| Route                     | Access | Purpose                                                      |
+| ------------------------- | ------ | ------------------------------------------------------------ |
+| `/`                       | Public | Workspace introduction + public Message Studio entry         |
+| `/workspace/today`        | Auth   | Daily landing: who should you talk to today (Phase A: shell) |
+| `/workspace/clients`      | Auth   | Client relationship list (Phase A: shell)                    |
+| `/workspace/clients/[id]` | Auth   | Focused client view, opaque uuid only (Phase A: shell)       |
+| `/tools/message-studio`   | Public | Standalone message composer, no account needed               |
+| `/login`                  | Public | Google sign-in                                               |
+
+Transitional redirects: `/tools/client-radar` → `/workspace/today` (permanent),
+`/tools/followups` → `/workspace/today?filter=followups` (temporary).
+The retired standalone workspaces must not survive as second sources of truth.
+
+### Follow-up domain (`features/followups/`, route retired in Phase A)
 
 Session-local action queue. The MFD downloads `public/followup-template.csv`
 (5 columns: Client Name, Mobile, Next Follow-up, Reason, Note), fills it,
@@ -69,8 +84,12 @@ Phase-01 needs **no environment variables** and no paid services.
 
 ```text
 app/                          # Routes only (thin pages + metadata)
-  page.tsx                    # Tool grid (1 active + coming-soon cards)
-  tools/message-studio/       # Route wrapper, imports the feature
+  page.tsx                    # Public entry: workspace intro + Message Studio
+  workspace/                  # Authenticated shell (layout: Today/Clients nav)
+    today/page.tsx            # Daily landing shell (Phase A placeholder)
+    clients/page.tsx          # Client list shell (Phase B implements)
+    clients/[id]/page.tsx     # Client detail shell, opaque uuid (Phase B implements)
+  tools/message-studio/       # Public standalone composer (kept)
 features/message-studio/      # Feature module: EVERYTHING the tool owns
   templates.ts                # Template registry (the only place purposes live)
   validation.ts               # Template validation (reads registry) + custom-message validation

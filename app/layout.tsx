@@ -3,9 +3,9 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MicroNest — Microtools for Mutual Fund Distributor operations",
+  title: "MicroNest — MFD Relationship Workspace",
   description:
-    "Small operational microtools for Mutual Fund Distributors. Works alongside your existing financial software.",
+    "One focused workspace that helps Mutual Fund Distributors maintain client relationships every day. Works alongside your existing financial software.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -22,11 +22,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
             <Link
               href="/"
-              className="text-base font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              className="inline-flex min-h-[44px] items-center text-base font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
             >
-              MicroNest <span className="font-normal text-stone-500">· MFD Microtools</span>
+              MicroNest <span className="font-normal text-stone-500">· MFD Workspace</span>
             </Link>
             <nav aria-label="Primary" className="flex items-center gap-1">
+              <Link
+                href="/workspace/today"
+                className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Workspace
+              </Link>
               <Link
                 href="/tools/message-studio"
                 className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"

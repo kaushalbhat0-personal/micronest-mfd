@@ -79,8 +79,13 @@ async function userIdFor(email: string): Promise<string> {
  * test project — never a production account, never real Google OAuth. The
  * stub route establishes a real Supabase session; every assertion then runs
  * through the same UI and RLS as production.
+ *
+ * RCCF-MFD-18 Phase A: skipped — the UI under test moved off
+ * /tools/client-radar (now a redirect) and /workspace/today is a placeholder
+ * shell until Phase B. Helpers and assertions below are preserved untouched
+ * for Phase B re-activation against /workspace/today.
  */
-test.describe("Client Radar persistence", () => {
+test.describe.skip("Client Radar persistence", () => {
   test.skip(!stubConfigured, "Requires SUPABASE_E2E=stub with SUPABASE_TEST_* credentials.");
 
   const email = `e2e-radar-${Date.now()}@example.invalid`;

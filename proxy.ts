@@ -7,11 +7,10 @@ import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "./lib/supaba
  * Session refresh + route protection (Next 16 `proxy` convention).
  *
  * When Supabase credentials are absent (local dev / E2E without a project),
- * requests pass through untouched: there is no session to validate and —
- * in Phase A — no cloud data to protect, so failing open leaks nothing
- * beyond today's public session-local behavior. Production MUST configure
- * the env vars (see .env.example); with them present, /tools/client-radar
- * strictly requires a session.
+ * requests pass through untouched: there is no session to validate and no
+ * cloud data to protect, so failing open leaks nothing beyond the public
+ * workspace shells. Production MUST configure the env vars (see
+ * .env.example); with them present, /workspace/* strictly requires a session.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -59,5 +58,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/tools/client-radar/:path*", "/login"],
+  matcher: ["/workspace/:path*", "/login"],
 };

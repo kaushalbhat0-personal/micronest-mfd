@@ -20,7 +20,7 @@ export default function MessageStudioPage() {
           href="/"
           className="inline-flex min-h-[44px] items-center text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
         >
-          ← All tools
+          ← Home
         </Link>
       </nav>
       <section className="flex flex-col gap-1">

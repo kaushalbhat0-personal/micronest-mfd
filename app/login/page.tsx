@@ -7,8 +7,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 export const metadata: Metadata = {
-  title: "Sign in — MicroNest MFD Microtools",
-  description: "Sign in with Google to keep your Client Radar available on your laptop and phone.",
+  title: "Sign in — MicroNest MFD Workspace",
+  description:
+    "Sign in with Google to open your MFD Relationship Workspace on your laptop and phone.",
 };
 
 const ERROR_COPY: Record<string, string> = {
@@ -62,13 +63,13 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           href="/"
           className="inline-flex min-h-[44px] items-center text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
         >
-          ← All tools
+          ← Home
         </Link>
       </nav>
       <section className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Sign in</h1>
         <p className="text-sm leading-relaxed text-stone-600">
-          Sign in to keep your Client Radar available on your laptop and phone.
+          Sign in to open your MFD Relationship Workspace on your laptop and phone.
         </p>
       </section>
       <Suspense

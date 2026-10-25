@@ -2,26 +2,32 @@ import { describe, expect, it } from "vitest";
 import { isProtectedPath, loginUrlFor, safeNextPath } from "@/lib/auth/guard";
 
 describe("auth guard", () => {
-  it("protects client radar including nested paths", () => {
-    expect(isProtectedPath("/tools/client-radar")).toBe(true);
-    expect(isProtectedPath("/tools/client-radar/")).toBe(true);
-    expect(isProtectedPath("/tools/client-radar/export")).toBe(true);
+  it("protects the workspace including nested client routes", () => {
+    expect(isProtectedPath("/workspace")).toBe(true);
+    expect(isProtectedPath("/workspace/")).toBe(true);
+    expect(isProtectedPath("/workspace/today")).toBe(true);
+    expect(isProtectedPath("/workspace/clients")).toBe(true);
+    expect(isProtectedPath("/workspace/clients/123")).toBe(true);
   });
 
   it("leaves public routes alone", () => {
     expect(isProtectedPath("/")).toBe(false);
     expect(isProtectedPath("/login")).toBe(false);
     expect(isProtectedPath("/tools/message-studio")).toBe(false);
-    expect(isProtectedPath("/tools/followups")).toBe(false);
     expect(isProtectedPath("/auth/callback")).toBe(false);
-    expect(isProtectedPath("/tools/client-radar-backup")).toBe(false);
+    expect(isProtectedPath("/workspace-backup")).toBe(false);
+  });
+
+  it("no longer protects the retired standalone tool routes", () => {
+    expect(isProtectedPath("/tools/client-radar")).toBe(false);
+    expect(isProtectedPath("/tools/followups")).toBe(false);
   });
 
   it("accepts safe same-origin paths", () => {
-    expect(safeNextPath("/tools/client-radar")).toBe("/tools/client-radar");
+    expect(safeNextPath("/workspace/today")).toBe("/workspace/today");
     expect(safeNextPath("/")).toBe("/");
-    expect(safeNextPath("/login?next=%2Ftools%2Fclient-radar")).toBe(
-      "/login?next=%2Ftools%2Fclient-radar",
+    expect(safeNextPath("/login?next=%2Fworkspace%2Ftoday")).toBe(
+      "/login?next=%2Fworkspace%2Ftoday",
     );
   });
 
@@ -38,9 +44,9 @@ describe("auth guard", () => {
   });
 
   it("builds login urls preserving the requested path", () => {
-    expect(loginUrlFor("/tools/client-radar")).toBe("/login?next=%2Ftools%2Fclient-radar");
-    expect(loginUrlFor("/tools/client-radar?page=2")).toBe(
-      "/login?next=%2Ftools%2Fclient-radar%3Fpage%3D2",
+    expect(loginUrlFor("/workspace/today")).toBe("/login?next=%2Fworkspace%2Ftoday");
+    expect(loginUrlFor("/workspace/clients?page=2")).toBe(
+      "/login?next=%2Fworkspace%2Fclients%3Fpage%3D2",
     );
     expect(loginUrlFor("https://evil.example")).toBe("/login?next=%2F");
   });

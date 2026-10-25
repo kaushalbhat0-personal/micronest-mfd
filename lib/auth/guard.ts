@@ -4,7 +4,7 @@
  */
 
 /** Paths that require an authenticated session. */
-const PROTECTED_PREFIXES = ["/tools/client-radar"] as const;
+const PROTECTED_PREFIXES = ["/workspace"] as const;
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -13,7 +13,7 @@ export function isProtectedPath(pathname: string): boolean {
 }
 
 /**
- * Accepts only same-origin absolute paths ("/tools/client-radar").
+ * Accepts only same-origin absolute paths ("/workspace/today").
  * Rejects external URLs, protocol-relative URLs, and backslash tricks —
  * anything else becomes "/". Never trust a raw `next` query parameter.
  */

@@ -5,9 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
  * - default: Supabase vars forced empty → proxy passes through, the full
  *   session-local suite (radar/follow-ups/studio) runs unmodified.
  * - SUPABASE_E2E=dummy: syntactically-present but invalid credentials →
- *   session lookup fails closed and /tools/client-radar really redirects to
+ *   session lookup fails closed and /workspace/* really redirects to
  *   /login. Run only e2e/auth.spec.ts in this mode; suites needing the
- *   session-local UI require the default mode.
+ *   workspace UI require the default mode.
  * - SUPABASE_E2E=stub: real test-project credentials from SUPABASE_TEST_URL /
  *   SUPABASE_TEST_ANON_KEY, plus server-only SUPABASE_TEST_SERVICE_ROLE_KEY
  *   exposed to the server as SUPABASE_E2E_SERVICE_ROLE_KEY. Enables the

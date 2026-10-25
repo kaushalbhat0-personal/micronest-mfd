@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
- * Authenticated identity affordance for the Client Radar shell. Streams
+ * Authenticated identity affordance for the workspace shell. Streams
  * behind Suspense so the static shell prerenders (cacheComponents).
  * Defense in depth behind proxy.ts: signed-out sessions are bounced to
  * /login when auth is configured. Renders nothing pre-Supabase setup.
@@ -15,7 +15,7 @@ export async function RadarIdentity() {
   const {
     data: { user },
   } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  if (!user) redirect("/login?next=%2Ftools%2Fclient-radar");
+  if (!user) redirect("/login?next=%2Fworkspace%2Ftoday");
 
   const email = user.email ?? "Signed in";
   return (
