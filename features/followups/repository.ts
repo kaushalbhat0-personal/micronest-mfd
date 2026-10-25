@@ -142,6 +142,58 @@ export async function listOpenFollowupsForClient(
 }
 
 /**
+ * Loads every follow-up (open + completed) for one client in a single query.
+ * Malformed ids surface as the same safe load error before any DB access.
+ * RLS remains authoritative for ownership (foreign rows yield zero rows).
+ * Ordering is enforced in code so the contract holds regardless of how the
+ * database returns rows: open rows first (due_date ASC, created_at ASC),
+ * completed rows second (completed_at DESC).
+ */
+export async function listFollowupsForClient(
+  supabase: SupabaseClient,
+  clientId: string,
+): Promise<StoredFollowup[]> {
+  if (!isValidClientId(clientId)) {
+    throw toStoreError("load", "We couldn't find those follow-ups.");
+  }
+  try {
+    const result = await supabase
+      .from(TABLE)
+      .select(FOLLOWUP_COLUMNS)
+      .eq("client_id", clientId)
+      .order("due_date", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("completed_at", { ascending: false });
+    if (result.error) {
+      if (isAuthError(result.error)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("load", "We couldn't find those follow-ups.");
+    }
+    const all = ((result.data ?? []) as DbRow[]).map(toStoredFollowup);
+    const open = all
+      .filter((row) => row.completedAt === null)
+      .sort((a, b) => {
+        if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+        if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+        return 0;
+      });
+    const completed = all
+      .filter((row) => row.completedAt !== null)
+      .sort((a, b) => {
+        const left = a.completedAt ?? "";
+        const right = b.completedAt ?? "";
+        if (left === right) return 0;
+        return left > right ? -1 : 1;
+      });
+    return [...open, ...completed];
+  } catch (error) {
+    if (error instanceof FollowupStoreError) throw error;
+    throw toStoreError("load", "We couldn't find those follow-ups.");
+  }
+}
+
+/**
  * Creates one follow-up for the authenticated user's client. Only the four
  * approved fields are sent — user_id is filled by the database default
  * (auth.uid()) and ownership is enforced by RLS, so a foreign client_id is

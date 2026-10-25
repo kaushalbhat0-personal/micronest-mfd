@@ -202,3 +202,106 @@ describe("followup repository complete/reopen", () => {
     expect(sent).not.toHaveProperty("user_id");
   });
 });
+
+describe("listFollowupsForClient (C2 full-client list)", () => {
+  const row = (overrides: Record<string, unknown>) => ({ ...DB_ROW, ...overrides });
+
+  it("returns open rows before completed rows", async () => {
+    const table = stubTable({
+      data: [
+        row({ id: "c1", completed_at: "2026-10-24T09:00:00.000Z" }),
+        row({ id: "o1", due_date: "2026-11-05", completed_at: null }),
+      ],
+    });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows.map((r) => r.id)).toEqual(["o1", "c1"]);
+  });
+
+  it("sorts open rows by due_date ASC", async () => {
+    const table = stubTable({
+      data: [
+        row({ id: "late", due_date: "2026-11-10" }),
+        row({ id: "early", due_date: "2026-10-26" }),
+        row({ id: "mid", due_date: "2026-11-01" }),
+      ],
+    });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows.map((r) => r.id)).toEqual(["early", "mid", "late"]);
+  });
+
+  it("breaks equal due dates by created_at ASC", async () => {
+    const table = stubTable({
+      data: [
+        row({ id: "second", due_date: "2026-11-05", created_at: "2026-10-25T11:00:00.000Z" }),
+        row({ id: "first", due_date: "2026-11-05", created_at: "2026-10-25T10:00:00.000Z" }),
+      ],
+    });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows.map((r) => r.id)).toEqual(["first", "second"]);
+  });
+
+  it("sorts completed rows by completed_at DESC", async () => {
+    const table = stubTable({
+      data: [
+        row({ id: "old", completed_at: "2026-10-20T09:00:00.000Z" }),
+        row({ id: "new", completed_at: "2026-10-24T09:00:00.000Z" }),
+        row({ id: "mid", completed_at: "2026-10-22T09:00:00.000Z" }),
+      ],
+    });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows.map((r) => r.id)).toEqual(["new", "mid", "old"]);
+  });
+
+  it("rejects malformed client ids without touching the database", async () => {
+    const table = stubTable({ data: [DB_ROW] });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    await expect(listFollowupsForClient(table as never, "not-a-uuid")).rejects.toMatchObject({
+      code: "load",
+    });
+    expect(table.from).not.toHaveBeenCalled();
+  });
+
+  it("maps through the existing stored follow-up mapping without user_id", async () => {
+    const table = stubTable({
+      data: [{ ...DB_ROW, user_id: "someone-else" }],
+    });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows[0]).toEqual({
+      id: DB_ROW.id,
+      clientId: CLIENT,
+      dueDate: "2026-11-05",
+      reason: "Discuss SIP increase",
+      note: "",
+      completedAt: null,
+      createdAt: "2026-10-25T10:00:00.000Z",
+    });
+    expect(rows[0]).not.toHaveProperty("user_id");
+  });
+
+  it("keeps completed rows representable without the open-only projection", async () => {
+    const table = stubTable({
+      data: [row({ completed_at: "2026-10-24T09:00:00.000Z" })],
+    });
+    const [{ listFollowupsForClient }, { toFollowupRecord }] = await Promise.all([
+      import("@/features/followups/repository"),
+      import("@/features/followups/model"),
+    ]);
+    const rows = await listFollowupsForClient(table as never, CLIENT);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].completedAt).toBe("2026-10-24T09:00:00.000Z");
+    expect(toFollowupRecord(rows[0], { name: "N", phone: "" })).toBeNull();
+  });
+
+  it("scopes by client_id in a single query without a completed_at filter", async () => {
+    const table = stubTable({ data: [DB_ROW] });
+    const { listFollowupsForClient } = await import("@/features/followups/repository");
+    await listFollowupsForClient(table as never, CLIENT);
+    expect(table.calls.eq).toHaveBeenCalledWith("client_id", CLIENT);
+    expect(table.calls.is).not.toHaveBeenCalled();
+  });
+});

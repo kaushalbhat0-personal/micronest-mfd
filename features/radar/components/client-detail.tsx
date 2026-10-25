@@ -12,6 +12,7 @@ import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
+import { ClientFollowups } from "@/features/followups/components/client-followups";
 import { buildRadarHandoff, markContacted } from "../model";
 import {
   deleteClient,
@@ -282,6 +283,8 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
           initialPhone={handoff.phone}
         />
       )}
+
+      <ClientFollowups clientId={record.id} />
 
       <div className="border-t border-stone-200 pt-4">
         <div className="flex items-center justify-between gap-2">

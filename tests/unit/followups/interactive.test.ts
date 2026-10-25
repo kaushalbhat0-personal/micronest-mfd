@@ -189,3 +189,28 @@ describe("toFollowupRecord", () => {
     ).toBeNull();
   });
 });
+
+describe("splitStoredFollowups (C2 client-detail split)", () => {
+  it("splits open vs completed without reordering", async () => {
+    const { splitStoredFollowups } = await import("@/features/followups/model");
+    const openA = stored({ id: "o-a" });
+    const doneA = stored({ id: "c-a", completedAt: "2026-10-24T09:00:00.000Z" });
+    const openB = stored({ id: "o-b" });
+    // Repository order is [open...] + [completed...]; split must preserve it.
+    const { open, completed } = splitStoredFollowups([openA, openB, doneA]);
+    expect(open.map((r) => r.id)).toEqual(["o-a", "o-b"]);
+    expect(completed.map((r) => r.id)).toEqual(["c-a"]);
+  });
+
+  it("excludes completed history from the open header count", async () => {
+    const { splitStoredFollowups } = await import("@/features/followups/model");
+    const rows = [
+      stored({ id: "o-1" }),
+      stored({ id: "c-1", completedAt: "2026-10-24T09:00:00.000Z" }),
+      stored({ id: "c-2", completedAt: "2026-10-23T09:00:00.000Z" }),
+    ];
+    const { open, completed } = splitStoredFollowups(rows);
+    expect(open).toHaveLength(1);
+    expect(completed).toHaveLength(2);
+  });
+});

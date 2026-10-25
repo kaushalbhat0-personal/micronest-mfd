@@ -20,6 +20,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   completeFollowup,
   createFollowup,
+  listFollowupsForClient,
   listOpenFollowups,
   listOpenFollowupsForClient,
   reopenFollowup,
@@ -146,6 +147,77 @@ suite("followups repository persistence", () => {
       .single();
     expect(after.data!.last_contacted).toBe(before.data!.last_contacted);
     await admin.from("client_followups").delete().eq("id", created.id);
+  }, 60000);
+
+  it("full-client list carries open then completed through the lifecycle", async () => {
+    const created = await createFollowup(clientA, {
+      clientId: clientAId,
+      dueDate: FUTURE,
+      reason: "Full list lifecycle",
+      note: "",
+    });
+    try {
+      // create → present in full list as open and in open-only list.
+      const fullOpen = await listFollowupsForClient(clientA, clientAId);
+      expect(fullOpen.map((r) => r.id)).toContain(created.id);
+      expect(fullOpen.find((r) => r.id === created.id)!.completedAt).toBeNull();
+
+      // complete → reload-equivalent: absent from open-only, present in full as completed.
+      const done = await completeFollowup(clientA, created.id);
+      expect(typeof done.completedAt).toBe("string");
+      expect((await listOpenFollowupsForClient(clientA, clientAId)).map((r) => r.id)).not.toContain(
+        created.id,
+      );
+      const fullDone = await listFollowupsForClient(clientA, clientAId);
+      const doneRow = fullDone.find((r) => r.id === created.id)!;
+      expect(doneRow.completedAt).toBe(done.completedAt);
+      expect(fullDone.filter((r) => r.completedAt === null).map((r) => r.id)).not.toContain(
+        created.id,
+      );
+
+      // reopen → reload-equivalent: open again in both lists.
+      const reopened = await reopenFollowup(clientA, created.id);
+      expect(reopened.completedAt).toBeNull();
+      const fullReopened = await listFollowupsForClient(clientA, clientAId);
+      expect(fullReopened.find((r) => r.id === created.id)!.completedAt).toBeNull();
+      expect((await listOpenFollowupsForClient(clientA, clientAId)).map((r) => r.id)).toContain(
+        created.id,
+      );
+    } finally {
+      await admin.from("client_followups").delete().eq("id", created.id);
+    }
+  }, 60000);
+
+  it("full-client list ordering is open (due ASC) then completed (completed DESC)", async () => {
+    const mk = (dueDate: string) =>
+      createFollowup(clientA, {
+        clientId: clientAId,
+        dueDate,
+        reason: `Order ${dueDate}`,
+        note: "",
+      });
+    const first = await mk("2026-11-10");
+    const second = await mk("2026-11-06");
+    try {
+      const done = await completeFollowup(clientA, first.id);
+      expect(typeof done.completedAt).toBe("string");
+      const full = await listFollowupsForClient(clientA, clientAId);
+      const ids = full.map((r) => r.id);
+      // Open row sorts before the completed row regardless of due dates.
+      expect(ids.indexOf(second.id)).toBeLessThan(ids.indexOf(first.id));
+      expect(full.find((r) => r.id === first.id)!.completedAt).not.toBeNull();
+      expect(full.find((r) => r.id === second.id)!.completedAt).toBeNull();
+    } finally {
+      await admin.from("client_followups").delete().in("id", [first.id, second.id]);
+    }
+  }, 60000);
+
+  it("full-client list rejects malformed ids and blocks cross-user access", async () => {
+    await expect(listFollowupsForClient(clientA, "not-a-uuid")).rejects.toMatchObject({
+      code: "load",
+    });
+    // Foreign client id: RLS yields zero rows, never a leak.
+    expect(await listFollowupsForClient(clientA, clientBId)).toEqual([]);
   }, 60000);
 
   it("foreign client create is blocked and cross-user rows stay invisible", async () => {

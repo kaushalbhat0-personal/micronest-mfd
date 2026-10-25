@@ -183,3 +183,18 @@ export function toFollowupRecord(
     clientPhoneValid: client.phone.length > 0 && normalizePhone(client.phone).ok,
   };
 }
+
+/**
+ * Splits a repository-ordered full-client list into open and completed views.
+ * Pure and order-preserving: repository ordering ([open...] + [completed...])
+ * is never re-sorted here. The header count uses `open.length` only.
+ */
+export function splitStoredFollowups(rows: StoredFollowup[]): {
+  open: StoredFollowup[];
+  completed: StoredFollowup[];
+} {
+  return {
+    open: rows.filter((row) => row.completedAt === null),
+    completed: rows.filter((row) => row.completedAt !== null),
+  };
+}
