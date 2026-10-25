@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,8 @@ import { Field, Select } from "@/components/ui/controls";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { todayLocalYMD } from "@/lib/dates";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { RADAR_HEADERS } from "../template";
 import {
   DEFAULT_RECONNECT_INTERVAL_DAYS,
@@ -16,6 +19,13 @@ import {
 } from "../signals";
 import type { ClientRecord, RadarReport } from "../types";
 import { buildRadarHandoff, markContacted, parseAndBuildRadar, serializeRadarCsv } from "../model";
+import {
+  listClients,
+  RadarStoreError,
+  toClientRecord,
+  updateLastContacted,
+  type StoredRadarClient,
+} from "../repository";
 import { validateRadarFileMeta } from "../validation";
 import {
   filterRadarRecords,
@@ -45,14 +55,28 @@ const EMPTY_FILTER_COPY: Record<Exclude<RadarFilter, "all">, { title: string; hi
   },
 };
 
+type StoreStatus = "idle" | "loading" | "ready" | "error";
+type ViewSource = "cloud" | "import" | null;
+
+function storeErrorMessage(error: unknown): string {
+  if (error instanceof RadarStoreError) return error.message;
+  return "Something went wrong. Please try again.";
+}
+
 /**
  * Client Radar workspace: import → triage → reach out → mark contacted → export.
- * All state is session-local. Reload or re-import discards everything.
+ *
+ * Two data modes, one UI:
+ * - Cloud (Supabase configured + signed in): records load from the user's
+ *   database on open, refresh on focus/manual refresh, and Mark Contacted
+ *   persists. CSV import still works session-locally for bulk review.
+ * - Session-local (otherwise): the original import → work → export flow,
+ *   byte-for-byte unchanged behavior.
  */
 export function RadarWorkspace() {
   // Session date only — read on mount and at each interaction, never during
-  // prerender. Records only exist after an import (post-hydration), so the
-  // fallback is never displayed.
+  // prerender. Records only exist after an import or cloud load
+  // (post-hydration), so the fallback is never displayed.
   const [todayYMD, setTodayYMD] = React.useState<string | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [report, setReport] = React.useState<RadarReport | null>(null);
@@ -67,15 +91,131 @@ export function RadarWorkspace() {
     prev: ClientRecord;
   } | null>(null);
 
+  // Persistence state. Untouched when Supabase isn't configured.
+  const [persistenceOn, setPersistenceOn] = React.useState(false);
+  const [storeStatus, setStoreStatus] = React.useState<StoreStatus>("idle");
+  const [storeError, setStoreError] = React.useState<string | null>(null);
+  const [viewSource, setViewSource] = React.useState<ViewSource>(null);
+  const [hasCloudData, setHasCloudData] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set());
+  const supabaseRef = React.useRef<SupabaseClient | null>(null);
+  const persistedIdsRef = React.useRef<Set<string>>(new Set());
+  const loadInFlight = React.useRef(false);
+  const viewSourceRef = React.useRef<ViewSource>(null);
+  const intervalDaysRef = React.useRef(intervalDays);
+  React.useEffect(() => {
+    viewSourceRef.current = viewSource;
+    intervalDaysRef.current = intervalDays;
+  });
+
+  const applyCloudRecords = React.useCallback(
+    (stored: StoredRadarClient[], today: string, interval: number) => {
+      const mapped = stored.map((s, i) => toClientRecord(s, i, today, interval));
+      const sorted = sortRadarRecords(mapped, today);
+      persistedIdsRef.current = new Set(sorted.map((r) => r.id));
+      setHasCloudData(sorted.length > 0);
+      setRecords(sorted);
+    },
+    [],
+  );
+
+  const loadCloud = React.useCallback(
+    async (client: SupabaseClient, opts?: { silent?: boolean; resetView?: boolean }) => {
+      if (loadInFlight.current) return;
+      loadInFlight.current = true;
+      if (opts?.silent) {
+        setRefreshing(true);
+      } else {
+        setStoreStatus("loading");
+      }
+      setStoreError(null);
+      try {
+        const today = todayLocalYMD();
+        const stored = await listClients(client);
+        if (opts?.resetView !== false) {
+          setFilter("attention");
+          setLastContact(null);
+          setSelected(null);
+        }
+        setTodayYMD(today);
+        applyCloudRecords(stored, today, intervalDaysRef.current);
+        setViewSource("cloud");
+        setStoreStatus("ready");
+      } catch (error) {
+        setStoreError(storeErrorMessage(error));
+        setStoreStatus((prev) => (prev === "ready" ? prev : "error"));
+      } finally {
+        loadInFlight.current = false;
+        setRefreshing(false);
+      }
+    },
+    [applyCloudRecords],
+  );
+
+  // Initial cloud load + focus refresh. No-op without Supabase configured.
+  React.useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    let cancelled = false;
+    (async () => {
+      const client = createClient();
+      supabaseRef.current = client;
+      const { data } = await client.auth.getUser();
+      if (cancelled) return;
+      if (!data.user) return;
+      setPersistenceOn(true);
+      await loadCloud(client);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadCloud]);
+
+  // Cross-device refresh: refetch when the page becomes active again.
+  // Only while viewing the cloud dataset — never yanks an import away.
+  React.useEffect(() => {
+    if (!persistenceOn) return;
+    const onActive = () => {
+      if (document.hidden) return;
+      if (viewSourceRef.current !== "cloud") return;
+      const client = supabaseRef.current;
+      if (!client) return;
+      void loadCloud(client, { silent: true });
+    };
+    const onVisibility = () => {
+      if (!document.hidden) onActive();
+    };
+    window.addEventListener("focus", onActive);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onActive);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [persistenceOn, loadCloud]);
+
   function reset() {
     setFileName(null);
     setReport(null);
     setFileError(null);
-    setRecords([]);
     setFilter("attention");
     setIntervalDays(DEFAULT_RECONNECT_INTERVAL_DAYS);
     setSelected(null);
     setLastContact(null);
+    setStoreError(null);
+    if (persistenceOn) {
+      // Back to the import screen; saved Radar stays one tap away.
+      setViewSource(null);
+      setRecords([]);
+      persistedIdsRef.current = new Set();
+    } else {
+      setRecords([]);
+    }
+  }
+
+  function backToCloud() {
+    const client = supabaseRef.current;
+    if (!client) return;
+    void loadCloud(client);
   }
 
   function handleFileText(name: string, text: string) {
@@ -89,6 +229,8 @@ export function RadarWorkspace() {
     const next = parseAndBuildRadar(text, today, intervalDays);
     setReport(next);
     setRecords(next.records);
+    persistedIdsRef.current = new Set();
+    setViewSource("import");
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -119,29 +261,78 @@ export function RadarWorkspace() {
     setRecords((prev) => withReconnectInterval(prev, today, days));
   }
 
-  function handleContacted(id: string) {
+  async function handleContacted(id: string) {
     const today = todayLocalYMD();
     setTodayYMD(today);
-    setRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (!target) return prev;
+    const target = records.find((r) => r.id === id);
+    if (!target) return;
+    const client = supabaseRef.current;
+    if (!persistenceOn || !client || !persistedIdsRef.current.has(id)) {
       setLastContact({ id, name: target.name, prev: target });
-      const next = prev.map((r) => (r.id === id ? markContacted(r, today, intervalDays) : r));
-      return sortRadarRecords(next, today);
-    });
+      setRecords((prev) =>
+        sortRadarRecords(
+          prev.map((r) => (r.id === id ? markContacted(r, today, intervalDays) : r)),
+          today,
+        ),
+      );
+      return;
+    }
+    setPendingIds((prev) => new Set(prev).add(id));
+    setStoreError(null);
+    try {
+      await updateLastContacted(client, id, today);
+      setRecords((prev) =>
+        sortRadarRecords(
+          prev.map((r) => (r.id === id ? markContacted(r, today, intervalDays) : r)),
+          today,
+        ),
+      );
+      setLastContact({ id, name: target.name, prev: target });
+    } catch (error) {
+      setStoreError(storeErrorMessage(error));
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   }
 
-  function handleUndo() {
+  async function handleUndo() {
     if (!lastContact) return;
     const { prev } = lastContact;
     const today = todayYMD ?? todayLocalYMD();
-    setRecords((records) =>
-      sortRadarRecords(
-        records.map((r) => (r.id === prev.id ? prev : r)),
-        today,
-      ),
-    );
-    setLastContact(null);
+    const client = supabaseRef.current;
+    if (!persistenceOn || !client || !persistedIdsRef.current.has(prev.id)) {
+      setRecords((current) =>
+        sortRadarRecords(
+          current.map((r) => (r.id === prev.id ? prev : r)),
+          today,
+        ),
+      );
+      setLastContact(null);
+      return;
+    }
+    setPendingIds((ids) => new Set(ids).add(prev.id));
+    try {
+      await updateLastContacted(client, prev.id, prev.lastContacted);
+      setRecords((current) =>
+        sortRadarRecords(
+          current.map((r) => (r.id === prev.id ? prev : r)),
+          today,
+        ),
+      );
+      setLastContact(null);
+    } catch (error) {
+      setStoreError(storeErrorMessage(error));
+    } finally {
+      setPendingIds((ids) => {
+        const next = new Set(ids);
+        next.delete(prev.id);
+        return next;
+      });
+    }
   }
 
   function handleExport() {
@@ -159,6 +350,9 @@ export function RadarWorkspace() {
 
   const summary = React.useMemo(() => summarizeRadar(records), [records]);
   const visible = React.useMemo(() => filterRadarRecords(records, filter), [records, filter]);
+  const showImportScreen = persistenceOn
+    ? storeStatus === "ready" && records.length === 0 && viewSource !== "import"
+    : !report;
 
   // Message view: prefilled studio for one client. Back returns with state intact.
   if (selected) {
@@ -181,7 +375,29 @@ export function RadarWorkspace() {
 
   return (
     <div className="flex flex-col gap-5">
-      {!report && (
+      {persistenceOn && storeStatus === "loading" && (
+        <Card>
+          <p role="status" className="text-sm text-stone-600">
+            Loading your Client Radar…
+          </p>
+        </Card>
+      )}
+
+      {persistenceOn && storeStatus === "error" && records.length === 0 && (
+        <Card>
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-stone-900">
+              We couldn&apos;t load your Client Radar.
+            </p>
+            {storeError && <p className="text-xs text-stone-600">{storeError}</p>}
+            <Button variant="primary" onClick={backToCloud} className="sm:self-start">
+              Try again
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {showImportScreen && !(persistenceOn && storeStatus !== "ready") && (
         <Card>
           <div className="flex flex-col gap-4">
             <p className="text-sm text-stone-600">
@@ -240,6 +456,12 @@ export function RadarWorkspace() {
               </Field>
             </div>
 
+            {persistenceOn && hasCloudData && (
+              <Button variant="secondary" onClick={backToCloud}>
+                ← Back to saved Radar
+              </Button>
+            )}
+
             {fileError && (
               <Alert variant="error" title="Could not import file">
                 <p className="mt-1 text-xs">{fileError}</p>
@@ -249,7 +471,7 @@ export function RadarWorkspace() {
         </Card>
       )}
 
-      {report && (
+      {report && viewSource === "import" && (
         <>
           <section aria-label="Import result" aria-live="polite" className="flex flex-col gap-3">
             {report.records.length > 0 ? (
@@ -296,118 +518,148 @@ export function RadarWorkspace() {
               </details>
             )}
           </section>
+        </>
+      )}
 
-          {records.length > 0 && (
-            <>
-              <Card>
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
-                    <div className="rounded-lg bg-stone-50 px-2 py-2">
-                      <p className="text-lg font-semibold text-stone-900">{summary.total}</p>
-                      <p className="text-xs text-stone-500">Clients</p>
-                    </div>
-                    <div className="rounded-lg bg-stone-50 px-2 py-2">
-                      <p className="text-lg font-semibold text-stone-900">{summary.attention}</p>
-                      <p className="text-xs text-stone-500">Need Attention</p>
-                    </div>
-                    <div className="rounded-lg bg-stone-50 px-2 py-2">
-                      <p className="text-lg font-semibold text-stone-900">
-                        {summary.recentInvestors}
-                      </p>
-                      <p className="text-xs text-stone-500">Recent Investors</p>
-                    </div>
-                    <div className="rounded-lg bg-stone-50 px-2 py-2">
-                      <p className="text-lg font-semibold text-stone-900">{summary.newClients}</p>
-                      <p className="text-xs text-stone-500">New Clients</p>
-                    </div>
-                    <div className="rounded-lg bg-stone-50 px-2 py-2">
-                      <p className="text-lg font-semibold text-stone-900">{summary.reconnectDue}</p>
-                      <p className="text-xs text-stone-500">Reconnect Due</p>
-                    </div>
-                  </div>
-
-                  <Field id="radar-interval" label="Reconnect every">
-                    <Select
-                      id="radar-interval"
-                      value={String(intervalDays)}
-                      onChange={(e) => handleIntervalChange(Number(e.target.value))}
-                    >
-                      {RECONNECT_INTERVAL_OPTIONS.map((days) => (
-                        <option key={days} value={days}>
-                          {days} days
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-              </Card>
-
-              <RadarFilters
-                counts={{
-                  attention: summary.attention,
-                  recent: summary.recentInvestors,
-                  reconnect: summary.reconnectDue,
-                  fresh: summary.newClients,
-                  all: summary.total,
-                }}
-                value={filter}
-                onChange={setFilter}
-              />
-
-              {lastContact && (
-                <div
-                  role="status"
-                  className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"
-                >
-                  <p className="text-sm text-emerald-900">
-                    Marked {lastContact.name} as contacted.
-                  </p>
-                  <Button variant="ghost" onClick={handleUndo} className="px-2">
-                    Undo
-                  </Button>
-                </div>
-              )}
-
-              {visible.length === 0 && filter !== "all" ? (
-                <div className="rounded-xl border border-dashed border-stone-300 bg-white p-6 text-center">
-                  <p className="text-sm font-medium text-stone-800">
-                    {EMPTY_FILTER_COPY[filter].title}
-                  </p>
-                  <p className="mt-1 text-xs text-stone-500">{EMPTY_FILTER_COPY[filter].hint}</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3" aria-live="polite">
-                  {visible.map((record) => (
-                    <RadarClientCard
-                      key={record.id}
-                      record={record}
-                      // Records only exist after an import, which always sets
-                      // todayYMD first. The fallback never renders.
-                      todayYMD={todayYMD ?? "1970-01-01"}
-                      onMessage={setSelected}
-                      onContacted={handleContacted}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button variant="primary" onClick={handleExport} className="sm:flex-1">
-                  Download Updated CSV
-                </Button>
-                <Button variant="secondary" onClick={reset} className="sm:flex-1">
-                  Upload a different file
-                </Button>
-              </div>
-            </>
+      {records.length > 0 && (
+        <>
+          {storeError && (
+            <Alert variant="error" title="Couldn't save that change">
+              <p className="mt-1 text-xs">{storeError}</p>
+            </Alert>
           )}
+          <Card>
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+                <div className="rounded-lg bg-stone-50 px-2 py-2">
+                  <p className="text-lg font-semibold text-stone-900">{summary.total}</p>
+                  <p className="text-xs text-stone-500">Clients</p>
+                </div>
+                <div className="rounded-lg bg-stone-50 px-2 py-2">
+                  <p className="text-lg font-semibold text-stone-900">{summary.attention}</p>
+                  <p className="text-xs text-stone-500">Need Attention</p>
+                </div>
+                <div className="rounded-lg bg-stone-50 px-2 py-2">
+                  <p className="text-lg font-semibold text-stone-900">{summary.recentInvestors}</p>
+                  <p className="text-xs text-stone-500">Recent Investors</p>
+                </div>
+                <div className="rounded-lg bg-stone-50 px-2 py-2">
+                  <p className="text-lg font-semibold text-stone-900">{summary.newClients}</p>
+                  <p className="text-xs text-stone-500">New Clients</p>
+                </div>
+                <div className="rounded-lg bg-stone-50 px-2 py-2">
+                  <p className="text-lg font-semibold text-stone-900">{summary.reconnectDue}</p>
+                  <p className="text-xs text-stone-500">Reconnect Due</p>
+                </div>
+              </div>
+
+              <Field id="radar-interval" label="Reconnect every">
+                <Select
+                  id="radar-interval"
+                  value={String(intervalDays)}
+                  onChange={(e) => handleIntervalChange(Number(e.target.value))}
+                >
+                  {RECONNECT_INTERVAL_OPTIONS.map((days) => (
+                    <option key={days} value={days}>
+                      {days} days
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              {persistenceOn && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const client = supabaseRef.current;
+                    if (client) void loadCloud(client, { silent: true });
+                  }}
+                  disabled={refreshing}
+                  className="self-start px-2"
+                >
+                  {refreshing ? "Refreshing…" : "Refresh Radar"}
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          <RadarFilters
+            counts={{
+              attention: summary.attention,
+              recent: summary.recentInvestors,
+              reconnect: summary.reconnectDue,
+              fresh: summary.newClients,
+              all: summary.total,
+            }}
+            value={filter}
+            onChange={setFilter}
+          />
+
+          {lastContact && (
+            <div
+              role="status"
+              className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"
+            >
+              <p className="text-sm text-emerald-900">Marked {lastContact.name} as contacted.</p>
+              <Button
+                variant="ghost"
+                onClick={handleUndo}
+                disabled={pendingIds.has(lastContact.id)}
+                className="px-2"
+              >
+                Undo
+              </Button>
+            </div>
+          )}
+
+          {visible.length === 0 && filter !== "all" ? (
+            <div className="rounded-xl border border-dashed border-stone-300 bg-white p-6 text-center">
+              <p className="text-sm font-medium text-stone-800">
+                {EMPTY_FILTER_COPY[filter].title}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">{EMPTY_FILTER_COPY[filter].hint}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3" aria-live="polite">
+              {visible.map((record) => (
+                <RadarClientCard
+                  key={record.id}
+                  record={record}
+                  // Records only exist after an import or cloud load, which
+                  // always sets todayYMD first. The fallback never renders.
+                  todayYMD={todayYMD ?? "1970-01-01"}
+                  onMessage={setSelected}
+                  onContacted={handleContacted}
+                  pending={pendingIds.has(record.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="primary" onClick={handleExport} className="sm:flex-1">
+              Download Updated CSV
+            </Button>
+            <Button variant="secondary" onClick={reset} className="sm:flex-1">
+              Upload a different file
+            </Button>
+          </div>
         </>
       )}
 
       <p className="text-xs leading-relaxed text-stone-500">
-        Your changes stay in this session. Download the updated CSV when you&apos;re done. Nothing
-        is saved — reloading clears everything. Do not include PAN, Aadhaar, bank, OTP or password
-        details in your CSV.
+        {persistenceOn ? (
+          <>
+            Contact updates save to your account and appear on all your devices. CSV imports stay in
+            this session. Do not include PAN, Aadhaar, bank, OTP or password details in your CSV.
+          </>
+        ) : (
+          <>
+            Your changes stay in this session. Download the updated CSV when you&apos;re done.
+            Nothing is saved — reloading clears everything. Do not include PAN, Aadhaar, bank, OTP
+            or password details in your CSV.
+          </>
+        )}
       </p>
     </div>
   );

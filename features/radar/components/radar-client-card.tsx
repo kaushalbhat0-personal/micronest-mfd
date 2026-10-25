@@ -12,6 +12,7 @@ interface RadarClientCardProps {
   todayYMD: string;
   onMessage: (record: ClientRecord) => void;
   onContacted: (id: string) => void;
+  pending?: boolean;
 }
 
 /** One client: who, why they matter, and the tap-to-reach actions. */
@@ -20,6 +21,7 @@ export function RadarClientCard({
   todayYMD,
   onMessage,
   onContacted,
+  pending,
 }: RadarClientCardProps) {
   const reasons = reasonsFor(record, record.signals, todayYMD);
   const callUrl = buildCallUrl(record.phone);
@@ -82,8 +84,8 @@ export function RadarClientCard({
         <Button variant="secondary" onClick={() => onMessage(record)}>
           Message
         </Button>
-        <Button variant="secondary" onClick={() => onContacted(record.id)}>
-          Mark Contacted
+        <Button variant="secondary" onClick={() => onContacted(record.id)} disabled={pending}>
+          {pending ? "Saving…" : "Mark Contacted"}
         </Button>
       </div>
     </article>

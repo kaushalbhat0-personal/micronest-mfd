@@ -8,9 +8,15 @@ import { defineConfig, devices } from "@playwright/test";
  *   session lookup fails closed and /tools/client-radar really redirects to
  *   /login. Run only e2e/auth.spec.ts in this mode; suites needing the
  *   session-local UI require the default mode.
- * Never point E2E at real credentials; real OAuth is manual-only.
+ * - SUPABASE_E2E=stub: real test-project credentials from SUPABASE_TEST_URL /
+ *   SUPABASE_TEST_ANON_KEY, plus server-only SUPABASE_TEST_SERVICE_ROLE_KEY
+ *   exposed to the server as SUPABASE_E2E_SERVICE_ROLE_KEY. Enables the
+ *   /api/e2e/auth stub login for authenticated suites (e2e/radar-persisted).
+ *   Never point E2E at real credentials; real OAuth is manual-only.
+ * Never commit any of these values.
  */
 const dummyAuth = process.env.SUPABASE_E2E === "dummy";
+const stubAuth = process.env.SUPABASE_E2E === "stub";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,16 +34,23 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 3100",
     url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI && !dummyAuth,
+    reuseExistingServer: !process.env.CI && !dummyAuth && !stubAuth,
     timeout: 120_000,
     env: dummyAuth
       ? {
           NEXT_PUBLIC_SUPABASE_URL: "https://e2e-invalid.supabase.co",
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "e2e-dummy-key",
         }
-      : {
-          NEXT_PUBLIC_SUPABASE_URL: "",
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-        },
+      : stubAuth
+        ? {
+            NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_TEST_URL ?? "",
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_TEST_ANON_KEY ?? "",
+            SUPABASE_E2E: "stub",
+            SUPABASE_E2E_SERVICE_ROLE_KEY: process.env.SUPABASE_TEST_SERVICE_ROLE_KEY ?? "",
+          }
+        : {
+            NEXT_PUBLIC_SUPABASE_URL: "",
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+          },
   },
 });

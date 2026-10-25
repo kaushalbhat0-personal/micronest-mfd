@@ -7,7 +7,7 @@ import { RadarIdentity } from "@/features/auth/components/radar-identity";
 export const metadata: Metadata = {
   title: "Client Radar — MicroNest MFD Microtools",
   description:
-    "Know which clients are worth talking to this week — and why. Import your client list, see the most relevant conversations, reach out, and export the updated CSV. Nothing leaves your device.",
+    "Know which clients are worth talking to this week — and why. Contact updates save to your account; CSV imports stay on this device.",
 };
 
 // Static shell; the session check streams behind Suspense (cacheComponents).
