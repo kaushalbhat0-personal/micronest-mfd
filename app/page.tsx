@@ -22,8 +22,14 @@ export default function Home() {
           cta="Open Message Studio"
         />
         <ToolCard
+          title="Client Radar"
+          description="Relationship reconnect — who to talk to this week, and why."
+          href="/tools/client-radar"
+          cta="Open Client Radar"
+        />
+        <ToolCard
           title="Follow-up Workspace"
-          description="Turn your follow-up list into today's action queue."
+          description="Explicit dated tasks — who is overdue, due today, or upcoming."
           href="/tools/followups"
           cta="Open Workspace"
         />

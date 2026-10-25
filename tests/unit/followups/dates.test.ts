@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  getFollowUpStatus,
-  normalizeFollowUpDate,
-  todayLocalYMD,
-} from "@/features/followups/dates";
+import { getFollowUpStatus } from "@/features/followups/dates";
+import { normalizeFollowUpDate, todayLocalYMD } from "@/lib/dates";
 
 describe("normalizeFollowUpDate", () => {
   it("accepts DD/MM/YYYY and normalizes to ISO", () => {

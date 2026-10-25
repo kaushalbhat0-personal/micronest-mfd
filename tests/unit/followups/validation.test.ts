@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv } from "@/features/followups/csv";
+import { parseCsv } from "@/lib/csv";
 import { TEMPLATE_HEADERS } from "@/features/followups/template";
 import {
   validateFileHeaders,

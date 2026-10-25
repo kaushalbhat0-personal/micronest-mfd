@@ -1,6 +1,7 @@
 import { normalizePhone } from "@/lib/whatsapp";
 import { detectSensitiveInput } from "@/lib/sensitive";
-import { normalizeFollowUpDate } from "./dates";
+import { normalizeFollowUpDate } from "@/lib/dates";
+import { normalizeHeader } from "@/lib/csv";
 import { REQUIRED_HEADERS, TEMPLATE_HEADERS, type TemplateHeader } from "./template";
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -11,14 +12,6 @@ export const MAX_REASON_LENGTH = 40;
 export const MAX_NOTE_LENGTH = 200;
 
 export type HeaderMap = Record<TemplateHeader, number>;
-
-/** Case-insensitive, trimmed, BOM-safe header comparison. */
-export function normalizeHeader(value: string): string {
-  return value
-    .replace(/^\uFEFF/, "")
-    .trim()
-    .toLowerCase();
-}
 
 export interface HeaderValidation {
   map: HeaderMap | null;

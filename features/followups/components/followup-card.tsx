@@ -3,7 +3,8 @@
 import { Button, buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatDisplayDate, buildDirectMessage } from "../model";
+import { formatDisplayDate } from "@/lib/dates";
+import { buildDirectMessage } from "../model";
 import type { FollowUpRow } from "../types";
 
 interface FollowUpCardProps {

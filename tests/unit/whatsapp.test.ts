@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppUrl, normalizePhone } from "@/lib/whatsapp";
+import { buildCallUrl, buildWhatsAppUrl, normalizePhone } from "@/lib/whatsapp";
 
 describe("normalizePhone", () => {
   it("accepts empty input (user picks contact manually)", () => {
@@ -40,5 +40,18 @@ describe("buildWhatsAppUrl", () => {
   it("encodes special characters and newlines", () => {
     const url = buildWhatsAppUrl("Line1\nLine2 & more", "9876543210");
     expect(url).toContain("Line1%0ALine2%20%26%20more");
+  });
+});
+
+describe("buildCallUrl", () => {
+  it("builds a tel link with international digits", () => {
+    expect(buildCallUrl("9876543210")).toBe("tel:+919876543210");
+    expect(buildCallUrl("+91 98765 43210")).toBe("tel:+919876543210");
+  });
+
+  it("returns null for missing or invalid phones", () => {
+    expect(buildCallUrl("")).toBeNull();
+    expect(buildCallUrl(undefined)).toBeNull();
+    expect(buildCallUrl("123")).toBeNull();
   });
 });

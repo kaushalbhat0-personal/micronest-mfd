@@ -5,11 +5,11 @@ import { TEMPLATE_HEADERS } from "@/features/followups/template";
 import {
   buildDirectMessage,
   buildStudioHandoff,
-  formatDisplayDate,
-  hashString,
   inferPurpose,
   parseAndBuildWorkspace,
 } from "@/features/followups/model";
+import { formatDisplayDate } from "@/lib/dates";
+import { hashString } from "@/lib/hash";
 import { validateFileHeaders } from "@/features/followups/validation";
 
 const HEADER = "Client Name,Mobile,Next Follow-up,Reason,Note";

@@ -26,6 +26,24 @@ selected row. Follow-ups never imports template builders, validators, or
 preview internals. Purpose inference (`inferPurpose` in `model.ts`) is a
 small keyword map; the MFD edits everything before sending.
 
+### Client Radar domain (`features/radar/`, no UI yet)
+
+Pure domain foundation for the relationship radar. Same CSV pipeline shape
+as Follow-ups, different contract and signals.
+
+| Question                      | Answer                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| Radar CSV contract?           | `features/radar/template.ts` (7 headers, investment enum, New-Client flag)                       |
+| Radar validation?             | `features/radar/validation.ts` (headers, rows, today's-date future check)                        |
+| Radar signals?                | `features/radar/signals.ts` (`computeSignals`, `reasonsFor`, 5-class ordering)                   |
+| Radar model?                  | `features/radar/model.ts` (pipeline, `markContacted`, CSV round-trip serializer, studio handoff) |
+| Shared CSV/date/hash helpers? | `lib/csv.ts`, `lib/dates.ts`, `lib/hash.ts` (promoted from Follow-ups on second use)             |
+
+Key rules: blank `Last Contacted` means never recorded (always reconnect-due);
+30-day recent-investor window is fixed; reconnect interval (30/60/90/120/180,
+default 90) is the only setting; no dedupe in V1; no client persistence —
+`markContacted` is a pure state transition and export is a serializer, nothing more.
+
 ## Run locally
 
 ```bash

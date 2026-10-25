@@ -1,23 +1,11 @@
 import type { MessagePurpose } from "../message-studio/templates";
 import type { MessageFields } from "../message-studio/templates";
-import { getFollowUpStatus, todayLocalYMD } from "./dates";
-import { parseCsv, type ParsedCsv } from "./csv";
+import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
+import { hashString } from "@/lib/hash";
+import { getFollowUpStatus } from "./dates";
+import { parseCsv, type ParsedCsv } from "@/lib/csv";
 import type { FollowUpRow, ImportReport } from "./types";
 import { MAX_DATA_ROWS, validateFileHeaders, validateRow } from "./validation";
-
-/**
- * Tiny deterministic content hash (FNV-1a, hex). No dependency.
- * Uniqueness comes from mixing the spreadsheet line number into the input —
- * identical client rows on different lines still get distinct ids.
- */
-export function hashString(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16);
-}
 
 /**
  * Small deterministic keyword map from free-text reason to a studio purpose.
@@ -37,11 +25,6 @@ export interface StudioHandoff {
   purpose: MessagePurpose;
   fields: Partial<MessageFields>;
   phone: string;
-}
-
-/** Reformats YYYY-MM-DD back to the familiar DD/MM/YYYY for display/prefill. */
-export function formatDisplayDate(dateYMD: string): string {
-  return `${dateYMD.slice(8, 10)}/${dateYMD.slice(5, 7)}/${dateYMD.slice(0, 4)}`;
 }
 
 /** Builds Message Studio prefill from a row. Studio validation still applies. */

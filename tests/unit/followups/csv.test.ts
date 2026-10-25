@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv } from "@/features/followups/csv";
+import { parseCsv } from "@/lib/csv";
 
 describe("parseCsv", () => {
   it("parses the template header and simple rows", () => {

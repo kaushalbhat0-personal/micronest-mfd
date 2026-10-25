@@ -37,3 +37,14 @@ export function buildWhatsAppUrl(message: string, phone?: string): string | null
   if (!normalized.digits) return `https://wa.me/?text=${encoded}`;
   return `https://wa.me/${normalized.digits}?text=${encoded}`;
 }
+
+/**
+ * Builds a device-native telephone handoff URL. The OS dialer (phone app,
+ * FaceTime, Skype) handles the actual call — no telephony provider involved.
+ * Returns null for missing/invalid numbers so no dead action is rendered.
+ */
+export function buildCallUrl(phone?: string): string | null {
+  const normalized = normalizePhone(phone);
+  if (!normalized.ok || !normalized.digits) return null;
+  return `tel:+${normalized.digits}`;
+}

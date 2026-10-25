@@ -88,3 +88,11 @@ function parseLine(line: string): string[] | null {
   fields.push(current);
   return fields;
 }
+
+/** Case-insensitive, trimmed, BOM-safe header comparison for owned CSV contracts. */
+export function normalizeHeader(value: string): string {
+  return value
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase();
+}
