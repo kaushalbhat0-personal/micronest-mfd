@@ -2,6 +2,7 @@ import { normalizePhone } from "@/lib/whatsapp";
 import { detectSensitiveInput } from "@/lib/sensitive";
 import { normalizeFollowUpDate } from "@/lib/dates";
 import { normalizeHeader } from "@/lib/csv";
+import { isValidClientId } from "@/lib/workspace/params";
 import { REQUIRED_HEADERS, TEMPLATE_HEADERS, type TemplateHeader } from "./template";
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -171,4 +172,120 @@ export function validateFileMeta(fileName: string, fileSize: number): string | n
     return "This file is larger than 2 MB. Split it into smaller files and upload separately.";
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Interactive follow-up validation (RCCF-MFD-22, C1). Unlike the CSV path
+// above — which must tolerate historical rows from an export — interactive
+// creation rejects past dates: a follow-up due yesterday created today is
+// nonsense. Due dates arrive as YYYY-MM-DD from native date inputs.
+// ---------------------------------------------------------------------------
+
+/** Raw interactive input before validation. Dates are YYYY-MM-DD or empty. */
+export interface FollowupFieldInput {
+  clientId: string;
+  dueDate: string;
+  reason: string;
+  note: string;
+}
+
+export interface ValidatedFollowup {
+  clientId: string;
+  dueDate: string;
+  reason: string;
+  note: string;
+}
+
+export interface FollowupValidation {
+  row: ValidatedFollowup | null;
+  error: string | null;
+}
+
+export type FollowupFieldName = "clientId" | "dueDate" | "reason" | "note";
+
+/**
+ * Presentation mapping only — rule ownership stays in validateFollowupInput.
+ * Mirrors fieldForClientError so form error associations stay consistent.
+ */
+export function fieldForFollowupError(error: string | null): FollowupFieldName | null {
+  if (!error) return null;
+  if (error.startsWith("Client")) return "clientId";
+  if (error.startsWith("Due date")) return "dueDate";
+  if (error.startsWith("Reason")) return "reason";
+  if (error.startsWith("Note")) return "note";
+  return null;
+}
+
+/**
+ * Strict YYYY-MM-DD → YYYY-MM-DD. Rejects wrong shapes and impossible dates
+ * (2026-02-30). Never guesses — null means invalid.
+ */
+function parseDueDate(raw: string): string | null {
+  const match = raw.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+/** Single source of truth for interactive Add Follow-up input. */
+export function validateFollowupInput(
+  input: FollowupFieldInput,
+  todayYMD: string,
+): FollowupValidation {
+  const clientId = input.clientId.trim();
+  if (clientId.length === 0) return { row: null, error: "Client is required." };
+  if (!isValidClientId(clientId)) return { row: null, error: "Client reference is invalid." };
+
+  const rawDue = input.dueDate.trim();
+  if (rawDue.length === 0) return { row: null, error: "Due date is required." };
+  const dueDate = parseDueDate(rawDue);
+  if (!dueDate) {
+    const shown = rawDue.length > 30 ? `${rawDue.slice(0, 30)}…` : rawDue;
+    return { row: null, error: `Due date "${shown}" is not a valid date (use YYYY-MM-DD).` };
+  }
+  if (dueDate < todayYMD) {
+    return { row: null, error: "Due date cannot be in the past." };
+  }
+
+  const reason = input.reason.trim();
+  if (reason.length === 0) return { row: null, error: "Reason is required." };
+  if (reason.length > MAX_REASON_LENGTH) {
+    return {
+      row: null,
+      error: `Reason must be under ${MAX_REASON_LENGTH} characters.`,
+    };
+  }
+  if (detectSensitiveInput("Reason", reason)) {
+    return {
+      row: null,
+      error: "Reason looks like sensitive information — please remove it.",
+    };
+  }
+
+  const note = input.note.trim();
+  if (note.length > MAX_NOTE_LENGTH) {
+    return {
+      row: null,
+      error: `Note must be under ${MAX_NOTE_LENGTH} characters.`,
+    };
+  }
+  if (note && detectSensitiveInput("Note", note)) {
+    return {
+      row: null,
+      error: "Note looks like sensitive information — please remove it.",
+    };
+  }
+
+  return { row: { clientId, dueDate, reason, note }, error: null };
 }

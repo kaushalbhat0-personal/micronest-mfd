@@ -2,9 +2,10 @@ import type { MessagePurpose } from "../message-studio/templates";
 import type { MessageFields } from "../message-studio/templates";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { hashString } from "@/lib/hash";
+import { normalizePhone } from "@/lib/whatsapp";
 import { getFollowUpStatus } from "./dates";
 import { parseCsv, type ParsedCsv } from "@/lib/csv";
-import type { FollowUpRow, ImportReport } from "./types";
+import type { FollowupRecord, FollowUpRow, ImportReport, StoredFollowup } from "./types";
 import { MAX_DATA_ROWS, validateFileHeaders, validateRow } from "./validation";
 
 /**
@@ -28,7 +29,9 @@ export interface StudioHandoff {
 }
 
 /** Builds Message Studio prefill from a row. Studio validation still applies. */
-export function buildStudioHandoff(row: FollowUpRow): StudioHandoff {
+export function buildStudioHandoff(
+  row: Pick<FollowUpRow, "name" | "phone" | "date" | "reason" | "note">,
+): StudioHandoff {
   const purpose = inferPurpose(row.reason);
   const detail = [row.reason, row.note].filter((part) => part.length > 0).join(" — ");
   const fields: Partial<MessageFields> = { clientName: row.name };
@@ -50,7 +53,7 @@ export function buildStudioHandoff(row: FollowUpRow): StudioHandoff {
 }
 
 /** Direct WhatsApp text: fixed safe wording, name + reason only. */
-export function buildDirectMessage(row: FollowUpRow): string {
+export function buildDirectMessage(row: Pick<FollowUpRow, "name" | "reason">): string {
   const topic = row.reason.length > 0 ? row.reason : "your investment paperwork";
   return `Hi ${row.name}, following up regarding ${topic}.`;
 }
@@ -149,4 +152,34 @@ export function parseAndBuildWorkspace(
     reason: "Could not read this row — check commas and quotes.",
   }));
   return { ...base, invalid: [...malformed, ...base.invalid] };
+}
+
+// ---------------------------------------------------------------------------
+// Persistent record projection (RCCF-MFD-22, C1). Pure and feature-local:
+// an OPEN stored follow-up plus client display fields (joined at read time,
+// never stored) becomes the render-ready domain record. Completed rows are
+// never projected — they carry no active status by design, so this returns
+// null for them instead of inventing one.
+// ---------------------------------------------------------------------------
+
+export interface FollowupClientInfo {
+  name: string;
+  phone: string;
+}
+
+export function toFollowupRecord(
+  stored: StoredFollowup,
+  client: FollowupClientInfo,
+  todayYMD: string = todayLocalYMD(),
+): FollowupRecord | null {
+  if (stored.completedAt !== null) return null;
+  const { status, daysOverdue } = getFollowUpStatus(stored.dueDate, todayYMD);
+  return {
+    ...stored,
+    status,
+    daysOverdue,
+    clientName: client.name,
+    clientPhone: client.phone,
+    clientPhoneValid: client.phone.length > 0 && normalizePhone(client.phone).ok,
+  };
 }
