@@ -24,22 +24,36 @@ import { ModeSelector } from "./mode-selector";
 import { CustomMessageSection } from "./custom-message-section";
 import { LanguageToneControls, PurposeFields, PurposeSelector } from "./purpose-fields";
 
-export function MessageStudioForm() {
+export interface MessageStudioInitial {
+  initialPurpose?: MessagePurpose;
+  initialFields?: Partial<MessageFields>;
+  initialPhone?: string;
+}
+
+export function MessageStudioForm({
+  initialPurpose,
+  initialFields,
+  initialPhone,
+}: MessageStudioInitial = {}) {
   // Prefs hold non-sensitive UI choices only (never client/message data).
   // Lazy initializer reads localStorage once; guarded for SSR. Note: the
   // server renders defaults while a returning browser may hold different
   // prefs — React reconciles this on hydration with no functional impact,
   // which is acceptable for prefs-only state (no user data involved).
+  // Explicit handoff values (e.g. from Follow-up Workspace) win over prefs
+  // on mount; afterwards the user owns the fields.
   const [initialPrefs] = React.useState(loadPrefs);
   const [mode, setMode] = React.useState<StudioMode>(initialPrefs.mode);
-  const [purpose, setPurpose] = React.useState<MessagePurpose>(initialPrefs.purpose);
+  const [purpose, setPurpose] = React.useState<MessagePurpose>(
+    initialPurpose ?? initialPrefs.purpose,
+  );
   const [language, setLanguage] = React.useState<MessageLanguage>(initialPrefs.language);
   const [tone, setTone] = React.useState<MessageTone>(initialPrefs.tone);
   const [arn, setArn] = React.useState(initialPrefs.arn);
   const [includeDisclosure, setIncludeDisclosure] = React.useState(initialPrefs.includeDisclosure);
 
-  const [fields, setFields] = React.useState<MessageFields>(EMPTY_FIELDS);
-  const [phone, setPhone] = React.useState("");
+  const [fields, setFields] = React.useState<MessageFields>({ ...EMPTY_FIELDS, ...initialFields });
+  const [phone, setPhone] = React.useState(initialPhone ?? "");
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [sensitiveWarnings, setSensitiveWarnings] = React.useState<string[]>([]);

@@ -1,0 +1,5 @@
+Client Name,Mobile,Next Follow-up,Reason,Note
+Good Client,9876543210,26/10/2026,SIP,ok
+,9876543210,26/10/2026,KYC,missing name
+Bad Date,9876543210,99/99/9999,,bad date
+PAN Note,9876543210,26/10/2026,,ABCDE1234F

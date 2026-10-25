@@ -4,10 +4,27 @@ Small operational microtools for Mutual Fund Distributors. Each tool does one jo
 opens fast on a phone, and works **alongside** the distributor's existing financial
 software. Nothing here replaces the system of record.
 
-Live tool: **Message Studio** (`/tools/message-studio`) with two modes —
-**Quick Templates** (4 deterministic seeded purposes) and **Custom Message**
-(user-written Unicode text, 1000-character limit, never persisted).
-No login, no database.
+### Follow-up Workspace (`/tools/followups`)
+
+Session-local action queue. The MFD downloads `public/followup-template.csv`
+(5 columns: Client Name, Mobile, Next Follow-up, Reason, Note), fills it,
+and uploads it. No backend, no storage — reload clears everything.
+
+| Question             | Answer                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| CSV contract?        | `features/followups/template.ts` (`TEMPLATE_HEADERS`) + `public/followup-template.csv` |
+| CSV parsing?         | `features/followups/csv.ts` (zero-dep, BOM/CRLF/quotes)                                |
+| Date logic?          | `features/followups/dates.ts` (DD/MM/YYYY → YYYY-MM-DD, string comparison only)        |
+| Import validation?   | `features/followups/validation.ts` (headers, rows, file limits)                        |
+| Domain model?        | `features/followups/model.ts` (projection, status, sort, IDs, studio handoff)          |
+| UI?                  | `features/followups/components/` (`workspace.tsx` orchestrates)                        |
+| Sensitive screening? | `lib/sensitive.ts` (shared by Message Studio + Follow-ups)                             |
+
+Message Studio integration is props-only: the workspace renders
+`<MessageStudioForm initialPurpose/initialFields/initialPhone>` for the
+selected row. Follow-ups never imports template builders, validators, or
+preview internals. Purpose inference (`inferPurpose` in `model.ts`) is a
+small keyword map; the MFD edits everything before sending.
 
 ## Run locally
 
@@ -61,7 +78,7 @@ dependency injection, or global stores until a concrete need exists.
 | ------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Add/change a message purpose?               | `features/message-studio/templates.ts` → add one `TEMPLATES` entry                 |
 | Change validation rule?                     | `features/message-studio/validation.ts` (`validateField`, `validateCustomMessage`) |
-| Change sensitive-data screening?            | `features/message-studio/sensitive.ts`                                             |
+| Change sensitive-data screening?            | `lib/sensitive.ts` (shared by Message Studio + Follow-ups)                         |
 | Change guardrail wording list?              | `features/message-studio/compliance.ts`                                            |
 | Change WhatsApp link format?                | `lib/whatsapp.ts`                                                                  |
 | Change button/input/card/alert/phone style? | `components/ui/*`                                                                  |

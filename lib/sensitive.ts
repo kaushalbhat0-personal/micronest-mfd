@@ -11,8 +11,9 @@ const SECRET_KEYWORDS = /\b(otp|password|cvv|atm\s*pin|upi\s*pin)\b/i;
 
 /**
  * Flags values that look like sensitive financial identity data.
- * Independent from required-field validation and compliance guardrails:
- * this answers "should the user be typing this at all?".
+ * Used by Message Studio and Follow-up Workspace. Independent from
+ * required-field validation and compliance guardrails: this answers
+ * "should the user be typing/importing this at all?".
  */
 export function detectSensitiveInput(field: string, value: string): SensitiveHit | null {
   if (!value) return null;

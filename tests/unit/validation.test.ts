@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectSensitiveInput } from "@/features/message-studio/sensitive";
+import { detectSensitiveInput } from "@/lib/sensitive";
 import { validateMessageInput } from "@/features/message-studio/validation";
 
 describe("validateMessageInput", () => {

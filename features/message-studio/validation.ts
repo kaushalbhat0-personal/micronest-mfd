@@ -1,4 +1,4 @@
-import { detectSensitiveInput, type SensitiveHit } from "./sensitive";
+import { detectSensitiveInput, type SensitiveHit } from "@/lib/sensitive";
 import { TEMPLATES, type MessageField, type MessagePurpose } from "./templates";
 
 export type FieldErrors = Partial<Record<MessageField, string>>;

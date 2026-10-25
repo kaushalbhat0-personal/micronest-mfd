@@ -22,9 +22,10 @@ export default function Home() {
           cta="Open Message Studio"
         />
         <ToolCard
-          title="Follow-up Tracker"
-          description="Never miss a client follow-up. Due-today view for leads and service requests."
-          comingSoon
+          title="Follow-up Workspace"
+          description="Turn your follow-up list into today's action queue."
+          href="/tools/followups"
+          cta="Open Workspace"
         />
         <ToolCard
           title="Document Checklist"
