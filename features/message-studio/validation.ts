@@ -9,6 +9,43 @@ export interface ValidationResult {
   sensitive: SensitiveHit[];
 }
 
+/** Maximum custom-message size in Unicode code points (emoji-safe). */
+export const CUSTOM_MESSAGE_MAX_LENGTH = 1000;
+
+/** Counts user-perceived characters as Unicode code points, not UTF-16 units. */
+export function countChars(text: string): number {
+  return Array.from(text).length;
+}
+
+export interface CustomValidationResult {
+  ok: boolean;
+  /** Single message-field error, if any. */
+  error: string | null;
+  sensitive: SensitiveHit[];
+}
+
+/**
+ * Validates a user-written custom message. Content is treated as opaque
+ * text: no language detection, no normalization, no transformation.
+ * Length is measured in code points so emoji/scripts count fairly.
+ */
+export function validateCustomMessage(text: string): CustomValidationResult {
+  const sensitive: SensitiveHit[] = [];
+  if (text.trim().length === 0) {
+    return { ok: false, error: "Please type your message first.", sensitive };
+  }
+  if (countChars(text) > CUSTOM_MESSAGE_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `Message must be within ${CUSTOM_MESSAGE_MAX_LENGTH} characters (currently ${countChars(text)}).`,
+      sensitive,
+    };
+  }
+  const hit = detectSensitiveInput("message", text);
+  if (hit) sensitive.push(hit);
+  return { ok: sensitive.length === 0, error: null, sensitive };
+}
+
 const FIELD_LABELS: Record<MessageField, string> = {
   clientName: "Client name",
   documents: "Required documents",

@@ -7,7 +7,10 @@ import {
 
 const KEY = "mfd-ms-prefs-v1";
 
+export type StudioMode = "templates" | "custom";
+
 export interface StudioPrefs {
+  mode: StudioMode;
   purpose: MessagePurpose;
   language: MessageLanguage;
   tone: MessageTone;
@@ -16,6 +19,7 @@ export interface StudioPrefs {
 }
 
 export const DEFAULT_PREFS: StudioPrefs = {
+  mode: "templates",
   purpose: "document-request",
   language: "en",
   tone: "professional",
@@ -36,6 +40,7 @@ export function loadPrefs(): StudioPrefs {
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<StudioPrefs>;
     return {
+      mode: parsed.mode === "custom" ? "custom" : "templates",
       purpose: isMessagePurpose(parsed.purpose) ? parsed.purpose : DEFAULT_PREFS.purpose,
       language: parsed.language === "hinglish" ? "hinglish" : "en",
       tone: parsed.tone === "friendly" ? "friendly" : "professional",

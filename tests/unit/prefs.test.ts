@@ -20,6 +20,7 @@ describe("loadPrefs", () => {
   it("returns defaults when storage holds valid prefs", () => {
     mockWindow(
       JSON.stringify({
+        mode: "custom",
         purpose: "review-invite",
         language: "hinglish",
         tone: "friendly",
@@ -28,6 +29,7 @@ describe("loadPrefs", () => {
       }),
     );
     expect(loadPrefs()).toEqual({
+      mode: "custom",
       purpose: "review-invite",
       language: "hinglish",
       tone: "friendly",

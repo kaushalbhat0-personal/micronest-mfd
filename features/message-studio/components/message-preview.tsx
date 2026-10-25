@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { normalizePhone, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { PhoneField } from "@/components/ui/phone-field";
 import { cn } from "@/lib/utils";
 
 interface MessagePreviewProps {
@@ -12,6 +13,20 @@ interface MessagePreviewProps {
   phone: string;
   onPhoneChange: (value: string) => void;
   phoneError: string | null;
+  /**
+   * Override the built-in phone input. Pass `null` to hide it (e.g. when
+   * the compose area already has its own phone field).
+   */
+  phoneField?: React.ReactNode;
+  /**
+   * When true, the WhatsApp action is hidden instead of shown disabled
+   * unless a valid phone number is available.
+   */
+  hideWhatsAppWhenNoPhone?: boolean;
+  /** Optional small note above the preview (e.g. recipient context). */
+  headerNote?: string;
+  /** Phone input id used for the built-in field. */
+  phoneInputId?: string;
 }
 
 export function MessagePreview({
@@ -20,6 +35,10 @@ export function MessagePreview({
   phone,
   onPhoneChange,
   phoneError,
+  phoneField,
+  hideWhatsAppWhenNoPhone = false,
+  headerNote,
+  phoneInputId = "ms-phone",
 }: MessagePreviewProps) {
   const [copied, setCopied] = React.useState(false);
   const [copyError, setCopyError] = React.useState<string | null>(null);
@@ -50,10 +69,14 @@ export function MessagePreview({
   }
 
   const waUrl = blocked ? null : buildWhatsAppUrl(message, phone);
+  // Custom mode hides the action when no phone is on hand; template mode
+  // keeps the contact-picker link / disabled button as before.
+  const showWhatsApp = !hideWhatsAppWhenNoPhone || normalizePhone(phone).digits !== undefined;
 
   return (
     <section aria-label="Generated message" className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-stone-900">Preview</h2>
+      {headerNote && <p className="text-xs text-stone-500">{headerNote}</p>}
 
       {blocked && (
         <Alert variant="warning" title="Check wording before sending">
@@ -76,52 +99,36 @@ export function MessagePreview({
         {message}
       </output>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="ms-phone" className="text-sm font-medium text-stone-800">
-          WhatsApp number{" "}
-          <span className="font-normal text-stone-500">(optional, never stored)</span>
-        </label>
-        <input
-          id="ms-phone"
-          inputMode="tel"
-          autoComplete="off"
-          placeholder="e.g. 98765 43210"
-          value={phone}
-          onChange={(e) => onPhoneChange(e.target.value)}
-          aria-describedby={phoneError ? "ms-phone-error" : undefined}
-          aria-invalid={Boolean(phoneError)}
-          className="min-h-[44px] w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-        />
-        {phoneError && (
-          <p id="ms-phone-error" role="alert" className="text-xs font-medium text-red-700">
-            {phoneError}
-          </p>
-        )}
-      </div>
+      {phoneField === undefined ? (
+        <PhoneField id={phoneInputId} value={phone} onChange={onPhoneChange} error={phoneError} />
+      ) : (
+        phoneField
+      )}
 
       <div className="bg-app sticky bottom-0 flex flex-col gap-2 py-2 sm:flex-row">
         <Button onClick={handleCopy} disabled={blocked} className="sm:flex-1" aria-live="polite">
           {copied ? "Copied ✓" : "Copy message"}
         </Button>
-        {waUrl ? (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(buttonClasses("secondary"), "sm:flex-1")}
-          >
-            Open WhatsApp
-          </a>
-        ) : (
-          <Button
-            variant="secondary"
-            disabled
-            className="sm:flex-1"
-            title={blocked ? "Resolve wording warning first" : "Fix phone number"}
-          >
-            Open WhatsApp
-          </Button>
-        )}
+        {showWhatsApp &&
+          (waUrl ? (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonClasses("secondary"), "sm:flex-1")}
+            >
+              Open WhatsApp
+            </a>
+          ) : (
+            <Button
+              variant="secondary"
+              disabled
+              className="sm:flex-1"
+              title={blocked ? "Resolve wording warning first" : "Fix phone number"}
+            >
+              Open WhatsApp
+            </Button>
+          ))}
       </div>
       {copyError && (
         <p role="alert" className="text-xs font-medium text-red-700">

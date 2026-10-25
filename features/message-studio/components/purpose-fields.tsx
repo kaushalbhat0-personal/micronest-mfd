@@ -31,7 +31,7 @@ export function PurposeSelector({ value, onChange }: PurposeSelectorProps) {
           <label
             key={id}
             className={cn(
-              "min-h-[44px] cursor-pointer rounded-lg border px-3 py-2",
+              "relative min-h-[44px] cursor-pointer rounded-lg border px-3 py-2",
               "has-checked:border-2 has-checked:border-emerald-900 has-checked:bg-emerald-50",
               "has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-emerald-900",
               value === id
@@ -45,7 +45,7 @@ export function PurposeSelector({ value, onChange }: PurposeSelectorProps) {
               value={id}
               checked={value === id}
               onChange={() => onChange(id)}
-              className="sr-only"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             />
             <span
               className={cn(

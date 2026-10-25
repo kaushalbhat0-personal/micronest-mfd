@@ -4,8 +4,10 @@ Small operational microtools for Mutual Fund Distributors. Each tool does one jo
 opens fast on a phone, and works **alongside** the distributor's existing financial
 software. Nothing here replaces the system of record.
 
-Live tool: **Message Studio** (`/tools/message-studio`) — deterministic
-WhatsApp/email message templates with wording guardrails. No login, no database.
+Live tool: **Message Studio** (`/tools/message-studio`) with two modes —
+**Quick Templates** (4 deterministic seeded purposes) and **Custom Message**
+(user-written Unicode text, 1000-character limit, never persisted).
+No login, no database.
 
 ## Run locally
 
@@ -36,12 +38,12 @@ app/                          # Routes only (thin pages + metadata)
   tools/message-studio/       # Route wrapper, imports the feature
 features/message-studio/      # Feature module: EVERYTHING the tool owns
   templates.ts                # Template registry (the only place purposes live)
-  validation.ts               # Required-field validation (reads the registry)
+  validation.ts               # Template validation (reads registry) + custom-message validation
   sensitive.ts                # PAN/Aadhaar/OTP detection (warn-only, never stored)
   compliance.ts               # Promise-wording guardrail (warn-only, not certification)
   prefs.ts                    # Browser-local UI prefs (never client data)
   components/                 # Feature UI (form, preview, purpose fields)
-components/ui/                # Shared primitives: Button, Card, Field/inputs, Alert
+components/ui/                # Shared primitives: Button, Card, Field/inputs, Alert, PhoneField
 lib/                          # Genuinely shared code only: utils (cn), whatsapp (wa.me)
 tests/unit/                   # Unit tests mirroring features/* + lib/*
 e2e/                          # Playwright smoke + accessibility specs
@@ -55,16 +57,16 @@ dependency injection, or global stores until a concrete need exists.
 
 ## Where things live (Day-1 answers)
 
-| Question                              | Answer                                                                     |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| Add/change a message purpose?         | `features/message-studio/templates.ts` → add one `TEMPLATES` entry         |
-| Change validation rule?               | `features/message-studio/validation.ts` (`validateField`)                  |
-| Change sensitive-data screening?      | `features/message-studio/sensitive.ts`                                     |
-| Change guardrail wording list?        | `features/message-studio/compliance.ts`                                    |
-| Change WhatsApp link format?          | `lib/whatsapp.ts`                                                          |
-| Change button/input/card/alert style? | `components/ui/*`                                                          |
-| Change page background?               | `:root --app-bg` in `app/globals.css` (+ `.bg-app`)                        |
-| Add a new microtool?                  | New route `app/tools/<tool>/page.tsx` + new `features/<tool>/` (see below) |
+| Question                                    | Answer                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Add/change a message purpose?               | `features/message-studio/templates.ts` → add one `TEMPLATES` entry                 |
+| Change validation rule?                     | `features/message-studio/validation.ts` (`validateField`, `validateCustomMessage`) |
+| Change sensitive-data screening?            | `features/message-studio/sensitive.ts`                                             |
+| Change guardrail wording list?              | `features/message-studio/compliance.ts`                                            |
+| Change WhatsApp link format?                | `lib/whatsapp.ts`                                                                  |
+| Change button/input/card/alert/phone style? | `components/ui/*`                                                                  |
+| Change page background?                     | `:root --app-bg` in `app/globals.css` (+ `.bg-app`)                                |
+| Add a new microtool?                        | New route `app/tools/<tool>/page.tsx` + new `features/<tool>/` (see below)         |
 
 ## Adding a message template (5th purpose)
 
