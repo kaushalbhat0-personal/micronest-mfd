@@ -1,6 +1,5 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -60,14 +59,12 @@ export function FollowUpCard({ row, onMessage, onDone, onUndo }: FollowUpCardPro
           {[row.reason, row.note].filter((part) => part.length > 0).join(" · ")}
         </p>
       )}
-      {row.phone && !row.phoneValid && (
-        <div className="mt-2">
-          <Alert variant="warning" title="Phone number needs checking">
-            <p className="mt-1 text-xs">
-              Verify the Mobile column for this row to enable WhatsApp.
-            </p>
-          </Alert>
-        </div>
+      {!row.phoneValid && (
+        <p className="mt-2 text-xs text-stone-500">
+          {row.phone
+            ? "Mobile number needs checking — Message still available."
+            : "Mobile unavailable — Message still available."}
+        </p>
       )}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         {waUrl ? (

@@ -45,10 +45,16 @@ test.describe("Follow-up Workspace", () => {
     await expect(page.getByRole("button", { name: /today.*2/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /upcoming.*1/i })).toBeVisible();
 
-    // Row without phone: Message only, no WhatsApp action.
+    // Row without phone: Message only, no WhatsApp action, small indicator.
     const amitCard = page.getByRole("article", { name: /today amit/i });
     await expect(amitCard.getByRole("link", { name: /whatsapp/i })).toHaveCount(0);
     await expect(amitCard.getByRole("button", { name: /^message$/i })).toBeVisible();
+    await expect(amitCard).toContainText("Mobile unavailable");
+
+    // Row with invalid phone: no WhatsApp action, checking indicator.
+    const vikramCard = page.getByRole("article", { name: /bad phone vikram/i });
+    await expect(vikramCard.getByRole("link", { name: /whatsapp/i })).toHaveCount(0);
+    await expect(vikramCard).toContainText("Mobile number needs checking");
 
     // Filter to upcoming.
     await page.getByRole("button", { name: /upcoming.*1/i }).click();
