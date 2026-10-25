@@ -1,4 +1,9 @@
-import type { MessageLanguage, MessagePurpose, MessageTone } from "./message-templates";
+import {
+  isMessagePurpose,
+  type MessageLanguage,
+  type MessagePurpose,
+  type MessageTone,
+} from "./templates";
 
 const KEY = "mfd-ms-prefs-v1";
 
@@ -18,7 +23,12 @@ export const DEFAULT_PREFS: StudioPrefs = {
   includeDisclosure: false,
 };
 
-/** Loads non-sensitive UI prefs only. Never stores client names or message text. */
+/**
+ * Loads non-sensitive UI prefs only. Never stores client names,
+ * phone numbers, message text, or financial data.
+ * Resilient: malformed JSON, unknown values, and unavailable storage
+ * all fall back to defaults so the tool always works.
+ */
 export function loadPrefs(): StudioPrefs {
   if (typeof window === "undefined") return DEFAULT_PREFS;
   try {
@@ -26,13 +36,7 @@ export function loadPrefs(): StudioPrefs {
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<StudioPrefs>;
     return {
-      purpose:
-        parsed.purpose === "document-request" ||
-        parsed.purpose === "sip-confirmation" ||
-        parsed.purpose === "review-invite" ||
-        parsed.purpose === "kyc-reminder"
-          ? parsed.purpose
-          : DEFAULT_PREFS.purpose,
+      purpose: isMessagePurpose(parsed.purpose) ? parsed.purpose : DEFAULT_PREFS.purpose,
       language: parsed.language === "hinglish" ? "hinglish" : "en",
       tone: parsed.tone === "friendly" ? "friendly" : "professional",
       arn: typeof parsed.arn === "string" ? parsed.arn.slice(0, 40) : "",

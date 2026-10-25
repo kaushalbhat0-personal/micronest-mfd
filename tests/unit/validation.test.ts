@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { detectSensitiveInput, validateMessageInput } from "@/lib/message-validation";
+import { detectSensitiveInput } from "@/features/message-studio/sensitive";
+import { validateMessageInput } from "@/features/message-studio/validation";
 
 describe("validateMessageInput", () => {
   it("requires client name and documents for document requests", () => {

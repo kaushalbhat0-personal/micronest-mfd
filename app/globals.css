@@ -2,10 +2,13 @@
 
 :root {
   color-scheme: light;
+  /* Single source for the app background. Page shell and sticky
+     action bars both reference this token (see .bg-app). */
+  --app-bg: #faf9f7;
 }
 
 body {
-  background-color: #faf9f7;
+  background-color: var(--app-bg);
   color: #1c1917;
   font-family:
     ui-sans-serif,
@@ -15,6 +18,11 @@ body {
     Roboto,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* App background as a utility so components stay in sync with body. */
+.bg-app {
+  background-color: var(--app-bg);
 }
 
 :focus-visible {

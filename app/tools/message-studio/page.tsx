@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MessageStudioForm } from "@/components/message-studio-form";
+import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 
 export const metadata: Metadata = {
   title: "Message Studio — MicroNest MFD Microtools",

@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { buildWhatsAppUrl, normalizePhone } from "@/lib/whatsapp";
-import { Button } from "./ui/button";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { Alert } from "@/components/ui/alert";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface MessagePreviewProps {
   message: string;
@@ -54,11 +56,7 @@ export function MessagePreview({
       <h2 className="text-sm font-semibold text-stone-900">Preview</h2>
 
       {blocked && (
-        <div
-          role="alert"
-          className="rounded-lg border border-amber-500 bg-amber-50 p-3 text-sm text-amber-900"
-        >
-          <p className="font-semibold">Check wording before sending</p>
+        <Alert variant="warning" title="Check wording before sending">
           <ul className="mt-1 list-disc pl-5">
             {guardIssues.map((issue) => (
               <li key={issue}>{issue}</li>
@@ -68,7 +66,7 @@ export function MessagePreview({
             Copying and WhatsApp handoff are paused until this wording is edited. This is a basic
             guardrail only, not a compliance certification.
           </p>
-        </div>
+        </Alert>
       )}
 
       <output
@@ -101,7 +99,7 @@ export function MessagePreview({
         )}
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-2 bg-[#faf9f7] py-2 sm:flex-row">
+      <div className="bg-app sticky bottom-0 flex flex-col gap-2 py-2 sm:flex-row">
         <Button onClick={handleCopy} disabled={blocked} className="sm:flex-1" aria-live="polite">
           {copied ? "Copied ✓" : "Copy message"}
         </Button>
@@ -110,7 +108,7 @@ export function MessagePreview({
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition-colors hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 sm:flex-1"
+            className={cn(buttonClasses("secondary"), "sm:flex-1")}
           >
             Open WhatsApp
           </a>
@@ -130,9 +128,6 @@ export function MessagePreview({
           {copyError}
         </p>
       )}
-      <p className="sr-only" aria-live="polite">
-        {normalizePhone(phone).ok ? "" : "Phone number issue."}
-      </p>
     </section>
   );
 }

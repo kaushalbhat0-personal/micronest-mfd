@@ -38,6 +38,8 @@ const PATTERNS: Array<{ id: string; label: string; pattern: RegExp }> = [
 /**
  * Scans a final message for obviously inappropriate promise-type wording.
  * This is a lightweight guardrail only — it does NOT certify SEBI/AMFI compliance.
+ * Patterns are intentionally narrow: when in doubt we leave wording alone and
+ * let the MFD judge, rather than blocking legitimate messages.
  */
 export function scanMessage(text: string): GuardMatch[] {
   const hits: GuardMatch[] = [];

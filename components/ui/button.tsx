@@ -14,18 +14,16 @@ const VARIANTS: Record<Variant, string> = {
   ghost: "bg-transparent text-emerald-900 hover:bg-emerald-50 focus-visible:ring-emerald-900",
 };
 
-export function Button({ variant = "primary", className, type = "button", ...rest }: ButtonProps) {
-  return (
-    <button
-      type={type}
-      className={cn(
-        "inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2 text-sm font-medium",
-        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        VARIANTS[variant],
-        className,
-      )}
-      {...rest}
-    />
+export function buttonClasses(variant: Variant = "primary", className?: string): string {
+  return cn(
+    "inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2 text-sm font-medium",
+    "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+    VARIANTS[variant],
+    className,
   );
+}
+
+export function Button({ variant = "primary", className, type = "button", ...rest }: ButtonProps) {
+  return <button type={type} className={buttonClasses(variant, className)} {...rest} />;
 }

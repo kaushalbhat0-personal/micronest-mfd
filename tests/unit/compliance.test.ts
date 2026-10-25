@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasGuardIssue, scanMessage } from "@/lib/compliance";
+import { hasGuardIssue, scanMessage } from "@/features/message-studio/compliance";
 
 describe("scanMessage", () => {
   it.each([
