@@ -4,7 +4,13 @@ import { sampleCsvText, uploadCsv, writeCsv } from "./helpers/csv-fixtures";
 import { radarCsvText, uploadRadarCsv, writeRadarCsv } from "./helpers/radar-fixtures";
 
 test.describe("Accessibility", () => {
-  for (const path of ["/", "/tools/message-studio", "/tools/followups", "/tools/client-radar"]) {
+  for (const path of [
+    "/",
+    "/tools/message-studio",
+    "/tools/followups",
+    "/tools/client-radar",
+    "/login",
+  ]) {
     test(`0 serious/critical violations on ${path}`, async ({ page }) => {
       await page.goto(path);
       const results = await new AxeBuilder({ page }).analyze();

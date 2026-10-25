@@ -26,12 +26,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               MicroNest <span className="font-normal text-stone-500">· MFD Microtools</span>
             </Link>
-            <nav aria-label="Primary">
+            <nav aria-label="Primary" className="flex items-center gap-1">
               <Link
                 href="/tools/message-studio"
                 className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
               >
                 Message Studio
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Sign in
               </Link>
             </nav>
           </div>
