@@ -64,7 +64,7 @@ test.describe("Client management", () => {
     await page.goto("/workspace/clients");
     await expect(page.getByText(/no clients yet/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Crud Arjun");
     await page.getByLabel(/mobile/i).fill("9876543210");
     await page.getByLabel("Investment type").selectOption("SIP");
@@ -80,7 +80,7 @@ test.describe("Client management", () => {
     await page.reload();
     await expect(page.getByRole("link", { name: /crud arjun/i })).toBeVisible();
 
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Zoya Khan");
     await page.getByRole("button", { name: "Add client", exact: true }).click();
     await expect(page.getByRole("link", { name: /zoya khan/i })).toBeVisible();
@@ -96,7 +96,7 @@ test.describe("Client management", () => {
 
   test("add validation rejects bad input without persisting", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByRole("button", { name: "Add client", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText(/client name is missing/i);
 
@@ -111,7 +111,7 @@ test.describe("Client management", () => {
 
   test("edit persists across reload", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Edit Meera");
     await page.getByRole("button", { name: "Add client", exact: true }).click();
     await page.getByRole("link", { name: /edit meera/i }).click();
@@ -132,7 +132,7 @@ test.describe("Client management", () => {
 
   test("delete requires confirmation and persists", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Delete Kabir");
     await page.getByRole("button", { name: "Add client", exact: true }).click();
     await page.getByRole("link", { name: /delete kabir/i }).click();
@@ -154,7 +154,7 @@ test.describe("Client management", () => {
 
   test("privacy: no PII in URL or storage, no service-role exposure", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Private Mohan");
     await page.getByLabel(/mobile/i).fill("9812345678");
     await page.getByRole("button", { name: "Add client", exact: true }).click();

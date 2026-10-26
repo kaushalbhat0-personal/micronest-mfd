@@ -6,8 +6,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Field, TextInput } from "@/components/ui/controls";
-import { SearchIcon } from "@/components/ui/icons";
+import {
+  NewClientIcon,
+  PhoneIcon,
+  PlusIcon,
+  RecentIcon,
+  SearchIcon,
+  UsersIcon,
+} from "@/components/ui/icons";
 import { SignalBadge, type SignalTone } from "@/components/ui/signal-badge";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
@@ -39,6 +47,7 @@ function secondaryLine(record: ClientRecord): string {
 export interface ClientSignalPill {
   label: string;
   tone: SignalTone;
+  icon: React.ReactNode;
 }
 
 /**
@@ -52,13 +61,13 @@ export function signalPillForRecord(
   record: Pick<ClientRecord, "signals">,
 ): ClientSignalPill | null {
   if (record.signals.includes("recent-investor")) {
-    return { label: "Recent", tone: "emerald" };
+    return { label: "Recent", tone: "emerald", icon: <RecentIcon /> };
   }
   if (record.signals.includes("new-client")) {
-    return { label: "New", tone: "emerald" };
+    return { label: "New", tone: "emerald", icon: <NewClientIcon /> };
   }
   if (record.signals.includes("reconnect-due")) {
-    return { label: "Reconnect", tone: "amber" };
+    return { label: "Reconnect", tone: "amber", icon: <PhoneIcon /> };
   }
   return null;
 }
@@ -184,7 +193,8 @@ export function ClientsWorkspace({
           }}
           className="sm:w-auto"
         >
-          {adding ? "Close" : "+ Add client"}
+          <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+          {adding ? "Close" : "Add client"}
         </Button>
       </div>
 
@@ -200,21 +210,23 @@ export function ClientsWorkspace({
       )}
 
       {records.length === 0 ? (
-        <Card>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-stone-900">No clients yet.</p>
-            <p className="text-sm leading-relaxed text-stone-600">
-              Add your first client above. Bulk setup from your existing financial software arrives
-              with CSV import in a later phase.
-            </p>
-          </div>
-        </Card>
+        <EmptyState
+          icon={<UsersIcon />}
+          title="Your client list starts here."
+          hint="Add your first client above. Bulk setup from your existing financial software arrives with CSV import in a later phase."
+        />
       ) : visible.length === 0 ? (
-        <Card>
-          <p className="text-sm text-stone-600">No clients found.</p>
-        </Card>
+        <EmptyState
+          icon={<SearchIcon />}
+          title="No clients found."
+          hint="Try searching a different name."
+        />
       ) : (
-        <div className="flex flex-col gap-2.5" aria-live="polite" aria-label="Client list">
+        <div
+          className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2"
+          aria-live="polite"
+          aria-label="Client list"
+        >
           {visible.map((record) => {
             const pill = signalPillForRecord(record);
             return (
@@ -232,7 +244,12 @@ export function ClientsWorkspace({
                     {secondaryLine(record)}
                   </span>
                 </span>
-                {pill && <SignalBadge tone={pill.tone}>{pill.label}</SignalBadge>}
+                {pill && (
+                  <SignalBadge tone={pill.tone}>
+                    {pill.icon}
+                    {pill.label}
+                  </SignalBadge>
+                )}
                 <span aria-hidden="true" className="shrink-0 text-stone-500">
                   →
                 </span>
