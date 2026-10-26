@@ -18,11 +18,24 @@ test.describe("Workspace shell", () => {
     );
   });
 
-  test("home presents the workspace as the product, not three tools", async ({ page }) => {
+  test("home presents the relationship workflow, not three tools", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /know who to call/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /from first conversation to long-term/i }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: /^get started$/i }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /open message studio/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /explore messages/i }).first()).toBeVisible();
+    // Lifecycle stages carry the positioning: reach out → book → attention → follow-up.
+    await expect(
+      page.getByRole("heading", { name: "Start the conversation", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /keep your entire client book in one place/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /know who needs your attention/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /never lose the next step/i })).toBeVisible();
     // Retired standalone products are no longer advertised.
     await expect(page.getByRole("heading", { name: /^client radar$/i })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /^follow-up workspace$/i })).toHaveCount(0);

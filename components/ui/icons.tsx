@@ -200,6 +200,16 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+export function TargetIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </Base>
+  );
+}
+
 export function UploadIcon(props: IconProps) {
   return (
     <Base {...props}>
