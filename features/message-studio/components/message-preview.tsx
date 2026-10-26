@@ -109,7 +109,7 @@ export function MessagePreview({
 
       <output
         aria-live="polite"
-        className="today-accent-reconnect whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-900 sm:text-[15px]"
+        className="today-accent-reconnect whitespace-pre-wrap rounded-2xl border border-stone-200 bg-white p-4 text-sm leading-relaxed text-stone-900 shadow-sm sm:text-[15px]"
       >
         {message}
       </output>

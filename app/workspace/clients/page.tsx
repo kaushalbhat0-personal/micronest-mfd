@@ -32,7 +32,7 @@ export default function ClientsPage() {
             Clients
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base lg:text-lg">
-            Everyone you look after — search, open a relationship, and stay in touch.
+            Your client relationship list — everyone you look after, one search away.
           </p>
         </div>
       </section>

@@ -7,7 +7,14 @@ import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
-import { CheckIcon, EditIcon, MessageIcon, PhoneIcon, TrashIcon } from "@/components/ui/icons";
+import {
+  CheckIcon,
+  EditIcon,
+  FileTextIcon,
+  MessageIcon,
+  PhoneIcon,
+  TrashIcon,
+} from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -201,22 +208,27 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:gap-6">
       <Card padding="compact" className="lg:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
-          <ClientAvatar name={record.name} className="h-14 w-14 text-lg lg:h-16 lg:w-16" />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <ClientAvatar name={record.name} className="h-16 w-16 text-xl lg:h-20 lg:w-20" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900 lg:text-2xl">
               {record.name}
             </h2>
-            <p className="tnum text-sm text-stone-500">{identityMeta(record)}</p>
+            <p className="tnum text-sm text-stone-600">{identityMeta(record)}</p>
+            <p className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+                {record.investmentType}
+              </span>
+              {record.isNewClient && (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
+                  New client
+                </span>
+              )}
+            </p>
           </div>
-          {record.isNewClient && (
-            <span className="shrink-0 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 sm:self-center">
-              New
-            </span>
-          )}
         </div>
 
         {!record.phoneValid && (
-          <p className="mt-3 text-xs text-stone-500">
+          <p className="mt-3 text-xs text-stone-600">
             {record.phone
               ? "Phone number needs checking — Call and WhatsApp are unavailable."
               : "No mobile number — Message is still available."}
@@ -273,7 +285,10 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
 
           <Card className="order-4 lg:order-none lg:p-6">
             <div className="flex flex-col gap-3">
-              <h3 className="eyebrow">Details</h3>
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <FileTextIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Details
+              </h3>
               <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Mobile</dt>
@@ -303,7 +318,10 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
         <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4 lg:sticky lg:top-20">
           <Card padding="compact" className="order-2 lg:order-none lg:p-5">
             <div className="flex flex-col gap-2.5">
-              <h3 className="eyebrow">Quick actions</h3>
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <PhoneIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Quick actions
+              </h3>
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
                 {callUrl ? (
                   <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}>
@@ -376,7 +394,10 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
 
           <Card padding="compact" className="order-5 lg:order-none lg:p-5">
             <div className="flex flex-col gap-2">
-              <h3 className="eyebrow">Maintain</h3>
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <EditIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Maintain
+              </h3>
               {!editing && !confirmingDelete && (
                 <div className="flex gap-2">
                   <Button

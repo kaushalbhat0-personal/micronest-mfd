@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   ArrowRightIcon,
+  CalendarIcon,
   CheckIcon,
+  ClockIcon,
   FileTextIcon,
   MessageIcon,
   PhoneIcon,
@@ -72,8 +74,8 @@ function SignedOutCtas() {
         Get started
         <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
       </Link>
-      <Link href="/login" className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
-        Sign in
+      <Link href="#how" className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
+        See how it works
       </Link>
     </div>
   );
@@ -103,9 +105,9 @@ async function PrimaryCtas() {
           Open workspace
           <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
         </Link>
-        <p className="text-xs leading-relaxed text-stone-600 sm:self-center">
-          You&apos;re signed in — jump back in where you left off.
-        </p>
+        <Link href="#how" className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
+          See how it works
+        </Link>
       </div>
     );
   }
@@ -113,31 +115,40 @@ async function PrimaryCtas() {
 }
 
 /**
- * Static, honest product preview: the same primitives as the real Today
- * cards (avatar, badges, reason lines) composed as a non-interactive
- * demonstration. No fake metrics, no fake controls.
+ * Static product preview of the Today workspace: attention count, client
+ * cards with signals, call/WhatsApp actions, and follow-up context.
+ * Clearly demo presentation data — never workspace data.
  */
 function ProductPreview() {
   return (
     <section aria-label="Product preview: the Today workspace">
-      <Card padding="compact">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-0.5">
-            <p className="eyebrow flex items-center gap-1.5">
-              <SunIcon aria-hidden="true" className="h-3.5 w-3.5" />
-              Today · Example preview
-            </p>
-            <p className="text-xl font-semibold tracking-tight text-stone-900">Good morning</p>
-            <p className="tnum text-sm text-stone-600">
-              <strong className="font-semibold text-stone-900">3</strong> people need you today.
-            </p>
+      <Card padding="compact" className="lg:p-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <p className="eyebrow flex items-center gap-1.5">
+                <SunIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Today · Example preview
+              </p>
+              <p className="text-xl font-semibold tracking-tight text-stone-900 lg:text-2xl">
+                Good morning
+              </p>
+              <p className="tnum text-sm text-stone-600">
+                <strong className="font-semibold text-stone-900">4</strong> people need you today.
+              </p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+              <ClockIcon aria-hidden="true" className="h-3.5 w-3.5" />2 due today
+            </span>
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
               <ClientAvatar name="Rajesh Sharma" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Rajesh Sharma</span>
-                <span className="truncate text-xs text-stone-500">Reconnect — 62 days silent</span>
+                <span className="truncate text-xs text-stone-600">
+                  SIP · Reconnect — 62 days silent
+                </span>
               </span>
               <SignalBadge tone="amber">Reconnect</SignalBadge>
             </div>
@@ -145,14 +156,24 @@ function ProductPreview() {
               <ClientAvatar name="Priya Mehta" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Priya Mehta</span>
-                <span className="truncate text-xs text-stone-500">Follow-up due today</span>
+                <span className="truncate text-xs text-stone-600">Follow-up due today</span>
               </span>
               <SignalBadge tone="amber">Due today</SignalBadge>
             </div>
+            <p className="flex items-center gap-1.5 px-1 text-xs text-stone-600">
+              <CalendarIcon aria-hidden="true" className="h-3.5 w-3.5" />+ 1 follow-up due tomorrow
+              · + 1 new client to welcome
+            </p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-900 px-4 py-3 text-sm font-medium text-white">
-            <PhoneIcon aria-hidden="true" className="h-4 w-4" />
-            Call
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-emerald-900 px-4 text-sm font-medium text-white">
+              <PhoneIcon aria-hidden="true" className="h-4 w-4" />
+              Call
+            </div>
+            <div className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-emerald-900 bg-white px-4 text-sm font-medium text-emerald-900">
+              <MessageIcon aria-hidden="true" className="h-4 w-4" />
+              WhatsApp
+            </div>
           </div>
         </div>
       </Card>
@@ -181,8 +202,9 @@ export default function Home() {
             Know who to call today.
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-stone-600 lg:text-lg">
-            A simple relationship workspace that helps you see which clients need attention, why
-            they matter, and what to do next.
+            <strong className="font-semibold text-stone-900">Know why. Know what to say.</strong> A
+            simple relationship workspace that helps you see which clients need attention, why they
+            matter, and what to do next.
           </p>
           <Suspense fallback={<SignedOutCtas />}>
             <PrimaryCtas />
@@ -194,7 +216,7 @@ export default function Home() {
         <ProductPreview />
       </section>
 
-      <section aria-labelledby="how-heading">
+      <section aria-labelledby="how-heading" id="how" className="scroll-mt-24">
         <div className="flex flex-col gap-3">
           <h2 id="how-heading" className="eyebrow">
             How it works

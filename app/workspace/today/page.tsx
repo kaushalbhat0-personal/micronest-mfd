@@ -103,6 +103,10 @@ async function TodayBody({ searchParams }: TodayPageProps) {
       </Card>
     );
   }
+  // Real display name only — never invented. Falls back to no personalization.
+  const fullName =
+    typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : "";
+  const userName = fullName ? fullName.split(/\s+/)[0] : undefined;
   return (
     <TodayWorkspace
       initialClients={clients}
@@ -110,6 +114,7 @@ async function TodayBody({ searchParams }: TodayPageProps) {
       initialFilter={initialFilter}
       configured
       signedIn
+      userName={userName}
     />
   );
 }

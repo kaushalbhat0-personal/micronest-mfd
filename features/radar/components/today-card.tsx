@@ -9,7 +9,9 @@ import { SignalBadge, type SignalTone } from "@/components/ui/signal-badge";
 import {
   CheckIcon,
   ChevronDownIcon,
+  ClockIcon,
   DotsIcon,
+  FileTextIcon,
   MessageIcon,
   PhoneIcon,
   WhyIcon,
@@ -90,12 +92,20 @@ export function todaySignalBadge(kind: TodayWhy["kind"]): { label: string; tone:
   }
 }
 
-function secondaryLine(item: TodayItem): string {
+function investmentLine(item: TodayItem): string {
+  const { record } = item;
+  if (record.lastInvested) {
+    return `${record.investmentType} · Invested ${formatDisplayDate(record.lastInvested)}`;
+  }
+  return `${record.investmentType} · Never invested`;
+}
+
+function contactLine(item: TodayItem): string {
   const { record } = item;
   if (record.lastContacted) {
-    return `${record.investmentType} · last contact ${formatDisplayDate(record.lastContacted)}`;
+    return `Last contact ${formatDisplayDate(record.lastContacted)}`;
   }
-  return `${record.investmentType} · never contacted`;
+  return "Never contacted";
 }
 
 interface TodayCardProps {
@@ -167,6 +177,104 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
   const showCall = callUrl && primary !== "call";
   const showWhatsApp = waUrl && primary !== "whatsapp";
 
+  const markContactedNode = (
+    <button
+      type="button"
+      onClick={() => onContacted(record.id)}
+      disabled={pending}
+      className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+    >
+      <CheckIcon />
+      {pending ? "Saving…" : "Mark contacted"}
+    </button>
+  );
+
+  const overflowNode = (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        aria-expanded={menuOpen}
+        aria-label={`More actions for ${record.name}`}
+        onClick={() => setMenuOpen((v) => !v)}
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+      >
+        <DotsIcon />
+      </button>
+      {menuOpen && (
+        <div
+          role="menu"
+          aria-label={`More actions for ${record.name}`}
+          className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-md"
+        >
+          {showCall && (
+            <a
+              role="menuitem"
+              href={callUrl}
+              className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+            >
+              <PhoneIcon /> Call
+            </a>
+          )}
+          {showWhatsApp && (
+            <a
+              role="menuitem"
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+            >
+              <MessageIcon /> WhatsApp
+            </a>
+          )}
+          <Link
+            role="menuitem"
+            href={detailHref}
+            className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+          >
+            <ChevronDownIcon className="rotate-[-90deg]" /> View client
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+
+  // Desktop exposes secondary actions inline; mobile keeps one obvious
+  // action plus the overflow menu. Same links, responsive arrangement.
+  const desktopActionsNode = (
+    <div className="flex items-center gap-1.5">
+      {showCall && (
+        <a
+          href={callUrl}
+          aria-label={`Call ${record.name}`}
+          title="Call"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-stone-200 bg-white text-emerald-900 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+        >
+          <PhoneIcon />
+        </a>
+      )}
+      {showWhatsApp && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`WhatsApp ${record.name}`}
+          title="WhatsApp"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-stone-200 bg-white text-emerald-900 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+        >
+          <MessageIcon />
+        </a>
+      )}
+      <Link
+        href={detailHref}
+        aria-label={`View ${record.name}`}
+        title="View client"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+      >
+        <ChevronDownIcon className="rotate-[-90deg]" />
+      </Link>
+    </div>
+  );
+
   return (
     <article
       aria-label={`Contact ${record.name}`}
@@ -205,7 +313,14 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
             <h3 className="truncate text-base font-semibold text-stone-900 lg:text-lg">
               {record.name}
             </h3>
-            <p className="tnum text-xs text-stone-500 lg:text-sm">{secondaryLine(item)}</p>
+            <p className="tnum flex items-center gap-1.5 text-xs text-stone-600 lg:text-sm">
+              <FileTextIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{investmentLine(item)}</span>
+            </p>
+            <p className="tnum flex items-center gap-1.5 text-xs text-stone-600 lg:text-sm">
+              <ClockIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{contactLine(item)}</span>
+            </p>
             {why && <p className="mt-1 text-sm leading-relaxed text-stone-700">{why.detail}</p>}
 
             {!record.phoneValid && (
@@ -217,65 +332,21 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
             )}
           </div>
         </div>
-        <div className="flex min-w-0 flex-col gap-2 lg:w-56 lg:shrink-0">
+        {/* Mobile / tablet: one obvious action + mark contacted + overflow. */}
+        <div className="flex min-w-0 flex-col gap-2 lg:hidden lg:w-56 lg:shrink-0">
           <div className="w-full">{primaryNode}</div>
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => onContacted(record.id)}
-              disabled={pending}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-            >
-              <CheckIcon />
-              {pending ? "Saving…" : "Mark contacted"}
-            </button>
-            <div className="relative" ref={menuRef}>
-              <button
-                type="button"
-                aria-expanded={menuOpen}
-                aria-label={`More actions for ${record.name}`}
-                onClick={() => setMenuOpen((v) => !v)}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-              >
-                <DotsIcon />
-              </button>
-              {menuOpen && (
-                <div
-                  role="menu"
-                  aria-label={`More actions for ${record.name}`}
-                  className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-md"
-                >
-                  {showCall && (
-                    <a
-                      role="menuitem"
-                      href={callUrl}
-                      className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
-                    >
-                      <PhoneIcon /> Call
-                    </a>
-                  )}
-                  {showWhatsApp && (
-                    <a
-                      role="menuitem"
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
-                    >
-                      <MessageIcon /> WhatsApp
-                    </a>
-                  )}
-                  <Link
-                    role="menuitem"
-                    href={detailHref}
-                    className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
-                  >
-                    <ChevronDownIcon className="rotate-[-90deg]" /> View client
-                  </Link>
-                </div>
-              )}
-            </div>
+            {markContactedNode}
+            {overflowNode}
           </div>
+        </div>
+        {/* Desktop: primary action + inline secondary actions + mark contacted. */}
+        <div className="hidden min-w-0 flex-col gap-2 lg:flex lg:w-60 lg:shrink-0">
+          <div className="w-full">{primaryNode}</div>
+          {desktopActionsNode}
+          <span className="inline-flex min-h-[44px] items-center self-start">
+            {markContactedNode}
+          </span>
         </div>
       </div>
 

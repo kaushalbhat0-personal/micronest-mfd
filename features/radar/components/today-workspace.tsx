@@ -16,9 +16,11 @@ import {
   CalendarIcon,
   CheckIcon,
   ClockIcon,
+  NewClientIcon,
   SunIcon,
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/ui/stat-card";
 import { todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -61,6 +63,8 @@ interface TodayWorkspaceProps {
   initialFilter: TodayFilter;
   configured: boolean;
   signedIn: boolean;
+  /** Authenticated user's first name for the greeting; omitted when unknown. */
+  userName?: string;
 }
 
 /**
@@ -75,6 +79,7 @@ export function TodayWorkspace({
   initialFilter,
   configured,
   signedIn,
+  userName,
 }: TodayWorkspaceProps) {
   const [todayYMD, setTodayYMD] = React.useState(() => todayLocalYMD());
   const [records, setRecords] = React.useState(() =>
@@ -258,7 +263,7 @@ export function TodayWorkspace({
             id="today-heading"
             className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl"
           >
-            {greeting}
+            {userName ? `${greeting}, ${userName}` : greeting}
           </h1>
           <p className="tnum text-base leading-relaxed text-stone-600 lg:text-lg">
             {counts.attention === 0 ? (
@@ -280,39 +285,41 @@ export function TodayWorkspace({
 
       <section aria-label="Attention summary">
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:gap-4">
-          <AttentionStat
+          <StatCard
             icon={<AlertIcon />}
-            label="Overdue"
-            value={counts.overdue}
+            label="Attention"
+            value={counts.attention}
+            pressed={filter === "attention"}
             iconTone="bg-red-50 text-red-800"
             valueTone="text-red-800"
-            onSelect={() => setFilter("followups")}
+            onSelect={() => setFilter("attention")}
           />
-          <AttentionStat
-            icon={<ClockIcon />}
-            label="Due today"
-            value={counts.dueToday}
-            iconTone="bg-amber-100 text-amber-800"
-            valueTone="text-amber-800"
-            onSelect={() => setFilter("followups")}
-          />
-          <AttentionStat
-            icon={<CalendarIcon />}
-            label="Reconnect"
-            value={counts.reconnect}
-            pressed={filter === "reconnect"}
-            iconTone="bg-emerald-50 text-emerald-900"
-            valueTone="text-emerald-900"
-            onSelect={() => setFilter("reconnect")}
-          />
-          <AttentionStat
-            icon={<SunIcon />}
+          <StatCard
+            icon={<NewClientIcon />}
             label="New"
             value={counts.fresh}
             pressed={filter === "new"}
             iconTone="bg-emerald-50 text-emerald-900"
             valueTone="text-emerald-900"
             onSelect={() => setFilter("new")}
+          />
+          <StatCard
+            icon={<ClockIcon />}
+            label="Follow-ups"
+            value={counts.followups}
+            pressed={filter === "followups"}
+            iconTone="bg-amber-100 text-amber-800"
+            valueTone="text-amber-800"
+            onSelect={() => setFilter("followups")}
+          />
+          <StatCard
+            icon={<CalendarIcon />}
+            label="Upcoming"
+            value={upcoming.length}
+            iconTone="bg-stone-200 text-stone-700"
+            valueTone="text-stone-900"
+            onSelect={() => setFilter("followups")}
+            ariaLabel={`Upcoming: ${upcoming.length}. Show follow-ups.`}
           />
         </div>
       </section>
@@ -375,24 +382,29 @@ export function TodayWorkspace({
         <div className="flex min-w-0 flex-col gap-4">
           {upcoming.length > 0 && (
             <section aria-labelledby="upcoming-heading">
-              <Card>
-                <div className="flex flex-col gap-2">
-                  <h2 id="upcoming-heading" className="eyebrow flex items-center gap-1.5">
-                    <ClockIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                    Coming up
-                  </h2>
-                  <ul className="flex flex-col gap-2">
+              <Card className="lg:p-5">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 id="upcoming-heading" className="eyebrow flex items-center gap-1.5">
+                      <CalendarIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                      Coming up
+                    </h2>
+                    <span className="tnum rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">
+                      {upcoming.length}
+                    </span>
+                  </div>
+                  <ul className="flex flex-col gap-1">
                     {upcoming.map((u) => (
                       <li key={`${u.clientId}-${u.dueDate}-${u.reason}`}>
                         <Link
                           href={`/workspace/clients/${u.clientId}`}
-                          className="group flex min-h-[44px] items-center justify-between gap-3 rounded-lg px-1 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                          className="group flex min-h-[44px] items-center justify-between gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                         >
                           <span className="flex min-w-0 flex-col">
                             <span className="truncate text-sm font-medium text-stone-900 group-hover:underline">
                               {u.clientName}
                             </span>
-                            <span className="truncate text-xs text-stone-500">{u.reason}</span>
+                            <span className="truncate text-xs text-stone-600">{u.reason}</span>
                           </span>
                           <span className="flex shrink-0 items-center gap-1.5">
                             <span className="tnum text-xs font-medium text-stone-600">
@@ -413,6 +425,7 @@ export function TodayWorkspace({
                     className="inline-flex min-h-[44px] items-center self-start rounded-lg px-1 text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                   >
                     View all follow-ups
+                    <ArrowRightIcon aria-hidden="true" className="ml-1 h-4 w-4" />
                   </button>
                 </div>
               </Card>
@@ -457,64 +470,6 @@ export function TodayWorkspace({
         </div>
       </div>
     </div>
-  );
-}
-
-function AttentionStat({
-  icon,
-  label,
-  value,
-  pressed,
-  iconTone,
-  valueTone,
-  onSelect,
-  className,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  /**
-   * Toggle state, when the stat mirrors a filter 1:1. Overdue and Due
-   * today both shortcut to the shared `followups` filter, so they carry
-   * no pressed state — otherwise two controls would announce the same
-   * selection. The selected filter is owned by the chip rail below.
-   */
-  pressed?: boolean;
-  iconTone: string;
-  valueTone: string;
-  onSelect: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={pressed}
-      className={cn(
-        "flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-xl border border-stone-200 bg-white px-2 py-3 shadow-sm lg:min-h-[112px] lg:flex-row lg:gap-3 lg:px-5 lg:py-4 lg:text-left",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900",
-        pressed
-          ? "border-emerald-900 ring-1 ring-inset ring-emerald-900"
-          : "transition-shadow hover:shadow-md",
-        className,
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full lg:h-10 lg:w-10",
-          iconTone,
-        )}
-      >
-        {icon}
-      </span>
-      <span className="flex flex-col items-center lg:items-start">
-        <span className={cn("tnum text-2xl font-semibold tracking-tight lg:text-3xl", valueTone)}>
-          {value}
-        </span>
-        <span className="text-xs text-stone-500 lg:text-sm">{label}</span>
-      </span>
-    </button>
   );
 }
 

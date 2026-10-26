@@ -5,6 +5,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, TextInput } from "@/components/ui/controls";
+import { MessageIcon, SendIcon } from "@/components/ui/icons";
 import { normalizePhone } from "@/lib/whatsapp";
 import { scanMessage } from "../compliance";
 import { clearPrefs, loadPrefs, savePrefs, type StudioMode } from "../prefs";
@@ -119,6 +120,10 @@ export function MessageStudioForm({
         <>
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-6">
             <Card className="lg:p-6">
+              <p className="eyebrow mb-4 flex items-center gap-1.5">
+                <MessageIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Configure
+              </p>
               <div className="flex flex-col gap-4">
                 <PurposeSelector
                   value={purpose}
@@ -212,6 +217,10 @@ export function MessageStudioForm({
             <div className="lg:sticky lg:top-20">
               {generated ? (
                 <Card className="lg:p-6">
+                  <p className="eyebrow mb-3 flex items-center gap-1.5">
+                    <SendIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                    Live preview
+                  </p>
                   <MessagePreview
                     message={generated}
                     guardIssues={guardIssues}
