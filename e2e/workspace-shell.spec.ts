@@ -20,7 +20,7 @@ test.describe("Workspace shell", () => {
 
   test("home presents the workspace as the product, not three tools", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /stay in touch/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /sign in to your workspace/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /open message studio/i })).toBeVisible();
     // Retired standalone products are no longer advertised.

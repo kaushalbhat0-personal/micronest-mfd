@@ -35,6 +35,18 @@ async function LoginCard({
   return (
     <Card>
       <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-900 text-lg font-semibold text-white"
+          >
+            M
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <p className="text-base font-semibold text-stone-900">MicroNest</p>
+            <p className="text-xs text-stone-500">MFD Relationship Workspace</p>
+          </div>
+        </div>
         <GoogleSignInButton next={next} disabled={!configured} />
         {errorCopy && (
           <p role="alert" className="text-xs font-medium text-red-700">
@@ -66,10 +78,13 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           ← Home
         </Link>
       </nav>
-      <section className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Sign in</h1>
+      <section className="flex flex-col gap-1.5">
+        <p className="eyebrow">Welcome</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
+          Sign in to your workspace
+        </h1>
         <p className="text-sm leading-relaxed text-stone-600">
-          Sign in to open your MFD Relationship Workspace on your laptop and phone.
+          Access your clients, follow-ups and daily priorities on your laptop and phone.
         </p>
       </section>
       <Suspense

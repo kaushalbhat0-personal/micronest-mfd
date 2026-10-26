@@ -6,7 +6,7 @@ test.describe("Message Studio smoke", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /stay in touch/i })).toBeVisible();
     await page.getByRole("link", { name: /open message studio/i }).click();
     await expect(page).toHaveURL(/\/tools\/message-studio/);
 
