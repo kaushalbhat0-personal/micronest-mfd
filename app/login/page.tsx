@@ -57,7 +57,7 @@ async function LoginCard({
 
 export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5">
       <nav aria-label="Breadcrumb">
         <Link
           href="/"

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 // returning visitors. Page shell and metadata here stay server-rendered.
 export default function MessageStudioPage() {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       <nav aria-label="Breadcrumb">
         <Link
           href="/"
