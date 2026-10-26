@@ -137,7 +137,7 @@ export function CustomMessageSection() {
         </Card>
       )}
 
-      <p className="text-xs leading-relaxed text-stone-500">
+      <p className="text-xs leading-relaxed text-stone-600">
         Privacy: your message never leaves this device until you choose Copy or WhatsApp. Nothing is
         saved — reloading clears everything. Do not enter PAN, Aadhaar, bank, OTP or password
         details. The wording check is basic and does not certify regulatory compliance.

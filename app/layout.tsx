@@ -19,14 +19,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <header className="border-b border-stone-200 bg-white">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 py-3">
             <Link
               href="/"
               className="inline-flex min-h-[44px] items-center text-base font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
             >
               MicroNest <span className="font-normal text-stone-500">· MFD Workspace</span>
             </Link>
-            <nav aria-label="Primary" className="flex items-center gap-1">
+            <nav aria-label="Primary" className="flex flex-wrap items-center justify-end gap-1">
               <Link
                 href="/workspace/today"
                 className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"

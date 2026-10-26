@@ -4,7 +4,7 @@
   color-scheme: light;
   /* Single source for the app background. Page shell and sticky
      action bars both reference this token (see .bg-app). */
-  --app-bg: #faf9f7;
+  --app-bg: #faf7f2;
 }
 
 body {
@@ -25,9 +25,65 @@ body {
   background-color: var(--app-bg);
 }
 
+/* Tabular numerals for counts, stats, and dates. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quiet section eyebrow: metadata hierarchy, never a heading substitute.
+   stone-600 keeps 12px semibold text at AA on the warm app background. */
+.eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #57534e;
+}
+
+/* Horizontal chip rails: scroll without a page-level scrollbar. */
+.scroll-x {
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
 :focus-visible {
   outline: 2px solid #064e3b;
+  border-radius: 4px;
   outline-offset: 2px;
+}
+
+/* Motion foundation (RCCF-MFD-29 Phase A): enter + skeleton only.
+   Pressed states use Tailwind active: utilities at the call site. */
+@keyframes today-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.today-enter {
+  animation: today-enter 160ms ease-out both;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -35,5 +91,10 @@ body {
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
+  }
+  .today-enter {
+    opacity: 1;
+    transform: none;
   }
 }

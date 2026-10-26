@@ -34,7 +34,7 @@ export default function Home() {
             What is the workspace?
           </Link>
         </div>
-        <p className="text-xs leading-relaxed text-stone-500">
+        <p className="text-xs leading-relaxed text-stone-600">
           The Relationship Workspace requires sign-in — it is your persistent workspace, available
           on your laptop and phone.
         </p>

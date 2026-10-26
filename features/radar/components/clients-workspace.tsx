@@ -211,7 +211,7 @@ export function ClientsWorkspace({
       )}
 
       {records.length > 0 && (
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-stone-600">
           {visible.length} of {records.length} client{records.length === 1 ? "" : "s"} shown.
         </p>
       )}

@@ -40,13 +40,11 @@ test.describe("Workspace shell", () => {
     await expect(page.getByRole("heading", { name: /^today$/i })).toBeVisible();
   });
 
-  test("today shell has heading, filters, and an honest placeholder", async ({ page }) => {
+  test("today renders the signed-out shell with an honest empty state", async ({ page }) => {
     await page.goto("/workspace/today");
     await expect(page.getByRole("heading", { name: /^today$/i })).toBeVisible();
     await expect(page.getByText(/who should you talk to today/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: /needs attention/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /follow-ups/i })).toBeVisible();
-    await expect(page.getByText(/relationship workspace is ready/i)).toBeVisible();
+    await expect(page.getByText(/your today list lives here/i)).toBeVisible();
     // No mock clients must ever appear in the shell.
     await expect(page.locator("article")).toHaveCount(0);
   });

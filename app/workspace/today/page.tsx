@@ -2,7 +2,16 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { buttonClasses } from "@/components/ui/button";
+import { TodaySkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { listOpenFollowups } from "@/features/followups/repository";
+import type { StoredFollowup } from "@/features/followups/types";
+import { listClients, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
+import { parseTodayFilter, type TodayFilter } from "@/features/radar/today";
+import { TodayWorkspace } from "@/features/radar/components/today-workspace";
 
 export const metadata: Metadata = {
   title: "Today — MFD Relationship Workspace",
@@ -10,108 +19,97 @@ export const metadata: Metadata = {
     "Who should you talk to today? Your client relationships needing attention, in one place.",
 };
 
-const FILTERS = [
-  { id: "attention", label: "Needs attention" },
-  { id: "followups", label: "Follow-ups" },
-  { id: "recent", label: "Recent" },
-  { id: "reconnect", label: "Reconnect due" },
-  { id: "new", label: "New" },
-] as const;
-
-type FilterId = (typeof FILTERS)[number]["id"];
-
-function isFilterId(value: unknown): value is FilterId {
-  return FILTERS.some((f) => f.id === value);
-}
-
 interface TodayPageProps {
   searchParams: Promise<{ filter?: string }>;
 }
 
 /**
- * Today shell (RCCF-MFD-18 Phase A).
- * Placeholder only — the unified attention ranking arrives in a later phase.
- * No mock client records: an empty shell must never be mistaken for real data.
- * Filter state streams behind Suspense so the shell prerenders (cacheComponents).
+ * Today (RCCF-MFD-29 Phase B). Server loads the owned client list plus all
+ * open follow-ups once (RLS final); ranking, filtering, and display copy are
+ * the pure view-model in features/radar/today.ts. The legacy `?filter=`
+ * values from the retired routes still select the initial filter.
  */
 export default function TodayPage({ searchParams }: TodayPageProps) {
   return (
-    <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Today</h1>
-        <p className="text-sm leading-relaxed text-stone-600">Who should you talk to today?</p>
-      </section>
-
-      <Suspense fallback={<TodayBodyFallback />}>
-        <TodayBody searchParams={searchParams} />
-      </Suspense>
-    </div>
-  );
-}
-
-function TodayBodyFallback() {
-  return (
-    <div className="flex flex-col gap-5" aria-hidden="true">
-      <div className="flex flex-wrap gap-1.5">
-        {FILTERS.map((filter) => (
-          <span
-            key={filter.id}
-            className="inline-flex min-h-[44px] items-center rounded-full border border-stone-300 bg-white px-4 text-sm font-medium text-stone-700"
-          >
-            {filter.label}
-          </span>
-        ))}
-      </div>
-      <Card>
-        <p className="text-sm text-stone-500">Loading today…</p>
-      </Card>
-    </div>
+    <Suspense fallback={<TodaySkeleton />}>
+      <TodayBody searchParams={searchParams} />
+    </Suspense>
   );
 }
 
 async function TodayBody({ searchParams }: TodayPageProps) {
   const params = await searchParams;
-  const active: FilterId = isFilterId(params.filter) ? params.filter : "attention";
+  const initialFilter: TodayFilter = parseTodayFilter(params.filter);
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div role="group" aria-label="Filter attention" className="flex flex-wrap gap-1.5">
-        {FILTERS.map((filter) => (
-          <Link
-            key={filter.id}
-            href={
-              filter.id === "attention"
-                ? "/workspace/today"
-                : `/workspace/today?filter=${filter.id}`
-            }
-            aria-current={active === filter.id ? "true" : undefined}
-            className={cn(
-              "inline-flex min-h-[44px] items-center rounded-full border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900",
-              active === filter.id
-                ? "border-emerald-900 bg-emerald-900 text-white"
-                : "border-stone-300 bg-white text-stone-700 hover:bg-stone-50",
-            )}
-          >
-            {filter.label}
-          </Link>
-        ))}
-      </div>
+  if (!isSupabaseConfigured()) {
+    return (
+      <TodayWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        initialFilter={initialFilter}
+        configured={false}
+        signedIn={false}
+      />
+    );
+  }
+  const supabase = await createServerSupabase();
+  if (!supabase) {
+    return (
+      <TodayWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        initialFilter={initialFilter}
+        configured={false}
+        signedIn={false}
+      />
+    );
+  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    // Proxy normally bounces signed-out sessions to /login first.
+    return (
+      <TodayWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        initialFilter={initialFilter}
+        configured
+        signedIn={false}
+      />
+    );
+  }
 
+  let clients: StoredRadarClient[] = [];
+  let followups: StoredFollowup[] = [];
+  try {
+    [clients, followups] = await Promise.all([listClients(supabase), listOpenFollowups(supabase)]);
+  } catch (error) {
+    const copy =
+      error instanceof RadarStoreError || error instanceof Error
+        ? error.message
+        : "We couldn't load today's list.";
+    return (
       <Card>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-stone-900">
-            Your relationship workspace is ready.
+            We couldn&apos;t load today&apos;s list.
           </p>
-          <p className="text-sm leading-relaxed text-stone-600">
-            {active === "followups"
-              ? "Follow-ups will live here — explicit dated tasks per client, alongside automatically derived reconnect reminders."
-              : "Clients needing attention will appear here — recent investors, reconnects due, new clients, and follow-ups — with the reason for each."}
-          </p>
-          <p className="text-xs leading-relaxed text-stone-500">
-            Full attention ranking, client management, and follow-ups arrive in the next phase.
-          </p>
+          <p className="text-xs text-stone-600">{copy}</p>
+          <Link href="/workspace/today" className={cn(buttonClasses("primary"), "sm:self-start")}>
+            Try again
+          </Link>
         </div>
       </Card>
-    </div>
+    );
+  }
+  return (
+    <TodayWorkspace
+      initialClients={clients}
+      initialFollowups={followups}
+      initialFilter={initialFilter}
+      configured
+      signedIn
+    />
   );
 }
