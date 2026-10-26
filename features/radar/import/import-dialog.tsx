@@ -19,7 +19,12 @@ import { RADAR_HEADERS, type RadarHeader } from "@/features/radar/template";
 import { autoMapColumns } from "./aliases";
 import type { DuplicateIdentity } from "./duplicates";
 import { buildPreview, importableRows } from "./pipeline";
-import { buildErrorCsv, buildTemplateCsv, downloadTextFile } from "./template-csv";
+import {
+  buildErrorCsv,
+  buildTemplateCsv,
+  TEMPLATE_FILENAME,
+  downloadTextFile,
+} from "./template-csv";
 import { parseCsvSheet, parseXlsxWorkbook } from "./workbook";
 import type { ColumnMapping, ImportSheet, PreviewRow } from "./import-types";
 
@@ -262,12 +267,14 @@ export function ImportDialog({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             <h2 id="import-heading" className="text-lg font-semibold text-stone-900">
-              Import clients
+              Import your client book
             </h2>
             <p className="text-sm text-stone-600">
               {step === "receipt"
                 ? "Import complete."
-                : "Bring your existing client list from Excel or CSV."}
+                : step === "file"
+                  ? "Download the template, fill in your clients, then upload it here."
+                  : "Bring your existing client list from Excel or CSV."}
             </p>
           </div>
           <button
@@ -283,47 +290,100 @@ export function ImportDialog({
 
         {step === "file" && (
           <div className="flex flex-col gap-4">
-            <Card padding="compact" className="bg-stone-50">
-              <div className="flex flex-col gap-1.5 text-sm leading-relaxed text-stone-600">
-                <p>
-                  <strong className="font-semibold text-stone-900">Supported: CSV · XLSX.</strong>{" "}
-                  Your existing financial software remains your system of record — import only the
-                  client information you need for relationship follow-up.
+            <p className="text-sm leading-relaxed text-stone-600">
+              The easiest way is to download our template, fill in your client details, then upload
+              it here. Already have a client list? Upload your CSV or XLSX directly.
+            </p>
+            <ol className="flex list-none flex-col gap-3 p-0">
+              <li className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+                  <span
+                    aria-hidden="true"
+                    className="tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white"
+                  >
+                    1
+                  </span>
+                  Download the template
                 </p>
-                <p className="text-xs">
-                  Files stay on this device and are never uploaded or stored. Ambiguous dates like
-                  01/02/2026 read as DD/MM/YYYY.
+                <p className="text-sm leading-relaxed text-stone-600">
+                  Use our ready-made columns so your client data imports correctly. You can edit it
+                  in Excel or Google Sheets.
                 </p>
-              </div>
-            </Card>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                downloadTextFile("micronest-client-template.csv", buildTemplateCsv(), "text/csv")
-              }
-              className="self-start"
-            >
-              <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-              Download CSV template
-            </Button>
-            <Field id="import-file" label="Choose a CSV or XLSX file">
-              <input
-                ref={fileInputRef}
-                id="import-file"
-                type="file"
-                accept=".csv,.xlsx"
-                aria-describedby="import-file-hint"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFile(file);
-                  e.target.value = "";
-                }}
-                className="block w-full min-h-[44px] rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-              />
-              <p id="import-file-hint" className="mt-1 text-xs text-stone-500">
-                Up to 5 MB and 500 rows. Nothing is uploaded anywhere.
-              </p>
-            </Field>
+                <div>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")
+                    }
+                  >
+                    <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Download CSV template
+                  </Button>
+                </div>
+              </li>
+              <li className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+                  <span
+                    aria-hidden="true"
+                    className="tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white"
+                  >
+                    2
+                  </span>
+                  Fill your client data
+                </p>
+                <div className="flex flex-col gap-1 text-sm leading-relaxed text-stone-600">
+                  <p>
+                    <strong className="font-semibold text-stone-900">Required:</strong> Client Name
+                  </p>
+                  <p>
+                    <strong className="font-semibold text-stone-900">Optional:</strong> Mobile,
+                    Investment Type, Last Invested, Last Contacted, New Client, Note
+                  </p>
+                  <p className="text-xs">
+                    Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other ·
+                    Notes up to 200 characters · Blank optional fields are fine.
+                  </p>
+                </div>
+              </li>
+              <li className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+                  <span
+                    aria-hidden="true"
+                    className="tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white"
+                  >
+                    3
+                  </span>
+                  Upload your completed file
+                </p>
+                <p className="text-sm leading-relaxed text-stone-600">
+                  Upload the template you filled in, or an existing CSV/XLSX client list. Workbooks
+                  with multiple sheets let you choose one before importing.
+                </p>
+                <Field id="import-file" label="Choose a CSV or XLSX file">
+                  <input
+                    ref={fileInputRef}
+                    id="import-file"
+                    type="file"
+                    accept=".csv,.xlsx"
+                    aria-describedby="import-file-hint"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleFile(file);
+                      e.target.value = "";
+                    }}
+                    className="block w-full min-h-[44px] rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                  />
+                  <p id="import-file-hint" className="mt-1 text-xs text-stone-500">
+                    Up to 5 MB and 500 rows.
+                  </p>
+                </Field>
+              </li>
+            </ol>
+            <p className="text-xs leading-relaxed text-stone-500">
+              Your existing financial software remains your system of record — import only the
+              client information you need for relationship management. Your file stays on this
+              device while it is being prepared; it is not uploaded as a file to MicroNest.
+            </p>
             {parsing && (
               <p role="status" className="text-sm text-stone-600">
                 Reading file…

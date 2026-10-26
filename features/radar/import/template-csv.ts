@@ -6,6 +6,9 @@ export function buildTemplateCsv(): string {
   return `${[...RADAR_HEADERS].join(",")}\n`;
 }
 
+/** Download filename for the canonical blank template. */
+export const TEMPLATE_FILENAME = "micronest-mfd-client-template.csv";
+
 function escapeCsvCell(value: string): string {
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;

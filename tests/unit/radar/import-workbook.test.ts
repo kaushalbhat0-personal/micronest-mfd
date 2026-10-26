@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { parseCsvSheet, parseXlsxWorkbook } from "@/features/radar/import/workbook";
-import { buildErrorCsv, buildTemplateCsv } from "@/features/radar/import/template-csv";
+import {
+  buildErrorCsv,
+  buildTemplateCsv,
+  TEMPLATE_FILENAME,
+} from "@/features/radar/import/template-csv";
 import { RADAR_HEADERS } from "@/features/radar/template";
 
 describe("buildTemplateCsv", () => {
-  it("emits the canonical blank template", () => {
+  it("emits the exact canonical headers with no sample data", () => {
     expect(buildTemplateCsv()).toBe(`${[...RADAR_HEADERS].join(",")}\n`);
+    expect(buildTemplateCsv()).not.toMatch(/[0-9]/);
+  });
+
+  it("uses the documented template filename", () => {
+    expect(TEMPLATE_FILENAME).toBe("micronest-mfd-client-template.csv");
   });
 });
 

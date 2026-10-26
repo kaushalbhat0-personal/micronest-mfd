@@ -11,6 +11,7 @@ import { Field, TextInput } from "@/components/ui/controls";
 import {
   ArrowRightIcon,
   ClockIcon,
+  DownloadIcon,
   FileTextIcon,
   NewClientIcon,
   PhoneIcon,
@@ -35,6 +36,7 @@ import type { ClientRecord } from "../types";
 import { filterClientsByName } from "../view";
 import { ClientForm } from "./client-form";
 import { ImportDialog, ImportTriggerIcon } from "../import/import-dialog";
+import { downloadTextFile, buildTemplateCsv, TEMPLATE_FILENAME } from "../import/template-csv";
 import { identityOf } from "../import/duplicates";
 
 function storeErrorMessage(error: unknown): string {
@@ -335,13 +337,26 @@ export function ClientsWorkspace({
       {records.length === 0 ? (
         <EmptyState
           icon={<UsersIcon />}
-          title="Your client book starts here"
-          hint="Add your first client manually — name, mobile number, and how they invest. Your relationship queue builds itself from there."
+          title="Bring your client book with you"
+          hint="Download the template and fill in your clients, import an existing CSV or XLSX list, or add your first client manually."
           action={
-            <Button variant="primary" onClick={openAdd}>
-              <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
-              Add client
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+              <Button variant="primary" onClick={openAdd}>
+                <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                Add your first client
+              </Button>
+              <Button variant="secondary" onClick={() => setImporting(true)}>
+                <ImportTriggerIcon />
+                Import client list
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")}
+              >
+                <DownloadIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                Download template
+              </Button>
+            </div>
           }
         />
       ) : visible.length === 0 ? (

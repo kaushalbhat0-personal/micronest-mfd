@@ -46,7 +46,7 @@ async function openImport(page: Page, name: RegExp = /^import$/i) {
   const trigger = page.getByRole("button", { name }).first();
   await expect(trigger).toBeVisible();
   await trigger.click();
-  await expect(page.getByRole("dialog", { name: /import clients/i })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: /import your client book/i })).toBeVisible();
 }
 
 async function upload(page: Page, fileName: string) {
@@ -80,13 +80,20 @@ test.describe("Client import", () => {
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: /download csv template/i }).click();
       const template = await download;
-      expect(template.suggestedFilename()).toBe("micronest-client-template.csv");
+      expect(template.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
 
       await upload(page, "import-valid.csv");
       // Single sheet jumps straight to column mapping.
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
-      const selects = page.getByRole("dialog", { name: /import clients/i }).locator("select");
+      const selects = page
+        .getByRole("dialog", { name: /import your client book/i })
+        .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
+      // Exact template headers: all seven map automatically, no manual step.
+      const mappedCount = await selects.evaluateAll(
+        (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
+      );
+      expect(mappedCount).toBe(7);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
@@ -98,7 +105,7 @@ test.describe("Client import", () => {
       await page.getByRole("button", { name: /^back$/i }).click();
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog", { name: /import clients/i })).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: /import your client book/i })).toHaveCount(0);
       await expect(page.getByRole("button", { name: /try import preview/i })).toBeFocused();
     });
 
@@ -112,7 +119,7 @@ test.describe("Client import", () => {
       await expect(page.getByText("Kavita Rao")).toBeVisible();
       await page.getByRole("button", { name: /^back$/i }).click();
       await page.getByRole("button", { name: /^back$/i }).click();
-      await expect(page.getByText(/bring your existing client list/i)).toBeVisible();
+      await expect(page.getByText("Download the template").first()).toBeVisible();
 
       await upload(page, "import-mixed.csv");
       await expect(page.getByRole("button", { name: /review 5 rows/i })).toBeVisible();
@@ -162,17 +169,29 @@ test.describe("Client import", () => {
     });
 
     test("template, mapping, preview, import, and receipt", async ({ page }) => {
+      await page.goto("/workspace/clients");
+      await expect(page.getByText(/bring your client book/i)).toBeVisible();
+      await expect(page.getByRole("button", { name: /import client list/i })).toBeVisible();
+      await expect(page.getByRole("button", { name: /download template/i })).toBeVisible();
+
       await openImport(page);
 
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: /download csv template/i }).click();
       const template = await download;
-      expect(template.suggestedFilename()).toBe("micronest-client-template.csv");
+      expect(template.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
 
       await upload(page, "import-valid.csv");
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
-      const selects = page.getByRole("dialog", { name: /import clients/i }).locator("select");
+      const selects = page
+        .getByRole("dialog", { name: /import your client book/i })
+        .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
+      // Exact template headers: all seven map automatically, no manual step.
+      const mappedCount = await selects.evaluateAll(
+        (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
+      );
+      expect(mappedCount).toBe(7);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
@@ -183,7 +202,7 @@ test.describe("Client import", () => {
       await page.getByRole("button", { name: /import 3 clients/i }).click();
       await expect(page.getByText("Import complete")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
-      await expect(page.getByRole("dialog", { name: /import clients/i })).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: /import your client book/i })).toHaveCount(0);
       await expect(page.getByRole("link", { name: /rajesh sharma/i })).toBeVisible();
       await expect(page.getByRole("link", { name: /priya mehta/i })).toBeVisible();
       await expect(page.getByRole("link", { name: /amit shah/i })).toBeVisible();

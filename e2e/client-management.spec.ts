@@ -62,9 +62,9 @@ test.describe("Client management", () => {
 
   test("empty, add, and search", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByText(/no clients yet/i)).toBeVisible();
+    await expect(page.getByText(/bring your client book/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /^add client$/i }).click();
+    await page.getByRole("button", { name: /add your first client/i }).click();
     await page.getByLabel("Client name").fill("Crud Arjun");
     await page.getByLabel(/mobile/i).fill("9876543210");
     await page.getByLabel("Investment type").selectOption("SIP");

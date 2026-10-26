@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { autoMapColumns, normalizeAliasKey } from "@/features/radar/import/aliases";
+import { RADAR_HEADERS } from "@/features/radar/template";
 
 describe("normalizeAliasKey", () => {
   it("lowercase-trims and collapses whitespace", () => {
@@ -44,5 +45,9 @@ describe("autoMapColumns", () => {
 
   it("treats blank headers as unmapped", () => {
     expect(autoMapColumns(["Client Name", ""])).toEqual(["Client Name", null]);
+  });
+
+  it("auto-maps the exact downloaded template with no manual step needed", () => {
+    expect(autoMapColumns([...RADAR_HEADERS])).toEqual([...RADAR_HEADERS]);
   });
 });
