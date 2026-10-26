@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { CheckIcon, EditIcon, MessageIcon, PhoneIcon, TrashIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -198,12 +199,14 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <div className="flex items-start gap-3">
-          <ClientAvatar name={record.name} />
+      <Card padding="compact">
+        <div className="flex items-center gap-4">
+          <ClientAvatar name={record.name} className="h-14 w-14 text-lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h2 className="text-lg font-semibold break-words text-stone-900">{record.name}</h2>
-            <p className="tnum text-xs text-stone-500">{identityMeta(record)}</p>
+            <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900">
+              {record.name}
+            </h2>
+            <p className="tnum text-sm text-stone-500">{identityMeta(record)}</p>
           </div>
           {record.isNewClient && (
             <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
@@ -213,7 +216,7 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
         </div>
 
         {!record.phoneValid && (
-          <p className="mt-2 text-xs text-stone-500">
+          <p className="mt-3 text-xs text-stone-500">
             {record.phone
               ? "Phone number needs checking — Call and WhatsApp are unavailable."
               : "No mobile number — Message is still available."}
@@ -242,12 +245,12 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
       {reasons.length > 0 && (
         <section
           aria-label="Why contact"
-          className={cn("rounded-xl border p-4 shadow-sm", whyStyle.accent, whyStyle.box)}
+          className={cn("rounded-xl border p-4 shadow-sm sm:p-5", whyStyle.accent, whyStyle.box)}
         >
-          <h3 className={cn("text-xs font-semibold", whyStyle.text)}>Why contact?</h3>
-          <ul className="mt-1.5 space-y-1">
+          <h3 className={cn("eyebrow", whyStyle.text)}>Why contact?</h3>
+          <ul className="mt-2 space-y-1.5">
             {reasons.map((reason) => (
-              <li key={reason} className={cn("text-sm", whyStyle.text)}>
+              <li key={reason} className={cn("text-base font-medium", whyStyle.text)}>
                 {reason}
               </li>
             ))}
@@ -258,10 +261,12 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
       <div className="grid grid-cols-2 gap-2">
         {callUrl ? (
           <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px]")}>
+            <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Call
           </a>
         ) : (
           <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
+            <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Call
           </button>
         )}
@@ -272,10 +277,12 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
             rel="noopener noreferrer"
             className={cn(buttonClasses("primary"), "min-h-[48px]")}
           >
+            <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             WhatsApp
           </a>
         ) : (
           <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
+            <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             WhatsApp
           </button>
         )}
@@ -287,6 +294,7 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
           onClick={() => setMessaging((v) => !v)}
           className="min-h-[48px] sm:flex-1"
         >
+          <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           {messaging ? "Close message" : "Message"}
         </Button>
         <Button
@@ -295,6 +303,7 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
           disabled={busy}
           className="min-h-[48px] sm:flex-1"
         >
+          <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           {busy ? "Saving…" : "Mark contacted"}
         </Button>
       </div>
@@ -308,101 +317,115 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
         />
       )}
 
-      <ClientFollowups clientId={record.id} />
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <ClientFollowups clientId={record.id} />
 
-      <Card>
-        <div className="flex flex-col gap-3">
-          <h3 className="eyebrow">Details</h3>
-          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Mobile</dt>
-              <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last invested</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last contacted</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastContacted)}</dd>
-            </div>
-          </dl>
+          <Card>
+            <div className="flex flex-col gap-3">
+              <h3 className="eyebrow">Details</h3>
+              <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Mobile</dt>
+                  <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Last invested</dt>
+                  <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
+                </div>
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Last contacted</dt>
+                  <dd className="font-medium text-stone-900">
+                    {displayDate(record.lastContacted)}
+                  </dd>
+                </div>
+              </dl>
 
-          {record.note.length > 0 && (
-            <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
-          )}
-        </div>
-      </Card>
-
-      <div className="border-t border-stone-200 pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-stone-900">Maintain</h3>
-          {!editing && !confirmingDelete && (
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setEditing(true)} className="px-3">
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmingDelete(true)}
-                className="px-3 text-red-700 hover:bg-red-50"
-              >
-                Delete
-              </Button>
+              {record.note.length > 0 && (
+                <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
+              )}
             </div>
-          )}
+          </Card>
         </div>
 
-        {editing && (
-          <div className="mt-3">
-            <ClientForm
-              key={formKey}
-              initial={toFormInitial(record)}
-              submitLabel="Save changes"
-              saving={busy}
-              externalError={saveError}
-              onSubmit={handleSaveEdit}
-              onCancel={() => {
-                setEditing(false);
-                setSaveError(null);
-              }}
-            />
-          </div>
-        )}
-
-        {confirmingDelete && (
-          <div
-            role="alertdialog"
-            aria-label="Confirm delete"
-            aria-describedby="delete-desc"
-            className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4"
-          >
-            <p className="text-sm font-medium text-stone-900">
-              Delete {record.name} from your workspace?
-            </p>
-            <p id="delete-desc" className="mt-1 text-xs leading-relaxed text-stone-600">
-              This permanently removes the client. This cannot be undone.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <Button
-                variant="primary"
-                onClick={handleDelete}
-                disabled={busy}
-                className="bg-red-700 hover:bg-red-800 focus-visible:ring-red-700 sm:flex-1"
-              >
-                {busy ? "Deleting…" : "Yes, delete"}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setConfirmingDelete(false)}
-                disabled={busy}
-                className="sm:flex-1"
-              >
-                Keep client
-              </Button>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card padding="compact">
+            <div className="flex flex-col gap-2">
+              <h3 className="eyebrow">Maintain</h3>
+              {!editing && !confirmingDelete && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEditing(true)}
+                    className="min-h-[44px] flex-1"
+                  >
+                    <EditIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="min-h-[44px] flex-1 text-red-700 hover:bg-red-50"
+                  >
+                    <TrashIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+
+            {editing && (
+              <div className="mt-3">
+                <ClientForm
+                  key={formKey}
+                  initial={toFormInitial(record)}
+                  submitLabel="Save changes"
+                  saving={busy}
+                  externalError={saveError}
+                  onSubmit={handleSaveEdit}
+                  onCancel={() => {
+                    setEditing(false);
+                    setSaveError(null);
+                  }}
+                />
+              </div>
+            )}
+
+            {confirmingDelete && (
+              <div
+                role="alertdialog"
+                aria-label="Confirm delete"
+                aria-describedby="delete-desc"
+                className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4"
+              >
+                <p className="text-sm font-medium text-stone-900">
+                  Delete {record.name} from your workspace?
+                </p>
+                <p id="delete-desc" className="mt-1 text-xs leading-relaxed text-stone-600">
+                  This permanently removes the client. This cannot be undone.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="primary"
+                    onClick={handleDelete}
+                    disabled={busy}
+                    className="bg-red-700 hover:bg-red-800 focus-visible:ring-red-700 sm:flex-1"
+                  >
+                    {busy ? "Deleting…" : "Yes, delete"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={busy}
+                    className="sm:flex-1"
+                  >
+                    Keep client
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );
