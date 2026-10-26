@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -7,6 +9,22 @@ export const metadata: Metadata = {
   description:
     "One focused workspace that helps Mutual Fund Distributors maintain client relationships every day. Works alongside your existing financial software.",
 };
+
+/**
+ * Static header shell for prerendering (RCCF-MFD-43). The live header reads
+ * the route for active navigation, so it streams in after the shell.
+ */
+function SiteHeaderFallback() {
+  return (
+    <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 lg:min-h-16">
+          <BrandMark href="/" />
+        </div>
+      </div>
+    </header>
+  );
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <Suspense fallback={<SiteHeaderFallback />}>
+          <SiteHeader />
+        </Suspense>
         <main
           id="main"
           className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"

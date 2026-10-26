@@ -48,6 +48,16 @@ body {
   color: #57534e;
 }
 
+/* Fixed mobile bottom navigation clearance (RCCF-MFD-43). While a
+   session is active the header adds .has-mobile-nav to <body>; below the
+   md breakpoint the main content keeps clear of the fixed nav, including
+   phones with gesture areas. No arbitrary fixed padding alone. */
+@media (max-width: 767.98px) {
+  body.has-mobile-nav main {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
 /* Horizontal chip rails: scroll without a page-level scrollbar. */
 .scroll-x {
   scrollbar-width: none;
