@@ -84,7 +84,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           Sign in to your workspace
         </h1>
         <p className="text-sm leading-relaxed text-stone-600">
-          Access your clients, follow-ups and daily priorities on your laptop and phone.
+          Your client relationship workspace is just one sign-in away. Access your clients,
+          follow-ups and daily priorities on your laptop and phone.
         </p>
       </section>
       <Suspense

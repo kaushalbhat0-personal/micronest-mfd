@@ -25,7 +25,7 @@ test.describe("Auth foundation", () => {
 
   test("public routes stay public without login", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /stay in touch/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /know who to call/i })).toBeVisible();
 
     await page.goto("/tools/message-studio");
     await expect(page.getByRole("button", { name: /generate message/i })).toBeVisible();
