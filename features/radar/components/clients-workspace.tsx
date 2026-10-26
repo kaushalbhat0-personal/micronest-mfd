@@ -162,7 +162,7 @@ export function ClientsWorkspace({
         <div className="sm:flex-1">
           <Field id="client-search" label="Search clients">
             <span className="relative block">
-              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-stone-400" />
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-stone-500" />
               <TextInput
                 id="client-search"
                 type="search"
@@ -241,7 +241,7 @@ export function ClientsWorkspace({
                     {pill.label}
                   </span>
                 )}
-                <span aria-hidden="true" className="shrink-0 text-stone-400">
+                <span aria-hidden="true" className="shrink-0 text-stone-500">
                   →
                 </span>
               </Link>

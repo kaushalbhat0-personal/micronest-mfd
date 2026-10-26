@@ -12,7 +12,7 @@ export function MessagePlaceholder() {
   return (
     <Card aria-hidden="true">
       <div className="today-enter flex flex-col items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-stone-400">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-stone-500">
           <MessageIcon />
         </span>
         <p className="text-sm text-stone-500">Your message will appear here…</p>
