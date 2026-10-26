@@ -34,6 +34,8 @@ import {
 import type { ClientRecord } from "../types";
 import { filterClientsByName } from "../view";
 import { ClientForm } from "./client-form";
+import { ImportDialog, ImportTriggerIcon } from "../import/import-dialog";
+import { identityOf } from "../import/duplicates";
 
 function storeErrorMessage(error: unknown): string {
   if (error instanceof RadarStoreError) return error.message;
@@ -106,6 +108,7 @@ export function ClientsWorkspace({
   );
   const [query, setQuery] = React.useState("");
   const [adding, setAdding] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [formKey, setFormKey] = React.useState(0);
@@ -163,24 +166,46 @@ export function ClientsWorkspace({
 
   if (!configured || !signedIn) {
     return (
-      <Card>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-stone-900">Client sync isn&apos;t available.</p>
-          <p className="text-sm leading-relaxed text-stone-600">
-            {!configured
-              ? "Sign-in isn't set up yet. Your client list will live here once authentication is configured."
-              : "Please sign in to see your client relationship list."}
-          </p>
-          {!signedIn && configured && (
-            <Link
-              href="/login?next=%2Fworkspace%2Fclients"
-              className={cn(buttonClasses("primary"), "mt-2 sm:self-start")}
-            >
-              Sign in
-            </Link>
-          )}
-        </div>
-      </Card>
+      <>
+        <Card>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-stone-900">Client sync isn&apos;t available.</p>
+            <p className="text-sm leading-relaxed text-stone-600">
+              {!configured
+                ? "Sign-in isn't set up yet. Your client list will live here once authentication is configured."
+                : "Please sign in to see your client relationship list."}
+            </p>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              {!signedIn && configured && (
+                <Link
+                  href="/login?next=%2Fworkspace%2Fclients"
+                  className={cn(buttonClasses("primary"), "sm:self-start")}
+                >
+                  Sign in
+                </Link>
+              )}
+              <Button
+                id="import-clients-button"
+                variant="secondary"
+                onClick={() => setImporting(true)}
+                className="sm:self-start"
+              >
+                <ImportTriggerIcon />
+                Try import preview
+              </Button>
+            </div>
+          </div>
+        </Card>
+        {importing && (
+          <ImportDialog
+            open={importing}
+            onClose={() => setImporting(false)}
+            configured={false}
+            existing={[]}
+            onImported={() => {}}
+          />
+        )}
+      </>
     );
   }
 
@@ -221,16 +246,45 @@ export function ClientsWorkspace({
             </span>
           </Field>
         </div>
-        <Button
-          id="add-client-button"
-          variant="primary"
-          onClick={openAdd}
-          className="sm:w-auto lg:min-w-40"
-        >
-          <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
-          Add client
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            id="add-client-button"
+            variant="primary"
+            onClick={openAdd}
+            className="w-full sm:w-auto lg:min-w-40"
+          >
+            <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+            Add client
+          </Button>
+          <Button
+            id="import-clients-button"
+            variant="secondary"
+            onClick={() => setImporting(true)}
+            className="w-full sm:w-auto lg:min-w-40"
+          >
+            <ImportTriggerIcon />
+            Import
+          </Button>
+        </div>
       </div>
+
+      {importing && (
+        <ImportDialog
+          open={importing}
+          onClose={() => setImporting(false)}
+          configured={configured}
+          existing={records.map((r) => identityOf(r.name, r.phone))}
+          onImported={(stored) => {
+            setRecords((prev) => {
+              const next = [...prev.map((r) => ({ ...r }))];
+              for (const s of stored) {
+                next.push(toClientRecord(s, next.length, todayYMD));
+              }
+              return next;
+            });
+          }}
+        />
+      )}
 
       {adding && (
         <div className="fixed inset-0 z-30 flex items-end justify-center sm:items-center sm:p-6">

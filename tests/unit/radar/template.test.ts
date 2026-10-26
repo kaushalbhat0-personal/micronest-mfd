@@ -11,6 +11,8 @@ describe("normalizeInvestmentType", () => {
     ["SIP", "SIP"],
     ["sip", "SIP"],
     ["  Lumpsum  ", "Lumpsum"],
+    ["lump sum", "Lumpsum"],
+    ["LUMPSUM", "Lumpsum"],
     ["BOTH", "Both"],
     ["insurance", "Insurance"],
     ["other", "Other"],
@@ -37,6 +39,10 @@ describe("parseNewClientFlag", () => {
 
   it("treats blank as false without warning", () => {
     expect(parseNewClientFlag("")).toEqual({ value: false, warning: null });
+  });
+
+  it.each(["no", "false", "0", "existing", "n"])("treats %s as an explicit no", (raw) => {
+    expect(parseNewClientFlag(raw)).toEqual({ value: false, warning: null });
   });
 
   it("treats unrecognized values as false with a warning", () => {
