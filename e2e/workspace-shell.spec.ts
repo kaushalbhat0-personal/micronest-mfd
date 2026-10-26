@@ -65,17 +65,22 @@ test.describe("Workspace shell", () => {
     expect(page.url()).not.toMatch(/name=|phone=|mobile=|note=/);
   });
 
-  test("workspace navigation links today and clients with touch targets", async ({ page }) => {
+  test("single header navigation links workspace and studio with touch targets", async ({
+    page,
+  }) => {
     await page.goto("/workspace/today");
-    const nav = page.getByRole("navigation", { name: /workspace/i });
-    await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^clients$/i })).toBeVisible();
-    for (const name of [/^today$/i, /^clients$/i]) {
+    // Phase A: the header is the only navigation system — no in-page pills.
+    const navs = page.getByRole("navigation");
+    await expect(navs).toHaveCount(1);
+    const nav = page.getByRole("navigation", { name: /primary/i });
+    await expect(nav.getByRole("link", { name: /^workspace$/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /^message studio$/i })).toBeVisible();
+    for (const name of [/^workspace$/i, /^message studio$/i]) {
       const box = await nav.getByRole("link", { name }).boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-    await nav.getByRole("link", { name: /^clients$/i }).click();
-    await expect(page).toHaveURL(/\/workspace\/clients/);
+    await nav.getByRole("link", { name: /^message studio$/i }).click();
+    await expect(page).toHaveURL(/\/tools\/message-studio/);
   });
 
   test("no client PII in workspace URLs or localStorage", async ({ page }) => {

@@ -81,6 +81,9 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await page.goto("/workspace/today");
       const bottom = page.getByTestId("mobile-bottom-nav");
       await expect(bottom).toBeVisible();
+      // Phase A: exactly one navigation per viewport — the top header nav
+      // stays hidden on mobile, the bottom nav never renders on desktop.
+      await expect(page.locator("header nav")).toBeHidden();
 
       // Active state is never color alone: indicator + weight + aria-current.
       const today = bottom.getByRole("link", { name: /^today$/i });
@@ -163,6 +166,8 @@ test.describe("Navigation brand + mobile bottom nav", () => {
 
       await page.goto("/workspace/today");
       await expect(page.getByTestId("mobile-bottom-nav")).toBeHidden();
+      // Phase A: the header is the only navigation system on desktop.
+      await expect(page.getByRole("navigation")).toHaveCount(1);
       const nav = page.getByRole("navigation", { name: /primary/i });
       await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
       await expect(nav.getByRole("link", { name: /^clients$/i })).toBeVisible();

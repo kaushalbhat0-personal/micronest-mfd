@@ -1,25 +1,15 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { WorkspaceNav, WorkspaceNavFallback } from "@/components/workspace-nav";
 import { Card } from "@/components/ui/card";
-import { RadarIdentity } from "@/features/auth/components/radar-identity";
 
 /**
- * Authenticated workspace shell (RCCF-MFD-18 Phase A).
- * Route protection itself lives in proxy.ts; the identity affordance below
- * is defense in depth and streams behind Suspense (cacheComponents).
+ * Authenticated workspace shell (RCCF-MFD-45 Phase A). Navigation lives
+ * exclusively in the site header (desktop) and the mobile bottom nav —
+ * no in-page pills, no second identity row. Route protection itself lives
+ * in proxy.ts.
  */
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Suspense fallback={<WorkspaceNavFallback />}>
-          <WorkspaceNav />
-        </Suspense>
-        <Suspense fallback={<span className="min-h-[44px]" aria-hidden="true" />}>
-          <RadarIdentity />
-        </Suspense>
-      </div>
       {children}
       <Card>
         <p className="text-xs leading-relaxed text-stone-500">
