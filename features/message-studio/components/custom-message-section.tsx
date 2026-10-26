@@ -9,6 +9,7 @@ import { PhoneField } from "@/components/ui/phone-field";
 import { normalizePhone } from "@/lib/whatsapp";
 import { scanMessage } from "../compliance";
 import { CUSTOM_MESSAGE_MAX_LENGTH, countChars, validateCustomMessage } from "../validation";
+import { MessagePlaceholder } from "./message-placeholder";
 import { MessagePreview } from "./message-preview";
 
 /**
@@ -121,7 +122,7 @@ export function CustomMessageSection() {
         </div>
       </Card>
 
-      {prepared !== null && (
+      {prepared !== null ? (
         <Card>
           <MessagePreview
             message={prepared}
@@ -135,6 +136,8 @@ export function CustomMessageSection() {
             headerNote={recipient.trim() ? `For: ${recipient.trim()}` : undefined}
           />
         </Card>
+      ) : (
+        <MessagePlaceholder />
       )}
 
       <p className="text-xs leading-relaxed text-stone-600">

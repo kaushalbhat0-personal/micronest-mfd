@@ -19,6 +19,7 @@ import {
   type MessageTone,
 } from "../templates";
 import { validateMessageInput, type FieldErrors } from "../validation";
+import { MessagePlaceholder } from "./message-placeholder";
 import { MessagePreview } from "./message-preview";
 import { ModeSelector } from "./mode-selector";
 import { CustomMessageSection } from "./custom-message-section";
@@ -206,7 +207,7 @@ export function MessageStudioForm({
             </div>
           </Card>
 
-          {generated && (
+          {generated ? (
             <Card>
               <MessagePreview
                 message={generated}
@@ -216,6 +217,8 @@ export function MessageStudioForm({
                 phoneError={phoneCheck.ok ? null : (phoneCheck.error ?? "Invalid phone number.")}
               />
             </Card>
+          ) : (
+            <MessagePlaceholder />
           )}
 
           <p className="text-xs leading-relaxed text-stone-600">

@@ -74,7 +74,7 @@ export function MessagePreview({
   const showWhatsApp = !hideWhatsAppWhenNoPhone || normalizePhone(phone).digits !== undefined;
 
   return (
-    <section aria-label="Generated message" className="flex flex-col gap-3">
+    <section aria-label="Generated message" className="today-enter flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-stone-900">Preview</h2>
       {headerNote && <p className="text-xs text-stone-500">{headerNote}</p>}
 
