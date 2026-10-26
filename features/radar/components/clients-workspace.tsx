@@ -5,7 +5,9 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ClientAvatar } from "@/components/ui/client-avatar";
 import { Field, TextInput } from "@/components/ui/controls";
+import { SearchIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
@@ -28,9 +30,36 @@ function storeErrorMessage(error: unknown): string {
 
 function secondaryLine(record: ClientRecord): string {
   if (record.lastContacted) {
-    return `Last contacted ${formatDisplayDate(record.lastContacted)}`;
+    return `${record.investmentType} · Last contacted ${formatDisplayDate(record.lastContacted)}`;
   }
-  return "Never contacted";
+  return `${record.investmentType} · Never contacted`;
+}
+
+export interface ClientSignalPill {
+  label: string;
+  className: string;
+}
+
+/**
+ * Presentation-only signal pill for a client row. Reads the existing
+ * domain signals (computeSignals is the source of truth — new-client
+ * mirrors isNewClient there) and shows at most one pill, following the
+ * domain priority order in radarPriorityClass: recent, then new, then
+ * reconnect. Text label carries the meaning; tint only reinforces it.
+ */
+export function signalPillForRecord(
+  record: Pick<ClientRecord, "signals">,
+): ClientSignalPill | null {
+  if (record.signals.includes("recent-investor")) {
+    return { label: "Recent", className: "bg-emerald-50 text-emerald-900" };
+  }
+  if (record.signals.includes("new-client")) {
+    return { label: "New", className: "bg-emerald-50 text-emerald-900" };
+  }
+  if (record.signals.includes("reconnect-due")) {
+    return { label: "Reconnect", className: "bg-amber-100 text-amber-900" };
+  }
+  return null;
 }
 
 interface ClientsWorkspaceProps {
@@ -132,14 +161,18 @@ export function ClientsWorkspace({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:flex-1">
           <Field id="client-search" label="Search clients">
-            <TextInput
-              id="client-search"
-              type="search"
-              placeholder="Search by client name"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoComplete="off"
-            />
+            <span className="relative block">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-stone-400" />
+              <TextInput
+                id="client-search"
+                type="search"
+                placeholder="Search by client name"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoComplete="off"
+                className="pl-10"
+              />
+            </span>
           </Field>
         </div>
         <Button
@@ -181,32 +214,39 @@ export function ClientsWorkspace({
         </Card>
       ) : (
         <div className="flex flex-col gap-2.5" aria-live="polite" aria-label="Client list">
-          {visible.map((record) => (
-            <Link
-              key={record.id}
-              href={`/workspace/clients/${record.id}`}
-              className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-            >
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex items-center gap-2">
+          {visible.map((record) => {
+            const pill = signalPillForRecord(record);
+            return (
+              <Link
+                key={record.id}
+                href={`/workspace/clients/${record.id}`}
+                className="flex min-h-[56px] items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                <ClientAvatar name={record.name} />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-base font-semibold text-stone-900">
                     {record.name}
                   </span>
-                  {record.isNewClient && (
-                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900">
-                      New
-                    </span>
-                  )}
+                  <span className="tnum truncate text-xs text-stone-500">
+                    {secondaryLine(record)}
+                  </span>
                 </span>
-                <span className="truncate text-xs text-stone-500">
-                  {record.investmentType} · {secondaryLine(record)}
+                {pill && (
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
+                      pill.className,
+                    )}
+                  >
+                    {pill.label}
+                  </span>
+                )}
+                <span aria-hidden="true" className="shrink-0 text-stone-400">
+                  →
                 </span>
-              </span>
-              <span aria-hidden="true" className="shrink-0 text-stone-400">
-                →
-              </span>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
 

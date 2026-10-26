@@ -36,6 +36,7 @@ const inputClass = (hasError: boolean) =>
 export function TextInput({
   id,
   error,
+  className,
   ...rest
 }: React.InputHTMLAttributes<HTMLInputElement> & { id: string; error?: string }) {
   return (
@@ -43,7 +44,7 @@ export function TextInput({
       id={id}
       aria-invalid={Boolean(error)}
       aria-describedby={error ? `${id}-error` : undefined}
-      className={inputClass(Boolean(error))}
+      className={cn(inputClass(Boolean(error)), className)}
       {...rest}
     />
   );
