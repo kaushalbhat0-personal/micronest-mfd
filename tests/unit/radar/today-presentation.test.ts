@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { initialsForName, toneForName } from "@/components/ui/client-avatar";
 import { cardClasses } from "@/components/ui/card";
 import { severityForWhyKind } from "@/features/radar/components/today-card";
+import { todaySignalBadge } from "@/features/radar/components/today-card";
 
 /**
  * RCCF-MFD-33 Phase 1+3: presentation helpers only.
@@ -46,6 +47,17 @@ describe("severityForWhyKind", () => {
     expect(severityForWhyKind("recent")).toBe("reconnect");
     expect(severityForWhyKind("followup-upcoming")).toBe("neutral");
     expect(severityForWhyKind(null)).toBe("neutral");
+  });
+});
+
+describe("todaySignalBadge", () => {
+  it("labels every why kind with a palette tone", () => {
+    expect(todaySignalBadge("followup-overdue")).toEqual({ label: "Overdue", tone: "red" });
+    expect(todaySignalBadge("followup-today")).toEqual({ label: "Due today", tone: "amber" });
+    expect(todaySignalBadge("followup-upcoming")).toEqual({ label: "Upcoming", tone: "stone" });
+    expect(todaySignalBadge("recent")).toEqual({ label: "Recent", tone: "emerald" });
+    expect(todaySignalBadge("reconnect")).toEqual({ label: "Reconnect", tone: "amber" });
+    expect(todaySignalBadge("new")).toEqual({ label: "New", tone: "emerald" });
   });
 });
 

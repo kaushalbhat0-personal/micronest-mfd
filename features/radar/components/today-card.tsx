@@ -5,6 +5,7 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 import { cardClasses } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { SignalBadge, type SignalTone } from "@/components/ui/signal-badge";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -66,6 +67,28 @@ const SEVERITY_ACCENT: Record<TodaySeverity, string> = {
   reconnect: "today-accent-reconnect",
   neutral: "today-accent",
 };
+
+/**
+ * Presentation-only signal badge for a Today card. Reads the existing
+ * TodayWhy kind — no domain logic. The badge reinforces the why line;
+ * the why text always carries the meaning.
+ */
+export function todaySignalBadge(kind: TodayWhy["kind"]): { label: string; tone: SignalTone } {
+  switch (kind) {
+    case "followup-overdue":
+      return { label: "Overdue", tone: "red" };
+    case "followup-today":
+      return { label: "Due today", tone: "amber" };
+    case "followup-upcoming":
+      return { label: "Upcoming", tone: "stone" };
+    case "recent":
+      return { label: "Recent", tone: "emerald" };
+    case "reconnect":
+      return { label: "Reconnect", tone: "amber" };
+    case "new":
+      return { label: "New", tone: "emerald" };
+  }
+}
 
 function secondaryLine(item: TodayItem): string {
   const { record } = item;
@@ -155,14 +178,28 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
       style={index < 5 ? { animationDelay: `${index * 24}ms` } : undefined}
     >
       <div className="flex items-start gap-3">
-        <ClientAvatar name={record.name} />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          {why && style && (
-            <p className={cn("flex items-center gap-1.5 text-xs font-semibold", style.text)}>
-              <WhyIcon kind={why.kind} />
-              {why.title}
-            </p>
-          )}
+        <ClientAvatar name={record.name} className="h-11 w-11" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            {why && style ? (
+              <p
+                className={cn(
+                  "flex min-w-0 items-center gap-1.5 text-xs font-semibold",
+                  style.text,
+                )}
+              >
+                <WhyIcon kind={why.kind} />
+                <span className="truncate">{why.title}</span>
+              </p>
+            ) : (
+              <span />
+            )}
+            {why && (
+              <SignalBadge tone={todaySignalBadge(why.kind).tone}>
+                {todaySignalBadge(why.kind).label}
+              </SignalBadge>
+            )}
+          </div>
           <h3 className="truncate text-base font-semibold text-stone-900">{record.name}</h3>
           <p className="tnum text-xs text-stone-500">{secondaryLine(item)}</p>
         </div>

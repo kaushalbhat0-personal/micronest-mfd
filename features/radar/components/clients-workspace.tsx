@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { Field, TextInput } from "@/components/ui/controls";
 import { SearchIcon } from "@/components/ui/icons";
+import { SignalBadge, type SignalTone } from "@/components/ui/signal-badge";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
@@ -37,7 +38,7 @@ function secondaryLine(record: ClientRecord): string {
 
 export interface ClientSignalPill {
   label: string;
-  className: string;
+  tone: SignalTone;
 }
 
 /**
@@ -51,13 +52,13 @@ export function signalPillForRecord(
   record: Pick<ClientRecord, "signals">,
 ): ClientSignalPill | null {
   if (record.signals.includes("recent-investor")) {
-    return { label: "Recent", className: "bg-emerald-50 text-emerald-900" };
+    return { label: "Recent", tone: "emerald" };
   }
   if (record.signals.includes("new-client")) {
-    return { label: "New", className: "bg-emerald-50 text-emerald-900" };
+    return { label: "New", tone: "emerald" };
   }
   if (record.signals.includes("reconnect-due")) {
-    return { label: "Reconnect", className: "bg-amber-100 text-amber-900" };
+    return { label: "Reconnect", tone: "amber" };
   }
   return null;
 }
@@ -231,16 +232,7 @@ export function ClientsWorkspace({
                     {secondaryLine(record)}
                   </span>
                 </span>
-                {pill && (
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
-                      pill.className,
-                    )}
-                  >
-                    {pill.label}
-                  </span>
-                )}
+                {pill && <SignalBadge tone={pill.tone}>{pill.label}</SignalBadge>}
                 <span aria-hidden="true" className="shrink-0 text-stone-500">
                   →
                 </span>

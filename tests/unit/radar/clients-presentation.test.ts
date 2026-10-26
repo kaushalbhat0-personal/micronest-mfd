@@ -36,7 +36,7 @@ describe("signalPillForRecord", () => {
     for (const signals of [["recent-investor"], ["new-client"], ["reconnect-due"]] as Signal[][]) {
       const pill = pillFor(signals);
       expect(pill?.label.length).toBeGreaterThan(0);
-      expect(pill?.className.length).toBeGreaterThan(0);
+      expect(["emerald", "amber", "red", "stone"]).toContain(pill?.tone);
     }
   });
 });
