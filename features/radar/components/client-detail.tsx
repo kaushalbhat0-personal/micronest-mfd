@@ -198,18 +198,18 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
   const whyStyle = WHY_SEVERITY_STYLE[whySeverity];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card padding="compact">
-        <div className="flex items-center gap-4">
-          <ClientAvatar name={record.name} className="h-14 w-14 text-lg" />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:gap-6">
+      <Card padding="compact" className="lg:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+          <ClientAvatar name={record.name} className="h-14 w-14 text-lg lg:h-16 lg:w-16" />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900">
+            <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900 lg:text-2xl">
               {record.name}
             </h2>
             <p className="tnum text-sm text-stone-500">{identityMeta(record)}</p>
           </div>
           {record.isNewClient && (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
+            <span className="shrink-0 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 sm:self-center">
               New
             </span>
           )}
@@ -242,89 +242,39 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
         </div>
       )}
 
-      {reasons.length > 0 && (
-        <section
-          aria-label="Why contact"
-          className={cn("rounded-xl border p-4 shadow-sm sm:p-5", whyStyle.accent, whyStyle.box)}
-        >
-          <h3 className={cn("eyebrow", whyStyle.text)}>Why contact?</h3>
-          <ul className="mt-2 space-y-1.5">
-            {reasons.map((reason) => (
-              <li key={reason} className={cn("text-base font-medium", whyStyle.text)}>
-                {reason}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
+          {reasons.length > 0 && (
+            <section
+              aria-label="Why contact"
+              className={cn(
+                "order-1 rounded-xl border p-4 shadow-sm sm:p-5 lg:order-none lg:p-6",
+                whyStyle.accent,
+                whyStyle.box,
+              )}
+            >
+              <h3 className={cn("eyebrow", whyStyle.text)}>Why contact?</h3>
+              <ul className="mt-2 space-y-1.5">
+                {reasons.map((reason) => (
+                  <li
+                    key={reason}
+                    className={cn("text-base font-medium lg:text-lg", whyStyle.text)}
+                  >
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-      <div className="grid grid-cols-2 gap-2">
-        {callUrl ? (
-          <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            Call
-          </a>
-        ) : (
-          <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            Call
-          </button>
-        )}
-        {waUrl ? (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(buttonClasses("primary"), "min-h-[48px]")}
-          >
-            <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            WhatsApp
-          </a>
-        ) : (
-          <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            WhatsApp
-          </button>
-        )}
-      </div>
+          <div className="order-3 lg:order-none">
+            <ClientFollowups clientId={record.id} />
+          </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          variant="secondary"
-          onClick={() => setMessaging((v) => !v)}
-          className="min-h-[48px] sm:flex-1"
-        >
-          <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-          {messaging ? "Close message" : "Message"}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleContacted}
-          disabled={busy}
-          className="min-h-[48px] sm:flex-1"
-        >
-          <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-          {busy ? "Saving…" : "Mark contacted"}
-        </Button>
-      </div>
-
-      {messaging && (
-        <MessageStudioForm
-          key={record.id}
-          initialPurpose={handoff.purpose}
-          initialFields={handoff.fields}
-          initialPhone={handoff.phone}
-        />
-      )}
-
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <ClientFollowups clientId={record.id} />
-
-          <Card>
+          <Card className="order-4 lg:order-none lg:p-6">
             <div className="flex flex-col gap-3">
               <h3 className="eyebrow">Details</h3>
-              <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Mobile</dt>
                   <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
@@ -342,14 +292,89 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
               </dl>
 
               {record.note.length > 0 && (
-                <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
+                <p className="rounded-lg bg-stone-50 p-3 text-sm leading-relaxed text-stone-700">
+                  {record.note}
+                </p>
               )}
             </div>
           </Card>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card padding="compact">
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4 lg:sticky lg:top-20">
+          <Card padding="compact" className="order-2 lg:order-none lg:p-5">
+            <div className="flex flex-col gap-2.5">
+              <h3 className="eyebrow">Quick actions</h3>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                {callUrl ? (
+                  <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}>
+                    <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Call
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Call
+                  </button>
+                )}
+                {waUrl ? (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                <Button
+                  variant="secondary"
+                  onClick={() => setMessaging((v) => !v)}
+                  className="min-h-[48px] sm:flex-1 lg:w-full"
+                >
+                  <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {messaging ? "Close message" : "Message"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleContacted}
+                  disabled={busy}
+                  className="min-h-[48px] sm:flex-1 lg:w-full"
+                >
+                  <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {busy ? "Saving…" : "Mark contacted"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {messaging && (
+            <div className="order-2 lg:order-none">
+              <MessageStudioForm
+                key={record.id}
+                initialPurpose={handoff.purpose}
+                initialFields={handoff.fields}
+                initialPhone={handoff.phone}
+              />
+            </div>
+          )}
+
+          <Card padding="compact" className="order-5 lg:order-none lg:p-5">
             <div className="flex flex-col gap-2">
               <h3 className="eyebrow">Maintain</h3>
               {!editing && !confirmingDelete && (

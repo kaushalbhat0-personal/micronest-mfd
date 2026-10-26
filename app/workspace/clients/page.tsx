@@ -18,18 +18,23 @@ export const metadata: Metadata = {
  */
 export default function ClientsPage() {
   return (
-    <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-1.5" aria-labelledby="clients-heading">
-        <p className="eyebrow">People</p>
-        <h1
-          id="clients-heading"
-          className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl"
-        >
-          Clients
-        </h1>
-        <p className="text-sm leading-relaxed text-stone-600 sm:text-base">
-          Everyone you look after — search, open a relationship, and stay in touch.
-        </p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:gap-7">
+      <section
+        className="grid grid-cols-1 items-end gap-2 lg:grid-cols-[minmax(0,1fr)_auto]"
+        aria-labelledby="clients-heading"
+      >
+        <div className="flex flex-col gap-1.5">
+          <p className="eyebrow">People</p>
+          <h1
+            id="clients-heading"
+            className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl"
+          >
+            Clients
+          </h1>
+          <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base lg:text-lg">
+            Everyone you look after — search, open a relationship, and stay in touch.
+          </p>
+        </div>
       </section>
 
       <Suspense

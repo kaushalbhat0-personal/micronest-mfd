@@ -167,8 +167,8 @@ export function ClientsWorkspace({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
         <div className="sm:flex-1">
           <Field id="client-search" label="Search clients">
             <span className="relative block">
@@ -180,7 +180,7 @@ export function ClientsWorkspace({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoComplete="off"
-                className="pl-10"
+                className="pl-10 lg:max-w-md"
               />
             </span>
           </Field>
@@ -191,7 +191,7 @@ export function ClientsWorkspace({
             setSaveError(null);
             setAdding((v) => !v);
           }}
-          className="sm:w-auto"
+          className="sm:w-auto lg:min-w-40"
         >
           <PlusIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
           {adding ? "Close" : "Add client"}
@@ -223,7 +223,7 @@ export function ClientsWorkspace({
         />
       ) : (
         <div
-          className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2"
+          className="grid grid-cols-1 items-stretch gap-2.5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4"
           aria-live="polite"
           aria-label="Client list"
         >
@@ -233,7 +233,7 @@ export function ClientsWorkspace({
               <Link
                 key={record.id}
                 href={`/workspace/clients/${record.id}`}
-                className="flex min-h-[56px] items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                className="flex min-h-[56px] items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 lg:min-h-[76px] lg:px-4 lg:py-3"
               >
                 <ClientAvatar name={record.name} />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -244,34 +244,42 @@ export function TodayWorkspace({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-1.5" aria-labelledby="today-heading">
-        <p className="eyebrow flex items-center gap-1.5">
-          <SunIcon aria-hidden="true" className="h-3.5 w-3.5" />
-          {dayLabel}
-        </p>
-        <h1
-          id="today-heading"
-          className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl"
-        >
-          {greeting}
-        </h1>
-        <p className="tnum text-base leading-relaxed text-stone-600">
-          {counts.attention === 0 ? (
-            "Nothing needs your attention right now."
-          ) : (
-            <>
-              <strong className="font-semibold text-stone-900">{counts.attention}</strong>{" "}
-              {counts.attention === 1 ? "person needs you today." : "people need you today."}
-            </>
-          )}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:gap-7">
+      <section
+        className="grid grid-cols-1 items-end gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"
+        aria-labelledby="today-heading"
+      >
+        <div className="flex flex-col gap-1.5">
+          <p className="eyebrow flex items-center gap-1.5">
+            <SunIcon aria-hidden="true" className="h-3.5 w-3.5" />
+            {dayLabel}
+          </p>
+          <h1
+            id="today-heading"
+            className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl"
+          >
+            {greeting}
+          </h1>
+          <p className="tnum text-base leading-relaxed text-stone-600 lg:text-lg">
+            {counts.attention === 0 ? (
+              "Nothing needs your attention right now."
+            ) : (
+              <>
+                <strong className="font-semibold text-stone-900">{counts.attention}</strong>{" "}
+                {counts.attention === 1 ? "person needs you today." : "people need you today."}
+              </>
+            )}
+          </p>
+        </div>
+        <p className="hidden text-sm text-stone-600 lg:block">
+          Call first, then follow through — the queue is already prioritised.
         </p>
       </section>
 
       {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
 
       <section aria-label="Attention summary">
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:gap-4">
           <AttentionStat
             icon={<AlertIcon />}
             label="Overdue"
@@ -297,6 +305,15 @@ export function TodayWorkspace({
             valueTone="text-emerald-900"
             onSelect={() => setFilter("reconnect")}
           />
+          <AttentionStat
+            icon={<SunIcon />}
+            label="New"
+            value={counts.fresh}
+            pressed={filter === "new"}
+            iconTone="bg-emerald-50 text-emerald-900"
+            valueTone="text-emerald-900"
+            onSelect={() => setFilter("new")}
+          />
         </div>
       </section>
 
@@ -317,15 +334,15 @@ export function TodayWorkspace({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 items-start gap-5 md:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section
           aria-labelledby="queue-heading"
           aria-live="polite"
-          className="flex min-w-0 flex-col gap-2.5"
+          className="flex min-w-0 flex-col gap-2.5 lg:gap-4"
         >
           <h2
             id="queue-heading"
-            className="flex items-center gap-2 text-sm font-semibold text-stone-900"
+            className="flex items-center gap-2 text-base font-semibold text-stone-900 lg:text-lg"
           >
             People to contact
             <SignalBadge tone={visible.length > 0 ? "amber" : "stone"}>
@@ -451,6 +468,7 @@ function AttentionStat({
   iconTone,
   valueTone,
   onSelect,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -465,6 +483,7 @@ function AttentionStat({
   iconTone: string;
   valueTone: string;
   onSelect: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -472,21 +491,29 @@ function AttentionStat({
       onClick={onSelect}
       aria-pressed={pressed}
       className={cn(
-        "flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-xl border border-stone-200 bg-white px-2 py-3 shadow-sm",
+        "flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-xl border border-stone-200 bg-white px-2 py-3 shadow-sm lg:min-h-[112px] lg:flex-row lg:gap-3 lg:px-5 lg:py-4 lg:text-left",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900",
         pressed
           ? "border-emerald-900 ring-1 ring-inset ring-emerald-900"
           : "transition-shadow hover:shadow-md",
+        className,
       )}
     >
       <span
         aria-hidden="true"
-        className={cn("flex h-8 w-8 items-center justify-center rounded-full", iconTone)}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-full lg:h-10 lg:w-10",
+          iconTone,
+        )}
       >
         {icon}
       </span>
-      <span className={cn("tnum text-2xl font-semibold tracking-tight", valueTone)}>{value}</span>
-      <span className="text-xs text-stone-500">{label}</span>
+      <span className="flex flex-col items-center lg:items-start">
+        <span className={cn("tnum text-2xl font-semibold tracking-tight lg:text-3xl", valueTone)}>
+          {value}
+        </span>
+        <span className="text-xs text-stone-500 lg:text-sm">{label}</span>
+      </span>
     </button>
   );
 }

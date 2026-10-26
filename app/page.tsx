@@ -167,36 +167,49 @@ function ProductPreview() {
  */
 export default function Home() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 sm:gap-12">
-      <section className="flex flex-col gap-4" aria-labelledby="home-heading">
-        <div className="flex flex-col gap-2">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 sm:gap-12 lg:gap-16">
+      <section
+        className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12"
+        aria-labelledby="home-heading"
+      >
+        <div className="flex max-w-xl flex-col gap-4 lg:gap-5">
           <p className="eyebrow">For mutual fund distributors</p>
           <h1
             id="home-heading"
-            className="max-w-xl text-4xl font-semibold tracking-tight text-stone-900 sm:text-5xl"
+            className="text-4xl font-semibold tracking-tight text-stone-900 sm:text-5xl lg:text-6xl lg:leading-[1.05]"
           >
             Know who to call today.
           </h1>
-          <p className="max-w-xl text-sm leading-relaxed text-stone-600 sm:text-base">
+          <p className="max-w-xl text-base leading-relaxed text-stone-600 lg:text-lg">
             A simple relationship workspace that helps you see which clients need attention, why
             they matter, and what to do next.
           </p>
+          <Suspense fallback={<SignedOutCtas />}>
+            <PrimaryCtas />
+          </Suspense>
+          <p className="text-xs leading-relaxed text-stone-600">
+            Works alongside your existing financial software — nothing to migrate.
+          </p>
         </div>
-        <Suspense fallback={<SignedOutCtas />}>
-          <PrimaryCtas />
-        </Suspense>
+        <ProductPreview />
       </section>
-
-      <ProductPreview />
 
       <section aria-labelledby="how-heading">
         <div className="flex flex-col gap-3">
           <h2 id="how-heading" className="eyebrow">
             How it works
           </h2>
-          <ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             {STEPS.map((step, i) => (
-              <li key={step.title}>
+              <li key={step.title} className="relative">
+                {i < STEPS.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+                  >
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </span>
+                )}
                 <Card padding="compact" className="h-full">
                   <div className="flex items-start gap-3">
                     <span
@@ -227,12 +240,12 @@ export default function Home() {
           <h2 id="features-heading" className="eyebrow">
             What&apos;s inside
           </h2>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             {FEATURES.map((feature) => (
               <Link
                 key={feature.title}
                 href={feature.href}
-                className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                className="flex flex-col rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 lg:p-5"
               >
                 <span className="flex items-start gap-3">
                   <span
@@ -253,29 +266,38 @@ export default function Home() {
       </section>
 
       <section aria-labelledby="studio-heading">
-        <Card>
-          <div className="flex flex-col gap-3">
-            <h2 id="studio-heading" className="eyebrow">
-              Communication
-            </h2>
-            <p className="text-base font-semibold text-stone-900">
-              The right words, ready to send.
-            </p>
-            <p className="text-sm leading-relaxed text-stone-600">
-              Pick a template, choose a language and tone, generate the message, and hand it to
-              WhatsApp. Deterministic templates — never AI generation, nothing stored anywhere.
-            </p>
-            <ol className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-stone-700">
-              {["Template", "Language", "Tone", "Message", "WhatsApp"].map((step, i, all) => (
-                <li key={step} className="flex items-center gap-1.5">
-                  <span className="rounded-full bg-stone-100 px-2.5 py-1">{step}</span>
-                  {i < all.length - 1 && (
-                    <ArrowRightIcon aria-hidden="true" className="h-3.5 w-3.5 text-stone-500" />
-                  )}
-                </li>
-              ))}
-            </ol>
-            <div className="flex items-start gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
+        <Card className="lg:p-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
+            <div className="flex flex-col gap-3">
+              <h2 id="studio-heading" className="eyebrow">
+                Communication
+              </h2>
+              <p className="text-xl font-semibold tracking-tight text-stone-900 lg:text-2xl">
+                The right words, ready to send.
+              </p>
+              <p className="text-sm leading-relaxed text-stone-600 lg:text-base">
+                Pick a template, choose a language and tone, generate the message, and hand it to
+                WhatsApp. Deterministic templates — never AI generation, nothing stored anywhere.
+              </p>
+              <ol className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-stone-700">
+                {["Template", "Language", "Tone", "Message", "WhatsApp"].map((step, i, all) => (
+                  <li key={step} className="flex items-center gap-1.5">
+                    <span className="rounded-full bg-stone-100 px-2.5 py-1">{step}</span>
+                    {i < all.length - 1 && (
+                      <ArrowRightIcon aria-hidden="true" className="h-3.5 w-3.5 text-stone-500" />
+                    )}
+                  </li>
+                ))}
+              </ol>
+              <Link
+                href="/tools/message-studio"
+                className="inline-flex min-h-[44px] items-center font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Open Message Studio
+                <ArrowRightIcon aria-hidden="true" className="ml-1.5 h-4 w-4" />
+              </Link>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4 lg:p-5">
               <span
                 aria-hidden="true"
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-emerald-900"
@@ -293,13 +315,6 @@ export default function Home() {
                 </span>
               </span>
             </div>
-            <Link
-              href="/tools/message-studio"
-              className="inline-flex min-h-[44px] items-center font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-            >
-              Open Message Studio
-              <ArrowRightIcon aria-hidden="true" className="ml-1.5 h-4 w-4" />
-            </Link>
           </div>
         </Card>
       </section>

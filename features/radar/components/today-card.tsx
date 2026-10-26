@@ -174,103 +174,108 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
         "today-enter",
         cardClasses("compact"),
         SEVERITY_ACCENT[severityForWhyKind(why ? why.kind : null)],
+        "lg:p-5",
       )}
       style={index < 5 ? { animationDelay: `${index * 24}ms` } : undefined}
     >
-      <div className="flex items-start gap-3">
-        <ClientAvatar name={record.name} className="h-11 w-11" />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            {why && style ? (
-              <p
-                className={cn(
-                  "flex min-w-0 items-center gap-1.5 text-xs font-semibold",
-                  style.text,
-                )}
-              >
-                <WhyIcon kind={why.kind} />
-                <span className="truncate">{why.title}</span>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-5">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <ClientAvatar name={record.name} className="h-11 w-11 lg:h-12 lg:w-12" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              {why && style ? (
+                <p
+                  className={cn(
+                    "flex min-w-0 items-center gap-1.5 text-xs font-semibold",
+                    style.text,
+                  )}
+                >
+                  <WhyIcon kind={why.kind} />
+                  <span className="truncate">{why.title}</span>
+                </p>
+              ) : (
+                <span />
+              )}
+              {why && (
+                <SignalBadge tone={todaySignalBadge(why.kind).tone}>
+                  {todaySignalBadge(why.kind).label}
+                </SignalBadge>
+              )}
+            </div>
+            <h3 className="truncate text-base font-semibold text-stone-900 lg:text-lg">
+              {record.name}
+            </h3>
+            <p className="tnum text-xs text-stone-500 lg:text-sm">{secondaryLine(item)}</p>
+            {why && <p className="mt-1 text-sm leading-relaxed text-stone-700">{why.detail}</p>}
+
+            {!record.phoneValid && (
+              <p className="mt-1.5 text-xs text-stone-500">
+                {record.phone
+                  ? "Mobile number needs checking — Call and WhatsApp unavailable."
+                  : "No mobile number — open the client to message."}
               </p>
-            ) : (
-              <span />
-            )}
-            {why && (
-              <SignalBadge tone={todaySignalBadge(why.kind).tone}>
-                {todaySignalBadge(why.kind).label}
-              </SignalBadge>
             )}
           </div>
-          <h3 className="truncate text-base font-semibold text-stone-900">{record.name}</h3>
-          <p className="tnum text-xs text-stone-500">{secondaryLine(item)}</p>
         </div>
-      </div>
-      {why && <p className="mt-1.5 text-sm text-stone-700">{why.detail}</p>}
-
-      {!record.phoneValid && (
-        <p className="mt-2 text-xs text-stone-500">
-          {record.phone
-            ? "Mobile number needs checking — Call and WhatsApp unavailable."
-            : "No mobile number — open the client to message."}
-        </p>
-      )}
-
-      <div className="mt-2.5">{primaryNode}</div>
-
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => onContacted(record.id)}
-          disabled={pending}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-        >
-          <CheckIcon />
-          {pending ? "Saving…" : "Mark contacted"}
-        </button>
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            aria-expanded={menuOpen}
-            aria-label={`More actions for ${record.name}`}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-          >
-            <DotsIcon />
-          </button>
-          {menuOpen && (
-            <div
-              role="menu"
-              aria-label={`More actions for ${record.name}`}
-              className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-md"
+        <div className="flex min-w-0 flex-col gap-2 lg:w-56 lg:shrink-0">
+          <div className="w-full">{primaryNode}</div>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => onContacted(record.id)}
+              disabled={pending}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
             >
-              {showCall && (
-                <a
-                  role="menuitem"
-                  href={callUrl}
-                  className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
-                >
-                  <PhoneIcon /> Call
-                </a>
-              )}
-              {showWhatsApp && (
-                <a
-                  role="menuitem"
-                  href={waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
-                >
-                  <MessageIcon /> WhatsApp
-                </a>
-              )}
-              <Link
-                role="menuitem"
-                href={detailHref}
-                className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+              <CheckIcon />
+              {pending ? "Saving…" : "Mark contacted"}
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                aria-expanded={menuOpen}
+                aria-label={`More actions for ${record.name}`}
+                onClick={() => setMenuOpen((v) => !v)}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
               >
-                <ChevronDownIcon className="rotate-[-90deg]" /> View client
-              </Link>
+                <DotsIcon />
+              </button>
+              {menuOpen && (
+                <div
+                  role="menu"
+                  aria-label={`More actions for ${record.name}`}
+                  className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-stone-200 bg-white py-1 shadow-md"
+                >
+                  {showCall && (
+                    <a
+                      role="menuitem"
+                      href={callUrl}
+                      className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+                    >
+                      <PhoneIcon /> Call
+                    </a>
+                  )}
+                  {showWhatsApp && (
+                    <a
+                      role="menuitem"
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+                    >
+                      <MessageIcon /> WhatsApp
+                    </a>
+                  )}
+                  <Link
+                    role="menuitem"
+                    href={detailHref}
+                    className="flex min-h-[44px] items-center gap-2 px-3 text-sm text-stone-800 hover:bg-stone-50"
+                  >
+                    <ChevronDownIcon className="rotate-[-90deg]" /> View client
+                  </Link>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

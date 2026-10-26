@@ -69,34 +69,52 @@ async function LoginCard({
 
 export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5">
-      <nav aria-label="Breadcrumb">
-        <Link
-          href="/"
-          className="inline-flex min-h-[44px] items-center text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+    <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12">
+      <div className="flex flex-col gap-5">
+        <nav aria-label="Breadcrumb">
+          <Link
+            href="/"
+            className="inline-flex min-h-[44px] items-center text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+          >
+            ← Home
+          </Link>
+        </nav>
+        <section className="flex flex-col gap-1.5">
+          <p className="eyebrow">Welcome</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+            Sign in to your workspace
+          </h1>
+          <p className="max-w-md text-sm leading-relaxed text-stone-600 sm:text-base">
+            Your client relationship workspace is just one sign-in away. Access your clients,
+            follow-ups and daily priorities on your laptop and phone.
+          </p>
+          <ul className="mt-2 hidden flex-col gap-2 text-sm text-stone-600 lg:flex">
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
+              Private to your signed-in account
+            </li>
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
+              Works alongside your existing software
+            </li>
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
+              No PAN, Aadhaar or bank details needed
+            </li>
+          </ul>
+        </section>
+      </div>
+      <div className="w-full">
+        <Suspense
+          fallback={
+            <Card>
+              <p className="text-sm text-stone-500">Loading sign-in…</p>
+            </Card>
+          }
         >
-          ← Home
-        </Link>
-      </nav>
-      <section className="flex flex-col gap-1.5">
-        <p className="eyebrow">Welcome</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
-          Sign in to your workspace
-        </h1>
-        <p className="text-sm leading-relaxed text-stone-600">
-          Your client relationship workspace is just one sign-in away. Access your clients,
-          follow-ups and daily priorities on your laptop and phone.
-        </p>
-      </section>
-      <Suspense
-        fallback={
-          <Card>
-            <p className="text-sm text-stone-500">Loading sign-in…</p>
-          </Card>
-        }
-      >
-        <LoginCard searchParams={searchParams} />
-      </Suspense>
+          <LoginCard searchParams={searchParams} />
+        </Suspense>
+      </div>
     </div>
   );
 }
