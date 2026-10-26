@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ClientAvatar } from "@/components/ui/client-avatar";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -24,6 +25,7 @@ import {
   type StoredRadarClient,
 } from "../repository";
 import { reasonsFor } from "../signals";
+import type { Signal } from "../types";
 import { radarWhatsAppText } from "../view";
 import { ClientForm, type ClientFormInitial } from "./client-form";
 
@@ -46,6 +48,45 @@ function toFormInitial(stored: StoredRadarClient): ClientFormInitial {
 
 function displayDate(value: string | null): string {
   return value ? formatDisplayDate(value) : "—";
+}
+
+export type WhySeverity = "warning" | "reconnect" | "neutral";
+
+/**
+ * Presentation-only severity for the Why-contact box. Reads the existing
+ * domain signals (computeSignals is the source of truth) — never
+ * recalculated here. Actionable attention (reconnect/new) renders amber;
+ * recent-only renders emerald; no signal renders neutral.
+ */
+export function whySeverityForSignals(signals: Signal[]): WhySeverity {
+  if (signals.includes("reconnect-due") || signals.includes("new-client")) return "warning";
+  if (signals.includes("recent-investor")) return "reconnect";
+  return "neutral";
+}
+
+const WHY_SEVERITY_STYLE: Record<WhySeverity, { accent: string; box: string; text: string }> = {
+  warning: {
+    accent: "today-accent-warning",
+    box: "border-amber-200 bg-amber-50",
+    text: "text-amber-900",
+  },
+  reconnect: {
+    accent: "today-accent-reconnect",
+    box: "border-emerald-200 bg-emerald-50",
+    text: "text-emerald-900",
+  },
+  neutral: {
+    accent: "today-accent",
+    box: "border-stone-200 bg-stone-50",
+    text: "text-stone-700",
+  },
+};
+
+function identityMeta(record: Pick<StoredRadarClient, "investmentType" | "lastContacted">): string {
+  if (record.lastContacted) {
+    return `${record.investmentType} · Last contacted ${formatDisplayDate(record.lastContacted)}`;
+  }
+  return `${record.investmentType} · Never contacted`;
 }
 
 /**
@@ -152,65 +193,32 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
   }
 
   const handoff = React.useMemo(() => buildRadarHandoff(record), [record]);
+  const whySeverity = whySeverityForSignals(record.signals);
+  const whyStyle = WHY_SEVERITY_STYLE[whySeverity];
 
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold text-stone-900">{record.name}</h2>
-            <span className="flex shrink-0 items-center gap-1.5">
-              {record.isNewClient && (
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
-                  New
-                </span>
-              )}
-              <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
-                {record.investmentType}
-              </span>
-            </span>
+        <div className="flex items-start gap-3">
+          <ClientAvatar name={record.name} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <h2 className="text-lg font-semibold break-words text-stone-900">{record.name}</h2>
+            <p className="tnum text-xs text-stone-500">{identityMeta(record)}</p>
           </div>
-
-          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Mobile</dt>
-              <dd className="font-medium text-stone-900">{record.phone || "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last invested</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last contacted</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastContacted)}</dd>
-            </div>
-          </dl>
-
-          {record.note.length > 0 && (
-            <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
-          )}
-
-          {reasons.length > 0 && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-xs font-medium text-emerald-900">Why this client is surfaced</p>
-              <ul className="mt-1.5 space-y-1">
-                {reasons.map((reason) => (
-                  <li key={reason} className="text-sm text-emerald-900">
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {!record.phoneValid && (
-            <p className="text-xs text-stone-500">
-              {record.phone
-                ? "Phone number needs checking — Call and WhatsApp are unavailable."
-                : "No mobile number — Message is still available."}
-            </p>
+          {record.isNewClient && (
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
+              New
+            </span>
           )}
         </div>
+
+        {!record.phoneValid && (
+          <p className="mt-2 text-xs text-stone-500">
+            {record.phone
+              ? "Phone number needs checking — Call and WhatsApp are unavailable."
+              : "No mobile number — Message is still available."}
+          </p>
+        )}
       </Card>
 
       {storeError && (
@@ -229,6 +237,22 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
             Undo
           </Button>
         </div>
+      )}
+
+      {reasons.length > 0 && (
+        <section
+          aria-label="Why contact"
+          className={cn("rounded-xl border p-4 shadow-sm", whyStyle.accent, whyStyle.box)}
+        >
+          <h3 className={cn("text-xs font-semibold", whyStyle.text)}>Why contact?</h3>
+          <ul className="mt-1.5 space-y-1">
+            {reasons.map((reason) => (
+              <li key={reason} className={cn("text-sm", whyStyle.text)}>
+                {reason}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -285,6 +309,30 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
       )}
 
       <ClientFollowups clientId={record.id} />
+
+      <Card>
+        <div className="flex flex-col gap-3">
+          <h3 className="eyebrow">Details</h3>
+          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            <div className="flex justify-between gap-2 sm:block">
+              <dt className="text-stone-500">Mobile</dt>
+              <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2 sm:block">
+              <dt className="text-stone-500">Last invested</dt>
+              <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 sm:block">
+              <dt className="text-stone-500">Last contacted</dt>
+              <dd className="font-medium text-stone-900">{displayDate(record.lastContacted)}</dd>
+            </div>
+          </dl>
+
+          {record.note.length > 0 && (
+            <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
+          )}
+        </div>
+      </Card>
 
       <div className="border-t border-stone-200 pt-4">
         <div className="flex items-center justify-between gap-2">
