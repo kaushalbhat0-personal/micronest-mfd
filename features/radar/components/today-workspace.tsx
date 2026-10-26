@@ -259,7 +259,6 @@ export function TodayWorkspace({
             icon={<AlertIcon />}
             label="Overdue"
             value={counts.overdue}
-            active={filter === "followups"}
             tone="text-red-800"
             onSelect={() => setFilter("followups")}
           />
@@ -267,7 +266,6 @@ export function TodayWorkspace({
             icon={<ClockIcon />}
             label="Due today"
             value={counts.dueToday}
-            active={filter === "followups"}
             tone="text-amber-800"
             onSelect={() => setFilter("followups")}
           />
@@ -275,7 +273,7 @@ export function TodayWorkspace({
             icon={<CalendarIcon />}
             label="Reconnect"
             value={counts.reconnect}
-            active={filter === "reconnect"}
+            pressed={filter === "reconnect"}
             tone="text-emerald-900"
             onSelect={() => setFilter("reconnect")}
           />
@@ -299,7 +297,7 @@ export function TodayWorkspace({
         ))}
       </div>
 
-      <section aria-labelledby="queue-heading" aria-live="polite" className="flex flex-col gap-3">
+      <section aria-labelledby="queue-heading" aria-live="polite" className="flex flex-col gap-2.5">
         <h2 id="queue-heading" className="text-sm font-semibold text-stone-900">
           People to contact
           <span className="tnum ml-1.5 font-normal text-stone-500">{visible.length}</span>
@@ -401,14 +399,20 @@ function AttentionStat({
   icon,
   label,
   value,
-  active,
+  pressed,
   tone,
   onSelect,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
-  active: boolean;
+  /**
+   * Toggle state, when the stat mirrors a filter 1:1. Overdue and Due
+   * today both shortcut to the shared `followups` filter, so they carry
+   * no pressed state — otherwise two controls would announce the same
+   * selection. The selected filter is owned by the chip rail below.
+   */
+  pressed?: boolean;
   tone: string;
   onSelect: () => void;
 }) {
@@ -416,11 +420,11 @@ function AttentionStat({
     <button
       type="button"
       onClick={onSelect}
-      aria-pressed={active}
+      aria-pressed={pressed}
       className={cn(
         "flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900",
-        active ? "bg-emerald-50 ring-1 ring-inset ring-emerald-900" : "hover:bg-stone-50",
+        pressed ? "bg-emerald-50 ring-1 ring-inset ring-emerald-900" : "hover:bg-stone-50",
       )}
     >
       <span className={cn("tnum flex items-center gap-1 text-lg font-semibold", tone)}>

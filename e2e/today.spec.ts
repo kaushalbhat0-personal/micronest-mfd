@@ -110,10 +110,36 @@ test.describe("Today workspace", () => {
     await seedQueue();
     await page.goto("/workspace/today");
 
-    // Attention strip renders with counts.
+    // Attention strip renders with counts. Overdue and Due today are
+    // shortcuts into the shared follow-ups filter (no pressed state —
+    // two controls must never announce the same selection); only
+    // Reconnect mirrors its filter 1:1.
     const strip = page.getByLabel("Attention summary");
     await expect(strip.getByRole("button", { name: /overdue/i })).toContainText("1");
     await expect(strip.getByRole("button", { name: /reconnect/i })).toContainText("1");
+    await expect(strip.getByRole("button", { name: /overdue/i })).not.toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(strip.getByRole("button", { name: /due today/i })).not.toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(strip.getByRole("button", { name: /reconnect/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await strip.getByRole("button", { name: /reconnect/i }).click();
+    await expect(strip.getByRole("button", { name: /reconnect/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await strip.getByRole("button", { name: /overdue/i }).click();
+    await expect(
+      page
+        .getByRole("group", { name: /filter today/i })
+        .getByRole("button", { name: /follow-ups/i }),
+    ).toHaveAttribute("aria-pressed", "true");
 
     // Priority card leads with why + one primary action.
     const card = page.getByRole("article", { name: /today overdue owner/i });

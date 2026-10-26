@@ -3,6 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
+import { cardClasses } from "@/components/ui/card";
+import { ClientAvatar } from "@/components/ui/client-avatar";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -33,6 +35,37 @@ function whyStyle(kind: TodayWhy["kind"]): { text: string; dot: string } {
       return { text: "text-amber-800", dot: "bg-amber-500" };
   }
 }
+
+export type TodaySeverity = "overdue" | "warning" | "reconnect" | "neutral";
+
+/**
+ * Presentation-only mapping from the existing TodayWhy kind to the
+ * severity accent. No business logic — every kind already produced
+ * by the domain view-model (../today.ts).
+ */
+export function severityForWhyKind(kind: TodayWhy["kind"] | null): TodaySeverity {
+  switch (kind) {
+    case "followup-overdue":
+      return "overdue";
+    case "followup-today":
+    case "new":
+      return "warning";
+    case "reconnect":
+    case "recent":
+      return "reconnect";
+    case "followup-upcoming":
+    case null:
+    default:
+      return "neutral";
+  }
+}
+
+const SEVERITY_ACCENT: Record<TodaySeverity, string> = {
+  overdue: "today-accent-overdue",
+  warning: "today-accent-warning",
+  reconnect: "today-accent-reconnect",
+  neutral: "today-accent",
+};
 
 function secondaryLine(item: TodayItem): string {
   const { record } = item;
@@ -114,20 +147,27 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
   return (
     <article
       aria-label={`Contact ${record.name}`}
-      className="today-enter rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+      className={cn(
+        "today-enter",
+        cardClasses("compact"),
+        SEVERITY_ACCENT[severityForWhyKind(why ? why.kind : null)],
+      )}
       style={index < 5 ? { animationDelay: `${index * 24}ms` } : undefined}
     >
-      <div className="flex flex-col gap-1">
-        {why && style && (
-          <p className={cn("flex items-center gap-1.5 text-xs font-semibold", style.text)}>
-            <WhyIcon kind={why.kind} />
-            {why.title}
-          </p>
-        )}
-        <h3 className="text-base font-semibold text-stone-900">{record.name}</h3>
-        <p className="tnum text-xs text-stone-500">{secondaryLine(item)}</p>
-        {why && <p className="text-sm text-stone-700">{why.detail}</p>}
+      <div className="flex items-start gap-3">
+        <ClientAvatar name={record.name} />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {why && style && (
+            <p className={cn("flex items-center gap-1.5 text-xs font-semibold", style.text)}>
+              <WhyIcon kind={why.kind} />
+              {why.title}
+            </p>
+          )}
+          <h3 className="truncate text-base font-semibold text-stone-900">{record.name}</h3>
+          <p className="tnum text-xs text-stone-500">{secondaryLine(item)}</p>
+        </div>
       </div>
+      {why && <p className="mt-1.5 text-sm text-stone-700">{why.detail}</p>}
 
       {!record.phoneValid && (
         <p className="mt-2 text-xs text-stone-500">
@@ -137,9 +177,9 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
         </p>
       )}
 
-      <div className="mt-3">{primaryNode}</div>
+      <div className="mt-2.5">{primaryNode}</div>
 
-      <div className="mt-1.5 flex items-center justify-between gap-2">
+      <div className="mt-1 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => onContacted(record.id)}

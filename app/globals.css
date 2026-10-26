@@ -5,6 +5,13 @@
   /* Single source for the app background. Page shell and sticky
      action bars both reference this token (see .bg-app). */
   --app-bg: #faf7f2;
+  /* Relationship severity signals (RCCF-MFD-33 Phase 1).
+     Presentation only — severity is derived from the existing
+     TodayWhy kinds, never recomputed here. */
+  --signal-overdue: #b91c1c;
+  --signal-warning: #b45309;
+  --signal-reconnect: #047857;
+  --signal-neutral: #d6d3d1;
 }
 
 body {
@@ -53,6 +60,22 @@ body {
   outline: 2px solid #064e3b;
   border-radius: 4px;
   outline-offset: 2px;
+}
+
+/* Today severity accent (RCCF-MFD-33 Phase 1): a restrained inset
+   left bar driven by the existing TodayWhy kind. Inset box-shadow
+   keeps card dimensions and rounded corners unchanged. */
+.today-accent {
+  box-shadow: inset 4px 0 0 var(--signal-neutral);
+}
+.today-accent-overdue {
+  box-shadow: inset 4px 0 0 var(--signal-overdue);
+}
+.today-accent-warning {
+  box-shadow: inset 4px 0 0 var(--signal-warning);
+}
+.today-accent-reconnect {
+  box-shadow: inset 4px 0 0 var(--signal-reconnect);
 }
 
 /* Motion foundation (RCCF-MFD-29 Phase A): enter + skeleton only.
