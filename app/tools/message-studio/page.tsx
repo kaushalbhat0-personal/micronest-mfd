@@ -23,8 +23,9 @@ export default function MessageStudioPage() {
           ← Home
         </Link>
       </nav>
-      <section className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
+      <section className="flex flex-col gap-1.5">
+        <p className="eyebrow">Communication</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
           Message Studio
         </h1>
         <p className="text-sm leading-relaxed text-stone-600">
