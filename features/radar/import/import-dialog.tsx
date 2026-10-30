@@ -10,6 +10,8 @@ import { SignalBadge } from "@/components/ui/signal-badge";
 import { DownloadIcon } from "@/components/ui/icons";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { nowMs } from "@/lib/dates";
+import { reportPerf } from "@/lib/perf/report";
 import {
   createClient as createStoredClient,
   type StoredRadarClient,
@@ -245,8 +247,12 @@ export function ImportDialog({
     if (!isSupabaseConfigured()) return;
     const targets = importableRows(rows);
     if (targets.length === 0) return;
+    // Aggregate import observability (counts + durations only — no client
+    // data, filenames, or file contents). Fire-and-forget; never blocks.
+    const started = nowMs();
     setStep("importing");
     setProgress({ done: 0, total: targets.length });
+    const writeStarted = nowMs();
     const supabase: SupabaseClient = createClient();
     const created: StoredRadarClient[] = [];
     let failed = 0;
@@ -263,6 +269,19 @@ export function ImportDialog({
       }
       setProgress({ done: created.length + failed, total: targets.length });
     }
+    const writeMs = nowMs() - writeStarted;
+    reportPerf({
+      op: "import.session",
+      attempted: targets.length,
+      ready,
+      skipped,
+      invalid,
+      duplicate: duplicates,
+      added: created.length,
+      failed,
+      writeMs,
+      durationMs: nowMs() - started,
+    });
     onImported(created);
     setReceipt({
       added: created.length,

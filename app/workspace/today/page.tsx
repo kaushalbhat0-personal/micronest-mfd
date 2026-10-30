@@ -7,6 +7,7 @@ import { TodaySkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { timed } from "@/lib/perf/log";
 import { listOpenFollowups } from "@/features/followups/repository";
 import type { StoredFollowup } from "@/features/followups/types";
 import { listClients, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
@@ -76,8 +77,14 @@ async function TodayBody({ searchParams }: TodayPageProps) {
   try {
     const [userResponse, clientRows, followupRows] = await Promise.all([
       supabase.auth.getUser(),
-      listClients(supabase),
-      listOpenFollowups(supabase),
+      timed("supabase.clients.list", () => listClients(supabase), {
+        route: "/workspace/today",
+        rowsOf: (rows) => rows.length,
+      }),
+      timed("supabase.followups.list-open", () => listOpenFollowups(supabase), {
+        route: "/workspace/today",
+        rowsOf: (rows) => rows.length,
+      }),
     ]);
     const user = userResponse.data.user;
     if (!user) {

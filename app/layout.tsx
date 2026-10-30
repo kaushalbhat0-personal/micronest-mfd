@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BrandMark } from "@/components/brand-mark";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -52,6 +54,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             details in any tool.
           </div>
         </footer>
+        {/* Web Analytics + Speed Insights: async scripts managed by Vercel.
+            Page views and Web Vitals only — no custom events, no PII. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

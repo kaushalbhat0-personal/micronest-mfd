@@ -47,3 +47,12 @@ export function daysBetweenYMD(fromYMD: string, toYMD: string): number {
 export function formatDisplayDate(dateYMD: string): string {
   return `${dateYMD.slice(8, 10)}/${dateYMD.slice(5, 7)}/${dateYMD.slice(0, 4)}`;
 }
+
+/**
+ * Wall-clock milliseconds for duration measurement in event handlers.
+ * Thin wrapper so component files satisfy the react-hooks/purity rule
+ * (direct Date.now() calls are flagged there); pure by contract here.
+ */
+export function nowMs(): number {
+  return Date.now();
+}

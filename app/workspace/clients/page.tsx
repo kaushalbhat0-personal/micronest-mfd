@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ClientCardSkeleton } from "@/components/ui/skeleton";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { timed } from "@/lib/perf/log";
 import { listOpenFollowups } from "@/features/followups/repository";
 import type { StoredFollowup } from "@/features/followups/types";
 import { listClients, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
@@ -93,8 +94,14 @@ async function ClientsBody() {
   try {
     const [userResponse, clientRows, followupRows] = await Promise.all([
       supabase.auth.getUser(),
-      listClients(supabase),
-      listOpenFollowups(supabase),
+      timed("supabase.clients.list", () => listClients(supabase), {
+        route: "/workspace/clients",
+        rowsOf: (rows) => rows.length,
+      }),
+      timed("supabase.followups.list-open", () => listOpenFollowups(supabase), {
+        route: "/workspace/clients",
+        rowsOf: (rows) => rows.length,
+      }),
     ]);
     if (!userResponse.data.user) {
       // Proxy normally bounces signed-out sessions to /login first.

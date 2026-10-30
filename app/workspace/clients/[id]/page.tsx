@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ClientCardSkeleton } from "@/components/ui/skeleton";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { timed } from "@/lib/perf/log";
 import { isValidClientId } from "@/lib/workspace/params";
 import { listFollowupsForClient } from "@/features/followups/repository";
 import type { StoredFollowup } from "@/features/followups/types";
@@ -95,11 +96,16 @@ async function ClientDetailBody({ params }: ClientDetailPageProps) {
   // error + retry) instead of failing the whole page.
   const [userResponse, clientOutcome, followupRows] = await Promise.all([
     supabase.auth.getUser(),
-    getClient(supabase, id).then(
+    timed("supabase.clients.get", () => getClient(supabase, id), {
+      route: "/workspace/clients/[id]",
+    }).then(
       (value: StoredRadarClient) => ({ status: "ok" as const, value }),
       (error: unknown) => ({ status: "error" as const, error }),
     ),
-    listFollowupsForClient(supabase, id).then(
+    timed("supabase.followups.list-for-client", () => listFollowupsForClient(supabase, id), {
+      route: "/workspace/clients/[id]",
+      rowsOf: (rows) => rows.length,
+    }).then(
       (value: StoredFollowup[]) => value,
       () => undefined,
     ),

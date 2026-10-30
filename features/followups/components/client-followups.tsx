@@ -6,9 +6,10 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, TextArea, TextInput } from "@/components/ui/controls";
-import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
+import { formatDisplayDate, nowMs, todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { reportPerf } from "@/lib/perf/report";
 import { dueWords } from "@/features/radar/today";
 import { splitStoredFollowups } from "../model";
 import { getFollowUpStatus } from "../dates";
@@ -188,6 +189,9 @@ export function ClientFollowups({
     setSuccess(null);
     setActionError(null);
     setBusy(true);
+    // Write→requery timing (aggregate ms + row count only). Fire-and-forget;
+    // the persist-first-then-requery flow below is unchanged.
+    const mutationStarted = nowMs();
     try {
       const supabase = supabaseOrThrow();
       await createFollowup(supabase, {
@@ -196,12 +200,28 @@ export function ClientFollowups({
         reason: checked.row.reason,
         note: checked.row.note,
       });
-      await refresh(supabase);
+      const writeMs = nowMs() - mutationStarted;
+      const refreshed = await refresh(supabase);
+      reportPerf({
+        op: "followup.mutation",
+        kind: "create",
+        ok: true,
+        writeMs,
+        requeryMs: nowMs() - mutationStarted - writeMs,
+        rows: refreshed.length,
+      });
       setFormOpen(false);
       resetForm();
       setSuccess("Follow-up added.");
       setToastId(null);
     } catch (error) {
+      reportPerf({
+        op: "followup.mutation",
+        kind: "create",
+        ok: false,
+        writeMs: nowMs() - mutationStarted,
+        requeryMs: 0,
+      });
       // Keep the form open with values intact so nothing is silently lost.
       setSaveError(followupErrorMessage(error));
     } finally {
@@ -213,12 +233,29 @@ export function ClientFollowups({
     setActionError(null);
     setSuccess(null);
     setBusy(true);
+    const mutationStarted = nowMs();
     try {
       const supabase = supabaseOrThrow();
       await completeFollowup(supabase, id);
-      await refresh(supabase);
+      const writeMs = nowMs() - mutationStarted;
+      const refreshed = await refresh(supabase);
+      reportPerf({
+        op: "followup.mutation",
+        kind: "complete",
+        ok: true,
+        writeMs,
+        requeryMs: nowMs() - mutationStarted - writeMs,
+        rows: refreshed.length,
+      });
       setToastId(id);
     } catch (error) {
+      reportPerf({
+        op: "followup.mutation",
+        kind: "complete",
+        ok: false,
+        writeMs: nowMs() - mutationStarted,
+        requeryMs: 0,
+      });
       setActionError(followupErrorMessage(error));
     } finally {
       setBusy(false);
@@ -229,12 +266,29 @@ export function ClientFollowups({
     setActionError(null);
     setSuccess(null);
     setBusy(true);
+    const mutationStarted = nowMs();
     try {
       const supabase = supabaseOrThrow();
       await reopenFollowup(supabase, id);
-      await refresh(supabase);
+      const writeMs = nowMs() - mutationStarted;
+      const refreshed = await refresh(supabase);
+      reportPerf({
+        op: "followup.mutation",
+        kind: "reopen",
+        ok: true,
+        writeMs,
+        requeryMs: nowMs() - mutationStarted - writeMs,
+        rows: refreshed.length,
+      });
       setToastId(null);
     } catch (error) {
+      reportPerf({
+        op: "followup.mutation",
+        kind: "reopen",
+        ok: false,
+        writeMs: nowMs() - mutationStarted,
+        requeryMs: 0,
+      });
       setActionError(followupErrorMessage(error));
     } finally {
       setBusy(false);
