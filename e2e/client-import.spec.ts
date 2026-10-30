@@ -41,12 +41,12 @@ async function clearRows() {
     .eq("user_id", await userIdFor());
 }
 
-async function openImport(page: Page, name: RegExp = /^import$/i) {
+async function openImport(page: Page, name: RegExp = /^add from file$/i) {
   await page.goto("/workspace/clients");
   const trigger = page.getByRole("button", { name }).first();
   await expect(trigger).toBeVisible();
   await trigger.click();
-  await expect(page.getByRole("dialog", { name: /import your client book/i })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: /add clients from a file/i })).toBeVisible();
 }
 
 async function upload(page: Page, fileName: string) {
@@ -74,7 +74,7 @@ test.describe("Client import", () => {
     );
 
     test("entry, template, mapping, preview, and validation", async ({ page }) => {
-      await openImport(page, /try import preview/i);
+      await openImport(page, /try a file upload/i);
 
       // Template downloads the canonical blank contract.
       const download = page.waitForEvent("download");
@@ -86,7 +86,7 @@ test.describe("Client import", () => {
       // Single sheet jumps straight to column mapping.
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
       const selects = page
-        .getByRole("dialog", { name: /import your client book/i })
+        .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
       // Exact template headers: all eight map automatically, no manual step.
@@ -97,7 +97,7 @@ test.describe("Client import", () => {
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
-      await expect(page.getByRole("button", { name: /import 3 clients/i })).toBeDisabled();
+      await expect(page.getByRole("button", { name: /add 3 clients/i })).toBeDisabled();
       await expect(page.getByText(/sign in to save imported clients/i)).toBeVisible();
       await expect(page.getByText("Rajesh Sharma")).toBeVisible();
       await expectAxeClean(page);
@@ -105,39 +105,39 @@ test.describe("Client import", () => {
       await page.getByRole("button", { name: /^back$/i }).click();
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog", { name: /import your client book/i })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: /try import preview/i })).toBeFocused();
+      await expect(page.getByRole("dialog", { name: /add clients from a file/i })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /try a file upload/i })).toBeFocused();
     });
 
     test("duplicates are counted, explained, and removable", async ({ page }) => {
-      await openImport(page, /try import preview/i);
+      await openImport(page, /try a file upload/i);
 
       await upload(page, "import-mixed.csv");
       await expect(page.getByRole("button", { name: /review 5 rows/i })).toBeVisible();
       await page.getByRole("button", { name: /review 5 rows/i }).click();
       await expect(page.getByText("5 rows found")).toBeVisible();
       // Dedicated duplicates summary — never hidden in a generic count.
-      await expect(page.getByText("2 duplicates")).toBeVisible();
-      await expect(page.getByText("2 duplicate clients found").first()).toBeVisible();
+      await expect(page.getByText("2 already added")).toBeVisible();
+      await expect(page.getByText("2 already in your lists found").first()).toBeVisible();
       await expect(page.getByText(/duplicate of row 2/i).first()).toBeVisible();
       await expect(page.getByText(/matched by mobile number/i).first()).toBeVisible();
 
       // Per-row removal drops the row from the pending import only.
       await expect(
-        page.getByRole("button", { name: /remove row 4 from this import/i }),
+        page.getByRole("button", { name: /remove row 4 from this upload/i }),
       ).toBeVisible();
-      await page.getByRole("button", { name: /remove row 4 from this import/i }).click();
-      await expect(page.getByText("1 duplicates")).toBeVisible();
+      await page.getByRole("button", { name: /remove row 4 from this upload/i }).click();
+      await expect(page.getByText("1 already added")).toBeVisible();
 
       // Bulk removal clears the rest.
-      await page.getByRole("button", { name: /remove duplicates/i }).click();
-      await expect(page.getByText("0 duplicates")).toHaveCount(0);
+      await page.getByRole("button", { name: /remove these rows/i }).click();
+      await expect(page.getByText("0 already added")).toHaveCount(0);
       await expect(page.getByText(/duplicate of row 2/i)).toHaveCount(0);
       await expectAxeClean(page);
     });
 
     test("aliases, mixed rows, invalid files, and sheet selection", async ({ page }) => {
-      await openImport(page, /try import preview/i);
+      await openImport(page, /try a file upload/i);
 
       await upload(page, "import-alias.csv");
       await expect(page.getByRole("button", { name: /review 2 rows/i })).toBeVisible();
@@ -152,12 +152,12 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /review 5 rows/i })).toBeVisible();
       await page.getByRole("button", { name: /review 5 rows/i }).click();
       await expect(page.getByText("5 rows found")).toBeVisible();
-      await expect(page.getByText("Client name is missing.")).toBeVisible();
+      await expect(page.getByText("Please enter the client's name.")).toBeVisible();
       await expect(page.getByText(/duplicate of row 2/i).first()).toBeVisible();
 
       const errorDownload = page.waitForEvent("download");
       await page
-        .getByRole("button", { name: /download rows needing attention/i })
+        .getByRole("button", { name: /download rows to fix/i })
         .first()
         .click();
       const errors = await errorDownload;
@@ -165,12 +165,12 @@ test.describe("Client import", () => {
       await expectAxeClean(page);
       await page.keyboard.press("Escape");
 
-      await openImport(page, /try import preview/i);
+      await openImport(page, /try a file upload/i);
       await upload(page, "import-invalid.txt");
       await expect(page.getByText(/please upload a .csv or .xlsx file/i)).toBeVisible();
       await page.keyboard.press("Escape");
 
-      await openImport(page, /try import preview/i);
+      await openImport(page, /try a file upload/i);
       await upload(page, "import-multi.xlsx");
       await expect(page.getByRole("radiogroup", { name: /choose a sheet/i })).toBeVisible();
       await page.getByRole("radio", { name: /archive/i }).click();
@@ -178,7 +178,7 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /review 1 rows/i })).toBeVisible();
       await page.getByRole("button", { name: /review 1 rows/i }).click();
       await expect(page.getByText("1 rows found")).toBeVisible();
-      await expect(page.getByRole("button", { name: /import 1 clients/i })).toBeDisabled();
+      await expect(page.getByRole("button", { name: /add 1 clients/i })).toBeDisabled();
     });
   });
 
@@ -197,8 +197,8 @@ test.describe("Client import", () => {
 
     test("template, mapping, preview, import, and receipt", async ({ page }) => {
       await page.goto("/workspace/clients");
-      await expect(page.getByText(/bring your client book/i)).toBeVisible();
-      await expect(page.getByRole("button", { name: /import client list/i })).toBeVisible();
+      await expect(page.getByText(/bring your clients/i)).toBeVisible();
+      await expect(page.getByRole("button", { name: /add from file/i })).toBeVisible();
       await expect(page.getByRole("button", { name: /download template/i })).toBeVisible();
 
       await openImport(page);
@@ -211,7 +211,7 @@ test.describe("Client import", () => {
       await upload(page, "import-valid.csv");
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
       const selects = page
-        .getByRole("dialog", { name: /import your client book/i })
+        .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
       // Exact template headers: all eight map automatically, no manual step.
@@ -222,14 +222,14 @@ test.describe("Client import", () => {
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
-      await expect(page.getByRole("button", { name: /import 3 clients/i })).toBeEnabled();
+      await expect(page.getByRole("button", { name: /add 3 clients/i })).toBeEnabled();
       await expect(page.getByText("Rajesh Sharma")).toBeVisible();
       await expectAxeClean(page);
 
-      await page.getByRole("button", { name: /import 3 clients/i }).click();
-      await expect(page.getByText("Import complete")).toBeVisible();
+      await page.getByRole("button", { name: /add 3 clients/i }).click();
+      await expect(page.getByText("Here's what was added")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
-      await expect(page.getByRole("dialog", { name: /import your client book/i })).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: /add clients from a file/i })).toHaveCount(0);
       await expect(page.getByRole("article", { name: /rajesh sharma/i })).toBeVisible();
       await expect(page.getByRole("article", { name: /priya mehta/i })).toBeVisible();
       await expect(page.getByRole("article", { name: /amit shah/i })).toBeVisible();
@@ -249,19 +249,19 @@ test.describe("Client import", () => {
       await upload(page, "import-mixed.csv");
       await page.getByRole("button", { name: /review 5 rows/i }).click();
       await expect(page.getByText("5 rows found")).toBeVisible();
-      await expect(page.getByText("Client name is missing.")).toBeVisible();
+      await expect(page.getByText("Please enter the client's name.")).toBeVisible();
       await expect(page.getByText(/duplicate of row 2/i).first()).toBeVisible();
 
       const errorDownload = page.waitForEvent("download");
       await page
-        .getByRole("button", { name: /download rows needing attention/i })
+        .getByRole("button", { name: /download rows to fix/i })
         .first()
         .click();
       const errors = await errorDownload;
       expect(errors.suggestedFilename()).toBe("import-needs-attention.csv");
       await expectAxeClean(page);
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("button", { name: /^import$/i })).toBeFocused();
+      await expect(page.getByRole("button", { name: /^add from file$/i })).toBeFocused();
     });
 
     test("invalid files and multi-sheet workbooks are handled", async ({ page }) => {
@@ -278,22 +278,22 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /review 1 rows/i })).toBeVisible();
       await page.getByRole("button", { name: /review 1 rows/i }).click();
       await expect(page.getByText("1 rows found")).toBeVisible();
-      await expect(page.getByRole("button", { name: /import 1 clients/i })).toBeEnabled();
+      await expect(page.getByRole("button", { name: /add 1 clients/i })).toBeEnabled();
     });
 
     test("re-importing skips every existing client", async ({ page }) => {
       await openImport(page);
       await upload(page, "import-valid.csv");
       await page.getByRole("button", { name: /review 3 rows/i }).click();
-      await page.getByRole("button", { name: /import 3 clients/i }).click();
-      await expect(page.getByText("Import complete")).toBeVisible();
+      await page.getByRole("button", { name: /add 3 clients/i }).click();
+      await expect(page.getByText("Here's what was added")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
 
       await openImport(page);
       await upload(page, "import-valid.csv");
       await page.getByRole("button", { name: /review 3 rows/i }).click();
-      await expect(page.getByText(/already in your client book/i).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: /nothing to import/i })).toBeDisabled();
+      await expect(page.getByText(/already in your clients/i).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: /nothing to add/i })).toBeDisabled();
     });
 
     test("manual add blocks an exact duplicate without overwriting", async ({ page }) => {

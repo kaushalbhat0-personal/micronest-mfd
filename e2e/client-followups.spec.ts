@@ -96,11 +96,11 @@ test.describe("Client Detail follow-ups", () => {
     await page.goto(`/workspace/clients/${clientId}`);
     await expect(page.getByRole("heading", { name: /followup c2 owner/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: /^follow-ups$/i })).toBeVisible();
-    await expect(page.getByText("No follow-ups yet.")).toBeVisible();
+    await expect(page.getByText("You're all caught up.")).toBeVisible();
 
     await page.getByRole("button", { name: /\+ add follow-up/i }).click();
-    await page.getByLabel("Due date").fill(due);
-    await page.getByLabel("Reason").fill(REASON);
+    await page.getByLabel("Follow up on").fill(due);
+    await page.getByLabel("Why").fill(REASON);
     await page.getByLabel(/note/i).fill("Prefers evening calls");
     await page.getByRole("button", { name: "Add", exact: true }).click();
 
@@ -114,15 +114,15 @@ test.describe("Client Detail follow-ups", () => {
     ).toEqual([]);
 
     await page.getByRole("button", { name: new RegExp(`mark ${REASON} done`, "i") }).click();
-    await expect(page.getByRole("status").filter({ hasText: /marked done/i })).toBeVisible();
-    await expect(page.getByText("No follow-ups yet.")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /follow-up marked done/i })).toBeVisible();
+    await expect(page.getByText("You're all caught up.")).toBeVisible();
     // The completed history row exists in the DOM (collapsed <details>), so
     // assert hidden rather than absent — the open list no longer shows it.
     await expect(page.getByText(REASON)).toBeHidden();
 
     await page.reload();
     await expect(page.getByRole("heading", { name: /^follow-ups$/i })).toBeVisible();
-    await expect(page.getByText("No follow-ups yet.")).toBeVisible();
+    await expect(page.getByText("You're all caught up.")).toBeVisible();
     // Completed history survives reload, collapsed by default.
     await expect(page.getByText(REASON)).toBeHidden();
     await page.getByText(new RegExp(`completed \\(1\\)`, "i")).click();
@@ -133,7 +133,7 @@ test.describe("Client Detail follow-ups", () => {
       historyAxe.violations.filter((v) => v.impact === "critical" || v.impact === "serious"),
     ).toEqual([]);
 
-    await page.getByRole("button", { name: new RegExp(`reopen ${REASON}`, "i") }).click();
+    await page.getByRole("button", { name: new RegExp(`open ${REASON} again`, "i") }).click();
     await expect(page.getByText(REASON)).toBeVisible();
     await expect(page.getByRole("heading", { name: /follow-ups 1/i })).toBeVisible();
 
@@ -146,13 +146,13 @@ test.describe("Client Detail follow-ups", () => {
     const clientId = await seedClient();
     await page.goto(`/workspace/clients/${clientId}`);
     await page.getByRole("button", { name: /\+ add follow-up/i }).click();
-    await page.getByLabel("Due date").fill(futureYMD(31));
-    await page.getByLabel("Reason").fill(REASON);
+    await page.getByLabel("Follow up on").fill(futureYMD(31));
+    await page.getByLabel("Why").fill(REASON);
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText(REASON)).toBeVisible();
 
     await page.getByRole("button", { name: new RegExp(`mark ${REASON} done`, "i") }).click();
-    await expect(page.getByRole("status").filter({ hasText: /marked done/i })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /follow-up marked done/i })).toBeVisible();
     await page.getByRole("button", { name: /undo/i }).click();
     await expect(page.getByText(REASON)).toBeVisible();
     await expect(page.getByRole("heading", { name: /follow-ups 1/i })).toBeVisible();
@@ -186,14 +186,14 @@ test.describe("Client Detail follow-ups", () => {
 
     // Completing the overdue row removes its overdue state but keeps the rest.
     await page.getByRole("button", { name: /mark overdue call back done/i }).click();
-    await expect(page.getByRole("status").filter({ hasText: /marked done/i })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /follow-up marked done/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: /follow-ups 2/i })).toBeVisible();
     await expect(page.getByText(/days overdue/i)).toHaveCount(0);
     await expect(page.getByText("Due today").first()).toBeVisible();
 
     // Client Book reflects the remaining open set with Today semantics.
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
     await expect(page.getByText(/days overdue/i)).toHaveCount(0);
     await expect(page.getByText("Due today").first()).toBeVisible();
 
@@ -210,8 +210,8 @@ test.describe("Client Detail follow-ups", () => {
     const clientId = await seedClient();
     await page.goto(`/workspace/clients/${clientId}`);
     await page.getByRole("button", { name: /\+ add follow-up/i }).click();
-    await page.getByLabel("Due date").fill("2020-01-01");
-    await page.getByLabel("Reason").fill(REASON);
+    await page.getByLabel("Follow up on").fill("2020-01-01");
+    await page.getByLabel("Why").fill(REASON);
     await page.getByRole("button", { name: "Add", exact: true }).click();
     // Scope to the field error: Next.js renders its own route-announcer with
     // role="alert", so an unscoped getByRole("alert") is ambiguous.
@@ -220,6 +220,6 @@ test.describe("Client Detail follow-ups", () => {
     ).toBeVisible();
     await page.reload();
     await expect(page.getByText(REASON)).toHaveCount(0);
-    await expect(page.getByText("No follow-ups yet.")).toBeVisible();
+    await expect(page.getByText("You're all caught up.")).toBeVisible();
   });
 });

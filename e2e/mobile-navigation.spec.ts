@@ -51,7 +51,7 @@ test.describe("Navigation brand + mobile bottom nav", () => {
 
   test("signed-out primary links keep 44px+ touch targets", async ({ page }) => {
     await page.goto("/");
-    for (const name of [/^workspace$/i, /^message studio$/i, /^sign in$/i]) {
+    for (const name of [/^today$/i, /^messages$/i, /^sign in$/i]) {
       const box = await page.getByRole("link", { name }).first().boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
@@ -88,7 +88,7 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       // Active state is never color alone: indicator + weight + aria-current.
       const today = bottom.getByRole("link", { name: /^today$/i });
       await expect(today).toHaveAttribute("aria-current", "page");
-      const clients = bottom.getByRole("link", { name: /^client book$/i });
+      const clients = bottom.getByRole("link", { name: /^clients$/i });
       const studio = bottom.getByRole("link", { name: /^messages$/i });
       await expect(studio).toContainText("Messages");
 
@@ -108,7 +108,7 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(/\/workspace\/clients/);
       await expect(
-        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /^client book$/i }),
+        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /^clients$/i }),
       ).toHaveAttribute("aria-current", "page");
 
       await studio.focus();
@@ -170,7 +170,7 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await expect(page.getByRole("navigation")).toHaveCount(1);
       const nav = page.getByRole("navigation", { name: /primary/i });
       await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
-      await expect(nav.getByRole("link", { name: /^client book$/i })).toBeVisible();
+      await expect(nav.getByRole("link", { name: /^clients$/i })).toBeVisible();
       await expect(nav.getByRole("link", { name: /^messages$/i })).toBeVisible();
       await expect(nav.getByRole("link", { name: /^today$/i })).toHaveAttribute(
         "aria-current",

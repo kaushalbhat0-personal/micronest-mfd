@@ -14,7 +14,7 @@ import { getClient, RadarStoreError, type StoredRadarClient } from "@/features/r
 import { ClientDetail } from "@/features/radar/components/client-detail";
 
 export const metadata: Metadata = {
-  title: "Client — MFD Relationship Workspace",
+  title: "Client — MicroNest MFD",
   description: "Focused client view: why this client matters and what to do next.",
 };
 
@@ -78,13 +78,13 @@ async function ClientDetailBody({ params }: ClientDetailPageProps) {
   }
   if (!isSupabaseConfigured()) {
     return (
-      <NotFoundCard copy="Client sync isn't set up yet. Please sign in once authentication is configured." />
+      <NotFoundCard copy="Your clients aren't available yet because sign-in isn't set up." />
     );
   }
   const supabase = await createServerSupabase();
   if (!supabase) {
     return (
-      <NotFoundCard copy="Client sync isn't set up yet. Please sign in once authentication is configured." />
+      <NotFoundCard copy="Your clients aren't available yet because sign-in isn't set up." />
     );
   }
   // P0: one parallel batch. The session validation (auth.getUser), the

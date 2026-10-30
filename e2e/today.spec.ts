@@ -104,8 +104,8 @@ test.describe("Today workspace", () => {
     await expect(
       page.getByRole("heading", { name: /good (morning|afternoon|evening)/i }),
     ).toBeVisible();
-    await expect(page.getByText(/relationship radar is clear/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: /go to client book/i })).toBeVisible();
+    await expect(page.getByText(/all clear/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /go to clients/i })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(0);
   });
 
@@ -160,19 +160,19 @@ test.describe("Today workspace", () => {
     // Mark contacted → toast → undo restores the queue.
     await page
       .getByRole("article", { name: /today overdue owner/i })
-      .getByRole("button", { name: /mark contacted/i })
+      .getByRole("button", { name: /i spoke to them/i })
       .click();
     const status = page.getByRole("status");
-    await expect(status).toContainText(/marked today overdue owner as contacted/i);
+    await expect(status).toContainText(/you spoke to today overdue owner/i);
     await status.getByRole("button", { name: /undo/i }).click();
     await expect(page.getByRole("article", { name: /today overdue owner/i })).toBeVisible();
 
     // Mark contacted again to verify the completed-today disclosure.
     await page
       .getByRole("article", { name: /today overdue owner/i })
-      .getByRole("button", { name: /mark contacted/i })
+      .getByRole("button", { name: /i spoke to them/i })
       .click();
-    await expect(page.getByText(/completed today/i)).toBeVisible();
+    await expect(page.getByText(/spoke today/i)).toBeVisible();
 
     // Upcoming lists the future follow-up with its reason.
     await expect(page.getByText(/future sip check/i)).toBeVisible();
@@ -185,15 +185,15 @@ test.describe("Today workspace", () => {
     await expect(card).toBeVisible();
 
     // Before contact the card offers the action.
-    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toBeVisible();
+    await expect(card.getByRole("button", { name: /^i spoke to them$/i })).toBeVisible();
 
-    await card.getByRole("button", { name: /^mark contacted$/i }).click();
-    await expect(page.getByRole("status")).toContainText(/marked today overdue owner/i);
+    await card.getByRole("button", { name: /^i spoke to them$/i }).click();
+    await expect(page.getByRole("status")).toContainText(/you spoke to today overdue owner/i);
 
     // After contact the card states the fact instead of repeating the action.
     // Two copies render (mobile + desktop arrangements); assert the visible one.
-    await expect(card.locator('span:text("Contacted today"):visible')).toBeVisible();
-    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toHaveCount(0);
+    await expect(card.locator('span:text("Spoke today"):visible')).toBeVisible();
+    await expect(card.getByRole("button", { name: /^i spoke to them$/i })).toHaveCount(0);
 
     // Dismiss the toast: the in-card Undo still restores the queue.
     await page
@@ -202,7 +202,7 @@ test.describe("Today workspace", () => {
       .click();
     await expect(page.getByRole("status")).toHaveCount(0);
     await card.getByRole("button", { name: /^undo/i }).click();
-    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toBeVisible();
+    await expect(card.getByRole("button", { name: /^i spoke to them$/i })).toBeVisible();
   });
 
   test("?filter=followups preselects the Follow-ups chip", async ({ page }) => {
@@ -246,7 +246,7 @@ test.describe("Today workspace", () => {
     await page.goto("/workspace/today");
     const card = page.getByRole("article", { name: /today overdue owner/i });
     await expect(card).toBeVisible();
-    await card.getByRole("button", { name: /mark contacted/i }).click();
-    await expect(page.getByRole("status")).toContainText(/marked today overdue owner/i);
+    await card.getByRole("button", { name: /i spoke to them/i }).click();
+    await expect(page.getByRole("status")).toContainText(/you spoke to today overdue owner/i);
   });
 });

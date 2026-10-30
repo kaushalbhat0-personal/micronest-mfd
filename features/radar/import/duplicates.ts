@@ -165,7 +165,7 @@ export function duplicateReasonText(
       ? `Duplicate of an earlier row in this file. ${basis}`
       : `Duplicate of row ${firstLine} in this file. ${basis}`;
   }
-  return `Already in your client book. ${basis}`;
+  return `Already in your clients. ${basis}`;
 }
 
 /**
@@ -179,13 +179,13 @@ export function manualDuplicateCopy(
   if (kind === "mobile") {
     return {
       title: "This client already exists",
-      body: `${existingName} is already in your Client Book.`,
+      body: `${existingName} is already in your clients.`,
       matchedBy: "Matched by mobile number.",
     };
   }
   return {
     title: "A client with this name already exists",
-    body: `${existingName} is already in your Client Book.`,
+    body: `${existingName} is already in your clients.`,
     matchedBy: "We couldn't confirm the mobile number, but the client name matches exactly.",
   };
 }

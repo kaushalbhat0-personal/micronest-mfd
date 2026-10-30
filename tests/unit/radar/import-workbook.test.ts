@@ -24,11 +24,11 @@ describe("buildErrorCsv", () => {
       {
         key: "row-2",
         line: 2,
-        name: "Unnamed row",
+        name: "Unnamed client",
         mobile: "—",
         investmentType: "Other",
         status: "invalid",
-        reasons: ["Client name is missing."],
+        reasons: ["Please enter the client's name."],
         fields: { "Client Name": "", Mobile: "9876543210" },
       },
       {
@@ -45,7 +45,7 @@ describe("buildErrorCsv", () => {
     const lines = csv.trim().split("\n");
     expect(lines[0]).toBe(`${[...RADAR_HEADERS].join(",")},Issue`);
     expect(lines).toHaveLength(2);
-    expect(lines[1]).toContain("Client name is missing.");
+    expect(lines[1]).toContain("Please enter the client's name.");
   });
 
   it("quotes cells containing commas", () => {
@@ -57,7 +57,7 @@ describe("buildErrorCsv", () => {
         mobile: "—",
         investmentType: "Other",
         status: "invalid",
-        reasons: ["Client name is missing."],
+        reasons: ["Please enter the client's name."],
         fields: { Note: "Met, at branch" },
       },
     ]);

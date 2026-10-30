@@ -124,10 +124,10 @@ describe("reasonsFor", () => {
     ).toEqual(["Recent investor · invested 12/10/2026"]);
     expect(
       reasonsFor({ lastInvested: null, lastContacted: null }, ["reconnect-due"], TODAY),
-    ).toEqual(["Follow-up due · never contacted"]);
+    ).toEqual(["Follow-up due · haven't spoken yet"]);
     expect(
       reasonsFor({ lastInvested: null, lastContacted: "2026-07-21" }, ["reconnect-due"], TODAY),
-    ).toEqual(["Follow-up due · 97 days since contact"]);
+    ).toEqual(["Follow-up due · 97 days since you last spoke"]);
     expect(reasonsFor({ lastInvested: null, lastContacted: TODAY }, ["new-client"], TODAY)).toEqual(
       ["New client"],
     );
@@ -136,7 +136,7 @@ describe("reasonsFor", () => {
   it("uses singular day correctly", () => {
     expect(
       reasonsFor({ lastInvested: null, lastContacted: "2026-10-25" }, ["reconnect-due"], TODAY),
-    ).toEqual(["Follow-up due · 1 day since contact"]);
+    ).toEqual(["Follow-up due · 1 day since you last spoke"]);
   });
 });
 

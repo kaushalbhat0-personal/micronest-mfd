@@ -49,40 +49,40 @@ describe("validateFollowupInput", () => {
 
   it("rejects past dates while the CSV path tolerates history", () => {
     expect(validateFollowupInput({ ...VALID, dueDate: "2026-10-24" }, TODAY).error).toContain(
-      "cannot be in the past",
+      "Please choose today or a future date",
     );
   });
 
   it("rejects empty, malformed, and impossible dates", () => {
     expect(validateFollowupInput({ ...VALID, dueDate: "" }, TODAY).error).toContain(
-      "Due date is required",
+      "Please choose when to follow up",
     );
     expect(validateFollowupInput({ ...VALID, dueDate: "25/10/2026" }, TODAY).error).toContain(
-      "not a valid date",
+      "doesn't look right",
     );
     expect(validateFollowupInput({ ...VALID, dueDate: "tomorrow" }, TODAY).error).toContain(
-      "not a valid date",
+      "doesn't look right",
     );
     expect(validateFollowupInput({ ...VALID, dueDate: "2026-02-30" }, TODAY).error).toContain(
-      "not a valid date",
+      "doesn't look right",
     );
     expect(validateFollowupInput({ ...VALID, dueDate: "2026-13-01" }, TODAY).error).toContain(
-      "not a valid date",
+      "doesn't look right",
     );
   });
 
   it("requires a well-formed client reference", () => {
     expect(validateFollowupInput({ ...VALID, clientId: "" }, TODAY).error).toContain(
-      "Client is required",
+      "Please choose a client",
     );
     expect(validateFollowupInput({ ...VALID, clientId: "Rajesh" }, TODAY).error).toContain(
-      "Client reference is invalid",
+      "Please choose a valid client",
     );
   });
 
   it("requires reason within 1–40 chars", () => {
     expect(validateFollowupInput({ ...VALID, reason: "   " }, TODAY).error).toContain(
-      "Reason is required",
+      "Please say why you're following up",
     );
     expect(validateFollowupInput({ ...VALID, reason: "x".repeat(41) }, TODAY).error).toContain(
       "under 40",
@@ -128,8 +128,8 @@ describe("validateFollowupInput", () => {
 
 describe("fieldForFollowupError", () => {
   it("maps validator messages onto form fields", () => {
-    expect(fieldForFollowupError("Client is required.")).toBe("clientId");
-    expect(fieldForFollowupError('Due date "x" is not a valid date (use YYYY-MM-DD).')).toBe(
+    expect(fieldForFollowupError("Please choose a client.")).toBe("clientId");
+    expect(fieldForFollowupError("That date doesn't look right — please use YYYY-MM-DD.")).toBe(
       "dueDate",
     );
     expect(

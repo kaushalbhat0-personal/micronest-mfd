@@ -3,9 +3,9 @@ import Link from "next/link";
 import { MessageStudioLoader } from "@/features/message-studio/components/message-studio-loader";
 
 export const metadata: Metadata = {
-  title: "Message Studio — MicroNest MFD Microtools",
+  title: "Messages — MicroNest MFD",
   description:
-    "Create professional, ready-to-send client messages in seconds. No login, no database, nothing stored.",
+    "Create professional, ready-to-send client messages in seconds. No login, nothing stored — everything stays on your device.",
 };
 
 // The form reads browser-local prefs (mode/purpose/tone) on first render,
@@ -27,14 +27,14 @@ export default function MessageStudioPage() {
         <div className="flex max-w-2xl flex-col gap-1.5">
           <p className="eyebrow">Communication</p>
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
-            Message Studio
+            Messages
           </h1>
           <p className="text-sm leading-relaxed text-stone-600 sm:text-base">
             Choose a purpose, enter 2–3 details, generate, copy — done. Then paste into WhatsApp or
-            email yourself. Or switch to Custom Message and write your own.
+            email yourself. Or write your own message instead.
           </p>
         </div>
-        <p className="hidden text-sm text-stone-600 lg:block">Configure left · preview right</p>
+        <p className="hidden text-sm text-stone-600 lg:block">Choose left · preview right</p>
       </section>
       <MessageStudioLoader />
     </div>

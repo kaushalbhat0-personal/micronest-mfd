@@ -101,7 +101,7 @@ export function MessagePreview({
             ))}
           </ul>
           <p className="mt-2 text-xs">
-            Copying and WhatsApp handoff are paused until this wording is edited. This is a basic
+            Copying and WhatsApp are paused until this wording is edited. This is a basic
             guardrail only, not a compliance certification.
           </p>
         </Alert>

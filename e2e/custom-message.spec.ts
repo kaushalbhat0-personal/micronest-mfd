@@ -5,13 +5,13 @@ const HINDI_MESSAGE = "नमस्कार राहुल जी,\nआपक�
 test.describe("Custom Message mode", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/tools/message-studio");
-    await page.getByRole("radio", { name: /custom message/i }).check();
+    await page.getByRole("radio", { name: /write a message/i }).check();
   });
 
   test("prepares a native-language message and copies it exactly", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-    await page.getByLabel("Recipient name (optional)").fill("Rahul");
+    await page.getByLabel("Send to (optional)").fill("Rahul");
     await page.getByLabel("Your message").fill(HINDI_MESSAGE);
     await page.getByRole("button", { name: /prepare message/i }).click();
 
@@ -71,7 +71,7 @@ test.describe("Custom Message mode", () => {
   });
 
   test("does not persist custom content across reload", async ({ page }) => {
-    await page.getByLabel("Recipient name (optional)").fill("Rahul");
+    await page.getByLabel("Send to (optional)").fill("Rahul");
     await page.getByLabel(/whatsapp number/i).fill("9876543210");
     await page.getByLabel("Your message").fill(HINDI_MESSAGE);
     await page.getByRole("button", { name: /prepare message/i }).click();
@@ -79,7 +79,7 @@ test.describe("Custom Message mode", () => {
 
     await page.reload();
     // Mode (a UI pref) may persist, but content must not.
-    await expect(page.getByLabel("Recipient name (optional)")).toHaveValue("");
+    await expect(page.getByLabel("Send to (optional)")).toHaveValue("");
     await expect(page.getByLabel("Your message")).toHaveValue("");
     await expect(page.getByRole("region", { name: "Generated message" })).toHaveCount(0);
   });

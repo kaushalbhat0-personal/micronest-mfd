@@ -69,7 +69,7 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
   {
     column: "Note",
     required: "No",
-    what: "Short internal note, max 200 characters. Blank is fine.",
+    what: "Short note, max 200 characters. Blank is fine.",
     example: "Interested in ELSS",
   },
 ];

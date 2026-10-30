@@ -54,7 +54,7 @@ describe("parseNewClientFlag", () => {
   it("treats unrecognized values as false with a warning", () => {
     const result = parseNewClientFlag("maybe");
     expect(result.value).toBe(false);
-    expect(result.warning).toContain("not recognized");
+    expect(result.warning).toContain("didn't recognise");
   });
 });
 

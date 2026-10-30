@@ -7,9 +7,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 export const metadata: Metadata = {
-  title: "Sign in — MicroNest MFD Workspace",
+  title: "Sign in — MicroNest MFD",
   description:
-    "Sign in with Google to open your MFD Relationship Workspace on your laptop and phone.",
+    "Sign in with Google to open your MicroNest client list on your laptop and phone.",
 };
 
 const ERROR_COPY: Record<string, string> = {
@@ -44,7 +44,7 @@ async function LoginCard({
           </span>
           <div className="flex min-w-0 flex-col">
             <p className="text-base font-semibold text-stone-900">MicroNest</p>
-            <p className="text-xs text-stone-500">MFD Relationship Workspace</p>
+            <p className="text-xs text-stone-500">For mutual fund distributors</p>
           </div>
         </div>
         <GoogleSignInButton next={next} disabled={!configured} />
@@ -82,11 +82,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         <section className="flex flex-col gap-1.5">
           <p className="eyebrow">Welcome</p>
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
-            Sign in to your workspace
+            Sign in to MicroNest
           </h1>
           <p className="max-w-md text-sm leading-relaxed text-stone-600 sm:text-base">
-            Your client relationship workspace is just one sign-in away. Access your clients,
-            follow-ups and daily priorities on your laptop and phone.
+            Your clients, follow-ups and daily priorities are just one sign-in away. Access them
+            on your laptop and phone.
           </p>
           <ul className="mt-2 hidden flex-col gap-2 text-sm text-stone-600 lg:flex">
             <li className="flex items-center gap-2">

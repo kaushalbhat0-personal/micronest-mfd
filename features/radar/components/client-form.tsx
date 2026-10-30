@@ -163,7 +163,7 @@ export function ClientForm({
 
         <Field
           id="client-mobile"
-          label="Mobile (optional)"
+          label="Mobile number (optional)"
           error={errors.phone}
           hint={phoneWarning ?? "10-digit mobile number, with or without +91."}
         >
@@ -178,7 +178,7 @@ export function ClientForm({
           />
         </Field>
 
-        <Field id="client-investment" label="Investment type" hint={typeWarning ?? undefined}>
+        <Field id="client-investment" label="What they have" hint={typeWarning ?? undefined}>
           <Select
             id="client-investment"
             value={values.investmentType}
@@ -222,7 +222,7 @@ export function ClientForm({
           </Field>
           <Field
             id="client-contacted"
-            label="Last contacted (optional)"
+            label="Last spoke (optional)"
             error={errors.lastContacted}
           >
             <TextInput
@@ -254,7 +254,7 @@ export function ClientForm({
 
         <Field
           id="client-note"
-          label="Note (optional)"
+          label="Notes (optional)"
           error={errors.note}
           hint="Max 200 characters."
         >

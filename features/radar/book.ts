@@ -16,7 +16,7 @@ export type BookFilter = "all" | "attention" | "followups" | "new";
 
 export const BOOK_FILTERS: Array<{ id: BookFilter; label: string }> = [
   { id: "all", label: "All" },
-  { id: "attention", label: "Attention" },
+  { id: "attention", label: "Needs attention" },
   { id: "followups", label: "Follow-ups" },
   { id: "new", label: "New" },
 ];

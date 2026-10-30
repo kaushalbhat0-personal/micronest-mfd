@@ -74,7 +74,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
 
   it("rejects missing and overlong names", () => {
     expect(validateClientFields({ ...VALID, name: "  " }, TODAY, "form").error).toContain(
-      "Client name is missing",
+      "Please enter the client's name",
     );
     expect(validateClientFields({ ...VALID, name: "x".repeat(61) }, TODAY, "form").error).toContain(
       "under 60",
@@ -84,7 +84,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
   it("rejects invalid and future dates", () => {
     expect(
       validateClientFields({ ...VALID, lastInvested: "31/02/2026" }, TODAY, "form").error,
-    ).toContain("Last Invested");
+    ).toContain("Last invested");
     expect(
       validateClientFields({ ...VALID, lastContacted: "26/10/2026" }, TODAY, "form").error,
     ).toContain("in the future");
@@ -113,7 +113,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
     expect(result.row?.phoneValid).toBe(false);
     expect(result.row?.investmentType).toBe("Other");
     expect(result.warnings.some((w) => w.startsWith("Phone number"))).toBe(true);
-    expect(result.warnings.some((w) => w.includes("Investment type"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("investment type"))).toBe(true);
   });
 
   it("trims all free-text fields", () => {
@@ -128,12 +128,16 @@ describe("validateClientFields (shared by CSV and form)", () => {
 
 describe("fieldForClientError", () => {
   it("maps validator messages onto form fields", () => {
-    expect(fieldForClientError("Client name is missing.")).toBe("name");
+    expect(fieldForClientError("Please enter the client's name.")).toBe("name");
     expect(fieldForClientError("Amount must be a number like 5000 or 5000.50.")).toBe("amount");
-    expect(fieldForClientError('Last Invested "x" is not a valid DD/MM/YYYY date.')).toBe(
-      "lastInvested",
-    );
-    expect(fieldForClientError('Last Contacted "x" is in the future.')).toBe("lastContacted");
+    expect(
+      fieldForClientError(
+        "Please check the Last invested date — \"x\" is not a valid DD/MM/YYYY date.",
+      ),
+    ).toBe("lastInvested");
+    expect(
+      fieldForClientError("The Last spoke date \"x\" can't be in the future."),
+    ).toBe("lastContacted");
     expect(fieldForClientError("Note looks like sensitive information — please remove it.")).toBe(
       "note",
     );

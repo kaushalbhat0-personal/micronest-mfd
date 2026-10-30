@@ -46,7 +46,7 @@ import { TodayCard } from "./today-card";
 
 const FILTERS: Array<{ id: TodayFilter; label: string }> = [
   { id: "attention", label: "Needs attention" },
-  { id: "followups", label: "Follow-ups" },
+  { id: "followups", label: "Follow up today" },
   { id: "reconnect", label: "Reconnect" },
   { id: "new", label: "New" },
   { id: "all", label: "All" },
@@ -151,7 +151,7 @@ export function TodayWorkspace({
       setUndoPrev((prev) => new Map(prev).set(id, prevLastContacted));
       showToast({
         tone: "success",
-        message: `Marked ${target.name} as contacted.`,
+        message: `You spoke to ${target.name}.`,
         actionLabel: "Undo",
         onAction: () => void undoContacted(id),
       });
@@ -235,7 +235,7 @@ export function TodayWorkspace({
             {greeting}
           </h1>
           <p className="text-sm leading-relaxed text-stone-600">
-            Your relationship radar is clear — there are no clients to review yet.
+            All clear — there are no clients to review yet.
           </p>
         </section>
         <Card>
@@ -251,12 +251,12 @@ export function TodayWorkspace({
                 Add your first client to start today&apos;s list
               </p>
               <p className="text-sm leading-relaxed text-stone-600">
-                Add clients to your Client Book and they will appear here with the reason to contact
+                Add your clients and they will appear here, with the reason to contact
                 them.
               </p>
             </div>
             <Link href="/workspace/clients" className={cn(buttonClasses("primary"), "mt-1")}>
-              Go to Client Book
+              Go to Clients
             </Link>
           </div>
         </Card>
@@ -293,7 +293,7 @@ export function TodayWorkspace({
           </p>
         </div>
         <p className="hidden text-sm text-stone-600 lg:block">
-          Call first, then follow through — the queue is already prioritised.
+          Call first, then follow through — the list is already in priority order.
         </p>
       </section>
 
@@ -303,7 +303,7 @@ export function TodayWorkspace({
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:gap-4">
           <StatCard
             icon={<AlertIcon />}
-            label="Attention"
+            label="Needs attention"
             value={counts.attention}
             pressed={filter === "attention"}
             iconTone="bg-red-50 text-red-800"
@@ -312,7 +312,7 @@ export function TodayWorkspace({
           />
           <StatCard
             icon={<NewClientIcon />}
-            label="New"
+            label="New clients"
             value={counts.fresh}
             pressed={filter === "new"}
             iconTone="bg-emerald-50 text-emerald-900"
@@ -366,7 +366,7 @@ export function TodayWorkspace({
             id="queue-heading"
             className="flex items-center gap-2 text-base font-semibold text-stone-900 lg:text-lg"
           >
-            People to contact
+            Who to contact
             <SignalBadge tone={visible.length > 0 ? "amber" : "stone"}>
               {visible.length}
             </SignalBadge>
@@ -464,7 +464,7 @@ export function TodayWorkspace({
                     >
                       <CheckIcon className="h-3.5 w-3.5" />
                     </span>
-                    Completed today
+                    Spoke today
                     <span className="tnum font-normal text-stone-500">{completed.length}</span>
                   </span>
                   <span aria-hidden="true" className="text-xs text-stone-500">

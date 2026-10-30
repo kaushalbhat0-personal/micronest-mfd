@@ -106,9 +106,9 @@ function investmentLine(item: TodayItem): string {
 function contactLine(item: TodayItem): string {
   const { record } = item;
   if (record.lastContacted) {
-    return `Last contact ${formatDisplayDate(record.lastContacted)}`;
+    return `Last spoke ${formatDisplayDate(record.lastContacted)}`;
   }
-  return "Never contacted";
+  return "Haven't spoken yet";
 }
 
 interface TodayCardProps {
@@ -200,12 +200,12 @@ export function TodayCard({
   const markContactedNode = contacted ? (
     <span className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-emerald-900">
       <CheckIcon />
-      Contacted today
+      Spoke today
       {canUndo && (
         <button
           type="button"
           onClick={() => onUndo(record.id)}
-          aria-label={`Undo marking ${record.name} as contacted`}
+          aria-label={`Mark ${record.name} as not spoken to`}
           className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-sm font-medium text-emerald-900 underline decoration-emerald-300 underline-offset-4 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
         >
           Undo
@@ -220,7 +220,7 @@ export function TodayCard({
       className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
     >
       <CheckIcon />
-      {pending ? "Saving…" : "Mark contacted"}
+      {pending ? "Saving…" : "I spoke to them"}
     </button>
   );
 

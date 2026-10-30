@@ -12,7 +12,7 @@ export interface ToastData {
 /**
  * Lightweight status feedback (RCCF-MFD-29 Phase A). Presentational only —
  * the caller owns timing and dismissal. Success announces politely,
- * errors assertively. Optional action slot supports "Marked contacted · Undo".
+ * errors assertively. Optional action slot supports "You spoke to … · Undo".
  */
 export function Toast({ toast, onDismiss }: { toast: ToastData; onDismiss: () => void }) {
   return (

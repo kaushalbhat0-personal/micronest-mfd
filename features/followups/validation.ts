@@ -209,9 +209,15 @@ export type FollowupFieldName = "clientId" | "dueDate" | "reason" | "note";
  */
 export function fieldForFollowupError(error: string | null): FollowupFieldName | null {
   if (!error) return null;
-  if (error.startsWith("Client")) return "clientId";
-  if (error.startsWith("Due date")) return "dueDate";
-  if (error.startsWith("Reason")) return "reason";
+  if (error.startsWith("Client") || error.startsWith("Please choose a")) return "clientId";
+  if (
+    error.startsWith("Due date") ||
+    error.startsWith("Please choose when") ||
+    error.startsWith("Please choose today") ||
+    error.startsWith("That date")
+  )
+    return "dueDate";
+  if (error.startsWith("Reason") || error.startsWith("Please say why")) return "reason";
   if (error.startsWith("Note")) return "note";
   return null;
 }
@@ -244,22 +250,22 @@ export function validateFollowupInput(
   todayYMD: string,
 ): FollowupValidation {
   const clientId = input.clientId.trim();
-  if (clientId.length === 0) return { row: null, error: "Client is required." };
-  if (!isValidClientId(clientId)) return { row: null, error: "Client reference is invalid." };
+  if (clientId.length === 0) return { row: null, error: "Please choose a client." };
+  if (!isValidClientId(clientId)) return { row: null, error: "Please choose a valid client." };
 
   const rawDue = input.dueDate.trim();
-  if (rawDue.length === 0) return { row: null, error: "Due date is required." };
+  if (rawDue.length === 0) return { row: null, error: "Please choose when to follow up." };
   const dueDate = parseDueDate(rawDue);
   if (!dueDate) {
     const shown = rawDue.length > 30 ? `${rawDue.slice(0, 30)}…` : rawDue;
-    return { row: null, error: `Due date "${shown}" is not a valid date (use YYYY-MM-DD).` };
+    return { row: null, error: `That date doesn't look right — please use YYYY-MM-DD (got "${shown}").` };
   }
   if (dueDate < todayYMD) {
-    return { row: null, error: "Due date cannot be in the past." };
+    return { row: null, error: "Please choose today or a future date." };
   }
 
   const reason = input.reason.trim();
-  if (reason.length === 0) return { row: null, error: "Reason is required." };
+  if (reason.length === 0) return { row: null, error: "Please say why you're following up." };
   if (reason.length > MAX_REASON_LENGTH) {
     return {
       row: null,

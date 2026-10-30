@@ -56,14 +56,14 @@ function statusTone(status: PreviewRow["status"]): "emerald" | "amber" | "stone"
 
 function statusLabel(status: PreviewRow["status"]): string {
   if (status === "ready") return "Ready";
-  if (status === "attention") return "Needs attention";
-  if (status === "invalid") return "Invalid";
-  return "Skipped";
+  if (status === "attention") return "Check now";
+  if (status === "invalid") return "Needs fixing";
+  return "Not added";
 }
 
-/** Duplicate rows keep the "skipped" status but render as Duplicates. */
+/** Duplicate rows keep the "skipped" status but render as already added. */
 function rowBadgeLabel(row: PreviewRow): string {
-  if (row.duplicate) return "Duplicate";
+  if (row.duplicate) return "Already added";
   return statusLabel(row.status);
 }
 
@@ -320,11 +320,11 @@ export function ImportDialog({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             <h2 id="import-heading" className="text-lg font-semibold text-stone-900">
-              Import your client book
+              Add clients from a file
             </h2>
             <p className="text-sm text-stone-600">
               {step === "receipt"
-                ? "Import complete."
+                ? "Here's what was added."
                 : step === "file"
                   ? "Download the template, fill in your clients, then upload it here."
                   : "Bring your existing client list from Excel or CSV."}
@@ -359,7 +359,7 @@ export function ImportDialog({
                   Download the template
                 </p>
                 <p className="text-sm leading-relaxed text-stone-600">
-                  Use our ready-made columns so your client data imports correctly. You can edit it
+                  Use our ready-made columns so your clients are added correctly. You can edit it
                   in Excel or Google Sheets.
                 </p>
                 <div>
@@ -477,9 +477,9 @@ export function ImportDialog({
               </li>
             </ol>
             <p className="text-xs leading-relaxed text-stone-500">
-              Your existing financial software remains your system of record — import only the
-              client information you need for relationship management. Your file stays on this
-              device while it is being prepared; it is not uploaded as a file to MicroNest.
+              Your existing financial software remains your main record — only add the client
+              details you need for relationship management. Your file stays on this device while it
+              is being prepared; it is never uploaded to MicroNest.
             </p>
             {parsing && (
               <p role="status" className="text-sm text-stone-600">
@@ -630,7 +630,7 @@ export function ImportDialog({
         {step === "importing" && (
           <div className="flex flex-col items-start gap-3 py-6" role="status">
             <p className="text-sm font-medium text-stone-900">
-              Importing {progress.done} of {progress.total}…
+              Adding {progress.done} of {progress.total}…
             </p>
             <div
               className="h-2 w-full overflow-hidden rounded-full bg-stone-200"
@@ -638,7 +638,7 @@ export function ImportDialog({
               aria-valuenow={progress.done}
               aria-valuemin={0}
               aria-valuemax={progress.total}
-              aria-label="Import progress"
+              aria-label="Upload progress"
             >
               <div
                 className="h-full rounded-full bg-emerald-900 transition-[width]"
@@ -666,12 +666,12 @@ export function ImportDialog({
                 )}
                 {duplicates > 0 && (
                   <div className="flex justify-between gap-2">
-                    <dt>Duplicates not imported</dt>
+                    <dt>Already in your list</dt>
                     <dd className="font-semibold">{duplicates}</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-2">
-                  <dt>Rows needing attention or skipped</dt>
+                  <dt>Need fixing or not added</dt>
                   <dd className="font-semibold">{receipt.skipped}</dd>
                 </div>
               </dl>
@@ -679,18 +679,18 @@ export function ImportDialog({
                 {fileName} · {receipt.timestamp}
               </p>
               <p className="mt-1 text-xs text-emerald-900/80">
-                Nothing already in your Client Book was overwritten.
+                Nothing already in your clients was overwritten.
               </p>
             </Card>
             {(invalid > 0 || skipped > 0) && (
               <div className="flex flex-col gap-2">
                 <Button variant="secondary" onClick={handleDownloadErrors} className="self-start">
                   <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-                  Download rows needing attention
+                  Download rows to fix
                 </Button>
                 <ul
                   className="flex max-h-48 flex-col gap-1 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-                  aria-label="Skipped and invalid rows"
+                  aria-label="Rows to review"
                   tabIndex={0}
                 >
                   {rows
@@ -709,7 +709,7 @@ export function ImportDialog({
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={handleClose}>
-                Import another file
+                Add another file
               </Button>
               <Button variant="primary" onClick={handleClose}>
                 View clients
@@ -760,7 +760,7 @@ function PreviewStep({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-sm font-semibold text-stone-900">Ready to import</p>
+        <p className="text-sm font-semibold text-stone-900">Ready to add</p>
         <p
           className="tnum mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-stone-600"
           role="status"
@@ -769,31 +769,31 @@ function PreviewStep({
             <strong className="font-semibold text-stone-900">{total}</strong> rows found
           </span>
           <span>
-            <strong className="font-semibold text-emerald-900">{ready}</strong> ready
+            <strong className="font-semibold text-emerald-900">{ready}</strong> ready to add
           </span>
           {attention > 0 && (
             <span>
-              <strong className="font-semibold text-amber-800">{attention}</strong> need attention
+              <strong className="font-semibold text-amber-800">{attention}</strong> need fixing
             </span>
           )}
           {duplicates > 0 && (
             <span>
-              <strong className="font-semibold text-stone-900">{duplicates}</strong> duplicates
+              <strong className="font-semibold text-stone-900">{duplicates}</strong> already added
             </span>
           )}
           {invalid > 0 && (
             <span>
-              <strong className="font-semibold text-red-700">{invalid}</strong> invalid
+              <strong className="font-semibold text-red-700">{invalid}</strong> need fixing
             </span>
           )}
           {otherSkipped > 0 && (
             <span>
-              <strong className="font-semibold text-stone-900">{otherSkipped}</strong> skipped
+              <strong className="font-semibold text-stone-900">{otherSkipped}</strong> not added
             </span>
           )}
           {blankSkipped > 0 && (
             <span>
-              <strong className="font-semibold text-stone-900">{blankSkipped}</strong> blank
+              <strong className="font-semibold text-stone-900">{blankSkipped}</strong> empty rows
             </span>
           )}
         </p>
@@ -803,14 +803,14 @@ function PreviewStep({
         {duplicates > 0 && (
           <div className="mt-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
             <p className="text-sm font-semibold text-stone-900">
-              {duplicates} duplicate client{duplicates === 1 ? "" : "s"} found
+              {duplicates} already in your list{duplicates === 1 ? "" : "s"} found
             </p>
             <p className="mt-0.5 text-xs leading-relaxed text-stone-600">
-              These rows are already in your Client Book or appear more than once in this file. They
-              won&apos;t be imported, and nothing already in your Client Book will be overwritten.
+              These rows are already in your clients or appear more than once in this file. They
+              won&apos;t be added, and nothing already in your clients will be overwritten.
             </p>
             <Button variant="secondary" onClick={onRemoveDuplicates} className="mt-2">
-              Remove duplicates
+              Remove these rows
             </Button>
           </div>
         )}
@@ -841,7 +841,7 @@ function PreviewStep({
                 <button
                   type="button"
                   onClick={() => onRemoveRow(row.key)}
-                  aria-label={`Remove row ${row.line} from this import`}
+                  aria-label={`Remove row ${row.line} from this upload`}
                   className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-xs font-semibold text-stone-700 underline-offset-2 hover:bg-stone-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                 >
                   Remove row
@@ -860,14 +860,14 @@ function PreviewStep({
         </Alert>
       )}
       <p className="text-xs leading-relaxed text-stone-500">
-        Only rows marked ready or needing attention will be imported. Nothing already in your Client
-        Book will be overwritten.
+        Only ready rows and rows to check will be added. Nothing already in your
+        clients will be overwritten.
       </p>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         {(invalid > 0 || duplicates > 0 || otherSkipped > 0) && (
           <Button variant="ghost" onClick={onDownloadErrors} className="sm:mr-auto">
             <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            Download rows needing attention
+            Download rows to fix
           </Button>
         )}
         <Button variant="ghost" onClick={onBack}>
@@ -878,7 +878,7 @@ function PreviewStep({
           onClick={onImport}
           disabled={importableCount === 0 || !configured}
         >
-          {importableCount === 0 ? "Nothing to import" : `Import ${importableCount} clients`}
+          {importableCount === 0 ? "Nothing to add" : `Add ${importableCount} clients`}
         </Button>
       </div>
     </div>

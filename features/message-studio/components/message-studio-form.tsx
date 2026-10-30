@@ -122,7 +122,7 @@ export function MessageStudioForm({
             <Card className="lg:p-6">
               <p className="eyebrow mb-4 flex items-center gap-1.5">
                 <MessageIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                Configure
+                Message type
               </p>
               <div className="flex flex-col gap-4">
                 <PurposeSelector
@@ -227,7 +227,7 @@ export function MessageStudioForm({
                     phone={phone}
                     onPhoneChange={setPhone}
                     phoneError={
-                      phoneCheck.ok ? null : (phoneCheck.error ?? "Invalid phone number.")
+                      phoneCheck.ok ? null : (phoneCheck.error ?? "Check the mobile number.")
                     }
                   />
                 </Card>

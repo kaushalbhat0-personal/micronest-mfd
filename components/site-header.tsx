@@ -38,8 +38,8 @@ function topLinkClass(isActive: boolean): string {
 
 /**
  * Site header with premium brand + adaptive navigation (RCCF-MFD-43).
- * Signed out: MicroNest [MFD] · Workspace / Message Studio · Sign in.
- * Signed in: desktop/tablet top nav (Today / Client Book / Messages +
+ * Signed out: MicroNest [MFD] · Today / Messages · Sign in.
+ * Signed in: desktop/tablet top nav (Today / Clients / Messages +
  * avatar menu); mobile compact brand bar + fixed bottom navigation with a
  * More sheet for account functions. Static prerender stays signed-out until
  * the session resolves.
@@ -181,7 +181,7 @@ export function SiteHeader() {
                     aria-current={active === "clients" ? "page" : undefined}
                     className={topLinkClass(active === "clients")}
                   >
-                    Client Book
+                    Clients
                   </Link>
                   <Link
                     href="/tools/message-studio"
@@ -255,13 +255,13 @@ export function SiteHeader() {
                     href="/workspace/today"
                     className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                   >
-                    Workspace
+                    Today
                   </Link>
                   <Link
                     href="/tools/message-studio"
                     className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                   >
-                    Message Studio
+                    Messages
                   </Link>
                 </nav>
                 <div className="order-2 ml-auto flex shrink-0 items-center sm:order-3">
@@ -306,7 +306,7 @@ export function SiteHeader() {
               id="account-sheet-heading"
               className="px-3 pt-1 pb-2 text-xs font-semibold tracking-[0.06em] text-stone-500 uppercase"
             >
-              Account
+              My account
             </p>
             <AccountPanel
               displayName={identity.displayName}

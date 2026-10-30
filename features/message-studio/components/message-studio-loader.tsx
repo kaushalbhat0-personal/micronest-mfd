@@ -16,7 +16,7 @@ const MessageStudioForm = dynamic(
     loading: () => (
       <Card>
         <p aria-busy="true" aria-live="polite" className="text-sm text-stone-500">
-          Loading Message Studio…
+          Loading Messages…
         </p>
       </Card>
     ),

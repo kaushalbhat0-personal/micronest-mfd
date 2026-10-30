@@ -20,9 +20,9 @@ test.describe("Accessibility", () => {
     });
   }
 
-  test("0 serious/critical violations in Custom Message mode", async ({ page }) => {
+  test("0 serious/critical violations in Write a message mode", async ({ page }) => {
     await page.goto("/tools/message-studio");
-    await page.getByRole("radio", { name: /custom message/i }).check();
+    await page.getByRole("radio", { name: /write a message/i }).check();
     await page.getByLabel("Your message").fill("नमस्कार राहुल जी, SIP confirm झाले आहे. 🙏");
     await page.getByRole("button", { name: /prepare message/i }).click();
     const results = await new AxeBuilder({ page }).analyze();

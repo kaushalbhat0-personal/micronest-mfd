@@ -109,7 +109,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
       const kind = hit.kind ?? (identities[i].mobileKey ? "mobile" : "name");
       return {
         ...base,
-        name: display["Client Name"] || "Unnamed row",
+        name: display["Client Name"] || "Unnamed client",
         mobile: display["Mobile"] || "—",
         investmentType: display["Investment Type"] || "Other",
         status: "skipped" as const,
@@ -125,7 +125,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
     if (sensitive) {
       return {
         ...base,
-        name: "Unnamed row",
+        name: "Unnamed client",
         mobile: display["Mobile"] || "—",
         investmentType: display["Investment Type"] || "Other",
         status: "invalid" as const,
@@ -136,7 +136,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
     if (!result.row) {
       return {
         ...base,
-        name: display["Client Name"] || "Unnamed row",
+        name: display["Client Name"] || "Unnamed client",
         mobile: display["Mobile"] || "—",
         investmentType: display["Investment Type"] || "Other",
         status: "invalid" as const,

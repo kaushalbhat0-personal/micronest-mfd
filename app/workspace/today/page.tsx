@@ -15,7 +15,7 @@ import { parseTodayFilter, type TodayFilter } from "@/features/radar/today";
 import { TodayWorkspace } from "@/features/radar/components/today-workspace";
 
 export const metadata: Metadata = {
-  title: "Today — MFD Relationship Workspace",
+  title: "Today — MicroNest MFD",
   description:
     "Who should you talk to today? Your client relationships needing attention, in one place.",
 };

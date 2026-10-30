@@ -30,7 +30,7 @@ test.describe("Workspace shell", () => {
       page.getByRole("heading", { name: "Start the conversation", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /keep your entire client book in one place/i }),
+      page.getByRole("heading", { name: /keep all your clients in one place/i }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /know who needs your attention/i }),
@@ -64,7 +64,7 @@ test.describe("Workspace shell", () => {
 
   test("clients shell and invalid detail id render cleanly", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(0);
 
     await page.goto("/workspace/clients/not-a-client-id");
@@ -86,13 +86,13 @@ test.describe("Workspace shell", () => {
     const navs = page.getByRole("navigation");
     await expect(navs).toHaveCount(1);
     const nav = page.getByRole("navigation", { name: /primary/i });
-    await expect(nav.getByRole("link", { name: /^workspace$/i })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^message studio$/i })).toBeVisible();
-    for (const name of [/^workspace$/i, /^message studio$/i]) {
+    await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /^messages$/i })).toBeVisible();
+    for (const name of [/^today$/i, /^messages$/i]) {
       const box = await nav.getByRole("link", { name }).boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-    await nav.getByRole("link", { name: /^message studio$/i }).click();
+    await nav.getByRole("link", { name: /^messages$/i }).click();
     await expect(page).toHaveURL(/\/tools\/message-studio/);
   });
 

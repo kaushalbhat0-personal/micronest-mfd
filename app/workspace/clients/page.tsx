@@ -10,8 +10,8 @@ import { listClients, RadarStoreError, type StoredRadarClient } from "@/features
 import { ClientsWorkspace } from "@/features/radar/components/clients-workspace";
 
 export const metadata: Metadata = {
-  title: "Client Book — MFD Relationship Workspace",
-  description: "Your client relationship list. Search, add, and maintain client relationships.",
+  title: "Clients — MicroNest MFD",
+  description: "Your client list. Search, add, and maintain client relationships.",
 };
 
 /**
@@ -29,15 +29,14 @@ export default function ClientsPage() {
         aria-labelledby="clients-heading"
       >
         <div className="flex flex-col gap-1.5">
-          <p className="eyebrow">People</p>
           <h1
             id="clients-heading"
             className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl"
           >
-            Client Book
+            Clients
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base lg:text-lg">
-            Your client relationships, organized in one place.
+            Your clients, organized in one place.
           </p>
         </div>
       </section>

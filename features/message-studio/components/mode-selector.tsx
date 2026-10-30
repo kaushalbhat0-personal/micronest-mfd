@@ -4,8 +4,8 @@ import type { StudioMode } from "../prefs";
 import { cn } from "@/lib/utils";
 
 const MODES: Array<{ id: StudioMode; label: string; hint: string }> = [
-  { id: "templates", label: "Quick Templates", hint: "Fill 2–3 details" },
-  { id: "custom", label: "Custom Message", hint: "Write your own" },
+  { id: "templates", label: "Saved messages", hint: "Fill 2–3 details" },
+  { id: "custom", label: "Write a message", hint: "Write your own" },
 ];
 
 interface ModeSelectorProps {

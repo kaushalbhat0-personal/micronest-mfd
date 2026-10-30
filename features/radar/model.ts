@@ -74,7 +74,7 @@ export function buildRadarReport(
       ...empty,
       invalid,
       ignoredColumns: headerCheck.ignored,
-      fileError: "No valid client rows found. Fix the rows listed below and re-upload.",
+      fileError: "No clients could be added. Fix the rows listed below and upload again.",
     };
   }
 

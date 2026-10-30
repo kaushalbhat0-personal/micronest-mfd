@@ -33,9 +33,9 @@ function investmentLine(item: TodayItem): string {
 function contactLine(item: TodayItem): string {
   const { record } = item;
   if (record.lastContacted) {
-    return `Last contacted ${formatDisplayDate(record.lastContacted)}`;
+    return `Last spoke ${formatDisplayDate(record.lastContacted)}`;
   }
-  return "Never contacted";
+  return "Haven't spoken yet";
 }
 
 const ACTION_BASE =

@@ -94,7 +94,7 @@ describe("validateRadarRow", () => {
 
   it("rejects missing and over-long names", () => {
     expect(validateRadarRow(["", "", "", "", "", "", "", ""], STANDARD, TODAY).error).toContain(
-      "missing",
+      "client's name",
     );
     expect(
       validateRadarRow(["x".repeat(61), "", "", "", "", "", "", ""], STANDARD, TODAY).error,

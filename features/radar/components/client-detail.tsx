@@ -121,9 +121,9 @@ function identityMeta(
   const amount = formatAmountContext(record.investmentType, record.amountPaise);
   const base = amount ? `${record.investmentType} · ${amount}` : record.investmentType;
   if (record.lastContacted) {
-    return `${base} · Last contacted ${formatDisplayDate(record.lastContacted)}`;
+    return `${base} · Last spoke ${formatDisplayDate(record.lastContacted)}`;
   }
-  return `${base} · Never contacted`;
+  return `${base} · Haven't spoken yet`;
 }
 
 /**
@@ -287,7 +287,7 @@ export function ClientDetail({
           role="status"
           className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"
         >
-          <p className="text-sm text-emerald-900">Marked {record.name} as contacted.</p>
+          <p className="text-sm text-emerald-900">You spoke to {record.name}.</p>
           <Button variant="ghost" onClick={handleUndo} disabled={busy} className="px-2">
             Undo
           </Button>
@@ -298,14 +298,14 @@ export function ClientDetail({
         <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
           {reasons.length > 0 && (
             <section
-              aria-label="Why contact"
+              aria-label="Why you're seeing this"
               className={cn(
                 "order-1 rounded-xl border p-4 shadow-sm sm:p-5 lg:order-none lg:p-6",
                 whyStyle.accent,
                 whyStyle.box,
               )}
             >
-              <h3 className={cn("eyebrow", whyStyle.text)}>Why contact?</h3>
+              <h3 className={cn("eyebrow", whyStyle.text)}>Why you&apos;re seeing this</h3>
               <ul className="mt-2 space-y-1.5">
                 {reasons.map((reason) => (
                   <li
@@ -331,11 +331,11 @@ export function ClientDetail({
               </h3>
               <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Mobile</dt>
+                  <dt className="text-stone-500">Mobile number</dt>
                   <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Investment</dt>
+                  <dt className="text-stone-500">What they have</dt>
                   <dd className="font-medium text-stone-900">
                     {record.investmentType}
                     {(() => {
@@ -349,7 +349,7 @@ export function ClientDetail({
                   <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Last contacted</dt>
+                  <dt className="text-stone-500">Last spoke</dt>
                   <dd className="font-medium text-stone-900">
                     {displayDate(record.lastContacted)}
                   </dd>
@@ -425,7 +425,7 @@ export function ClientDetail({
                   className="min-h-[48px] sm:flex-1 lg:w-full"
                 >
                   <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-                  {busy ? "Saving…" : "Mark contacted"}
+                  {busy ? "Saving…" : "I spoke to them"}
                 </Button>
               </div>
             </div>
@@ -446,7 +446,7 @@ export function ClientDetail({
             <div className="flex flex-col gap-2">
               <h3 className="eyebrow flex items-center gap-1.5">
                 <EditIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                Maintain
+                Edit or delete
               </h3>
               {!editing && !confirmingDelete && (
                 <div className="flex gap-2">
@@ -495,10 +495,11 @@ export function ClientDetail({
                 className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4"
               >
                 <p className="text-sm font-medium text-stone-900">
-                  Delete {record.name} from your workspace?
+                  Delete {record.name}?
                 </p>
                 <p id="delete-desc" className="mt-1 text-xs leading-relaxed text-stone-600">
-                  This permanently removes the client. This cannot be undone.
+                  This will permanently remove {record.name} from your clients. This cannot be
+                  undone.
                 </p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Button

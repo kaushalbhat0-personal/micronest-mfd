@@ -123,8 +123,8 @@ function whyFor(
   if (record.signals.includes("reconnect-due")) {
     const detail =
       record.lastContacted === null
-        ? "Never contacted"
-        : `${daysSince(record.lastContacted, todayYMD)} days since contact`;
+        ? "Haven't spoken yet"
+        : `${daysSince(record.lastContacted, todayYMD)} days since you last spoke`;
     return { kind: "reconnect", title: "Reconnect due", detail };
   }
   if (record.signals.includes("new-client")) {

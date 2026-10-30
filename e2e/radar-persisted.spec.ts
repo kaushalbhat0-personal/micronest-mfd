@@ -127,7 +127,7 @@ test.describe("Client Detail persistence", () => {
     const rows = await seedRows(await userIdFor(email));
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
-    await page.getByRole("button", { name: /mark contacted/i }).click();
+    await page.getByRole("button", { name: /i spoke to them/i }).click();
     await expect(
       page.getByRole("status").filter({ hasText: /marked persist dev as contacted/i }),
     ).toBeVisible();
@@ -141,7 +141,7 @@ test.describe("Client Detail persistence", () => {
     const rows = await seedRows(await userIdFor(email));
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
-    await page.getByRole("button", { name: /mark contacted/i }).click();
+    await page.getByRole("button", { name: /i spoke to them/i }).click();
     await expect(
       page.getByRole("status").filter({ hasText: /marked persist dev as contacted/i }),
     ).toBeVisible();
@@ -158,7 +158,7 @@ test.describe("Client Detail persistence", () => {
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Riya")}`);
     await expect(page.getByText("Both · Never contacted")).toBeVisible();
 
-    await page.getByRole("button", { name: /mark contacted/i }).click();
+    await page.getByRole("button", { name: /i spoke to them/i }).click();
     await expect(
       page.getByRole("status").filter({ hasText: /marked persist riya as contacted/i }),
     ).toBeVisible();

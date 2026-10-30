@@ -22,7 +22,7 @@ import {
 export const metadata = {
   title: "MicroNest — From first conversation to long-term client relationship",
   description:
-    "Keep your client book organized, prepare the right message before you reach out, know who needs attention, and never lose track of the next follow-up.",
+    "Keep your clients organized, prepare the right message before you reach out, know who needs attention, and never lose track of the next follow-up.",
 };
 
 function SignedOutCtas({
@@ -37,7 +37,7 @@ function SignedOutCtas({
         <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
       </Link>
       <Link href={secondary} className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
-        {secondary === "#workflow" ? "See how it works" : "Try Message Studio"}
+        {secondary === "#workflow" ? "See how it works" : "Try Messages"}
       </Link>
     </div>
   );
@@ -68,11 +68,11 @@ async function PrimaryCtas({
     return (
       <div className="mt-1 flex flex-col gap-2 sm:flex-row">
         <Link href="/workspace/today" className={cn(buttonClasses("primary"), "px-5 sm:flex-1")}>
-          Open workspace
+          Go to Today
           <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
         </Link>
         <Link href={secondary} className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
-          {secondary === "#workflow" ? "See how it works" : "Try Message Studio"}
+          {secondary === "#workflow" ? "See how it works" : "Try Messages"}
         </Link>
       </div>
     );
@@ -87,14 +87,14 @@ async function PrimaryCtas({
  */
 function BookPreview() {
   return (
-    <section aria-label="Product preview: the Client Book">
+    <section aria-label="Product preview: Clients">
       <Card padding="compact" className="lg:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
               <p className="eyebrow flex items-center gap-1.5">
                 <UsersIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                Client Book · Example preview
+                Clients · Example preview
               </p>
               <p className="text-xl font-semibold tracking-tight text-stone-900 lg:text-2xl">
                 Everyone you look after, in one place
@@ -111,7 +111,7 @@ function BookPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Rajesh Sharma</span>
                 <span className="truncate text-xs text-stone-600">
-                  SIP · Last contact 62 days ago
+                  SIP · Last spoke 62 days ago
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
@@ -127,7 +127,7 @@ function BookPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Priya Mehta</span>
                 <span className="truncate text-xs text-stone-600">
-                  Lumpsum · Last contact 12 days ago
+                  Lumpsum · Last spoke 12 days ago
                 </span>
               </span>
               <SignalBadge tone="emerald">Recent</SignalBadge>
@@ -166,7 +166,7 @@ function BookPreview() {
  */
 function TodayPreview() {
   return (
-    <section aria-label="Product preview: the Today workspace">
+    <section aria-label="Product preview: Today">
       <Card padding="compact" className="lg:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
@@ -239,17 +239,17 @@ const LIFECYCLE = [
     icon: <UsersIcon />,
     step: "02",
     title: "Organize",
-    heading: "Keep your entire client book in one place",
-    hint: "Move beyond scattered Excel sheets and notes. Keep the client information you actually need in one searchable workspace — and bring your existing list with you.",
-    proofs: ["Client Book", "Search", "Add", "Import"],
+    heading: "Keep all your clients in one place",
+    hint: "Move beyond scattered Excel sheets and notes. Keep the client information you actually need in one searchable place — and bring your existing list with you.",
+    proofs: ["Clients", "Search", "Add", "Upload"],
   },
   {
     icon: <TargetIcon />,
     step: "03",
     title: "Understand",
     heading: "Know who needs your attention",
-    hint: "See recent investors, reconnect opportunities, and new clients — with a clear reason for why someone needs attention.",
-    proofs: ["Signals", "Why contact?", "Call", "WhatsApp"],
+    hint: "See recently active clients, reconnect opportunities, and new clients — with a clear reason each one needs attention.",
+    proofs: ["Needs attention", "Why this client", "Call", "WhatsApp"],
   },
   {
     icon: <CheckIcon />,
@@ -283,9 +283,9 @@ export default function Home() {
             From first conversation to long-term client relationship.
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-stone-600 lg:text-lg">
-            One simple workspace to{" "}
+            One simple place to{" "}
             <strong className="font-semibold text-stone-900">
-              prepare client messages, organize your entire client book,
+              prepare client messages, organize all your clients,
             </strong>{" "}
             know who needs attention, and stay on top of every follow-up.
           </p>
@@ -340,9 +340,9 @@ export default function Home() {
           </ul>
           <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base">
             <strong className="font-semibold text-stone-900">
-              MicroNest brings the relationship layer together.
+              MicroNest brings the relationship side together.
             </strong>{" "}
-            Your existing financial software remains your system of record — MicroNest helps you
+            Your existing financial software remains your main record — MicroNest helps you
             manage the relationship around it.
           </p>
         </div>
@@ -407,12 +407,12 @@ export default function Home() {
       <section aria-labelledby="book-heading">
         <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
           <div className="flex max-w-xl flex-col gap-3">
-            <p className="eyebrow">The center of your workspace</p>
+            <p className="eyebrow">All your clients</p>
             <h2
               id="book-heading"
               className="text-2xl font-semibold tracking-tight text-stone-900 lg:text-3xl"
             >
-              Your client book. Not another spreadsheet.
+              Your clients. Not another spreadsheet.
             </h2>
             <p className="text-sm leading-relaxed text-stone-600 sm:text-base">
               Search your clients, see what matters, understand who needs attention, and act
@@ -422,15 +422,15 @@ export default function Home() {
             <ul className="flex flex-col gap-2 text-sm text-stone-600">
               <li className="flex items-center gap-2">
                 <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                Search, identity, investment type, and last contact
+                Search by name, see what they have, and when you last spoke
               </li>
               <li className="flex items-center gap-2">
                 <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                Attention signals and follow-up indicators
+                Attention signals and follow-up reminders
               </li>
               <li className="flex items-center gap-2">
                 <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                Call and WhatsApp from the client record
+                Call and WhatsApp from each client
               </li>
             </ul>
           </div>
@@ -455,7 +455,7 @@ export default function Home() {
                   Say the right thing.
                 </p>
                 <p className="text-sm leading-relaxed text-stone-600">
-                  Use Message Studio to prepare clear, professional communication before you reach
+                  Use Messages to prepare clear, professional communication before you reach
                   out.
                 </p>
                 <ul className="flex flex-col gap-2 text-sm text-stone-600">
@@ -469,7 +469,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-center gap-2">
                     <SendIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                    Copy or WhatsApp handoff
+                    Copy or WhatsApp
                   </li>
                 </ul>
                 <Link
@@ -488,13 +488,13 @@ export default function Home() {
                   Know what happens next.
                 </p>
                 <p className="text-sm leading-relaxed text-stone-600">
-                  Keep the client organized, understand why they need attention, and stay on top of
+                  Keep each client organized, understand why they need attention, and stay on top of
                   follow-ups.
                 </p>
                 <ul className="flex flex-col gap-2 text-sm text-stone-600">
                   <li className="flex items-center gap-2">
                     <UsersIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                    Client Book
+                    Clients
                   </li>
                   <li className="flex items-center gap-2">
                     <TargetIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
@@ -536,7 +536,7 @@ export default function Home() {
               When today starts, know where to focus.
             </h2>
             <p className="text-sm leading-relaxed text-stone-600 sm:text-base">
-              MicroNest turns your client book into a practical daily queue — so you can see who
+              MicroNest turns your clients into a practical daily list — so you can see who
               needs attention and what needs to happen next. Know who to call today, know why, and
               know what to say.
             </p>
@@ -552,8 +552,8 @@ export default function Home() {
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-emerald-900 sm:text-base">
             MicroNest doesn&apos;t try to replace your financial software. It gives you a simple
-            relationship layer around your client book — communication, attention, and follow-ups.
-            Your software stays the system of record.
+            relationship view around your clients — communication, attention, and follow-ups.
+            Your software stays the main record.
           </p>
           <ul className="mt-3 grid grid-cols-1 gap-1.5 text-sm text-emerald-900 sm:grid-cols-2">
             <li className="flex items-center gap-2">
@@ -562,7 +562,7 @@ export default function Home() {
             </li>
             <li className="flex items-center gap-2">
               <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
-              Import files are processed on your device
+              Files you upload are processed on your device
             </li>
             <li className="flex items-center gap-2">
               <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -600,10 +600,10 @@ export default function Home() {
       <section className="rounded-xl border border-stone-200 bg-white p-5 text-sm leading-relaxed text-stone-600 shadow-sm">
         <h2 className="text-sm font-semibold text-stone-900">Built for trust</h2>
         <ul className="mt-2 list-disc pl-5">
-          <li>Your workspace data is private to your signed-in account.</li>
-          <li>Message Studio needs no login — everything stays on your device.</li>
+          <li>Your client data is private to your signed-in account.</li>
+          <li>Messages needs no login — everything stays on your device.</li>
           <li>No PAN, Aadhaar, bank, OTP or password details needed — ever.</li>
-          <li>Messages are deterministic templates, not AI generation.</li>
+          <li>Messages use ready-made templates, not AI generation.</li>
         </ul>
       </section>
     </div>

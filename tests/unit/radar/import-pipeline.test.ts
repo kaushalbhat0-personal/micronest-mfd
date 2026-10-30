@@ -122,8 +122,8 @@ describe("buildPreview", () => {
       todayYMD: TODAY,
     });
     expect(preview.rows.map((r) => r.status)).toEqual(["invalid", "skipped", "skipped"]);
-    expect(preview.rows[0].reasons.join(" ")).toContain("missing");
-    expect(preview.rows[1].reasons.join(" ")).toContain("Already in your client book");
+    expect(preview.rows[0].reasons.join(" ")).toContain("client's name");
+    expect(preview.rows[1].reasons.join(" ")).toContain("Already in your clients");
   });
 
   it("rejects sensitive names without echoing them", () => {
@@ -136,7 +136,7 @@ describe("buildPreview", () => {
       todayYMD: TODAY,
     });
     expect(preview.rows[0].status).toBe("invalid");
-    expect(preview.rows[0].name).toBe("Unnamed row");
+    expect(preview.rows[0].name).toBe("Unnamed client");
     expect(preview.rows[0].reasons.join(" ")).not.toContain(pan);
   });
 
@@ -219,7 +219,7 @@ describe("buildPreview", () => {
     expect(preview.rows[1].reasons.join(" ")).toContain("Matched by mobile number");
     expect(preview.rows[1].input).toBeUndefined();
     expect(preview.rows[2].duplicate).toMatchObject({ scope: "book", matchedBy: "mobile" });
-    expect(preview.rows[2].reasons.join(" ")).toContain("Already in your client book");
+    expect(preview.rows[2].reasons.join(" ")).toContain("Already in your clients");
     expect(preview.rows[2].input).toBeUndefined();
   });
 

@@ -52,7 +52,7 @@ export function normalizeInvestmentType(raw: string): InvestmentTypeResult {
   if (alias) return { value: alias, warning: null };
   const match = INVESTMENT_TYPES.find((t) => t.toLowerCase() === clean);
   if (match) return { value: match, warning: null };
-  return { value: "Other", warning: "Investment type not recognized — treated as Other." };
+  return { value: "Other", warning: "We didn't recognise this investment type, so it's listed as Other." };
 }
 
 /**
@@ -64,7 +64,7 @@ export function parseNewClientFlag(raw: string): { value: boolean; warning: stri
   if (clean.length === 0) return { value: false, warning: null };
   if (NEW_CLIENT_TRUTHY.includes(clean)) return { value: true, warning: null };
   if (NEW_CLIENT_FALSY.includes(clean)) return { value: false, warning: null };
-  return { value: false, warning: "New Client value not recognized — treated as no." };
+  return { value: false, warning: "We didn't recognise the New Client value, so it's treated as no." };
 }
 
 /**

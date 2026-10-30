@@ -121,7 +121,7 @@ export function ClientFollowups({
   const todayYMD = React.useMemo(() => todayLocalYMD(), []);
 
   function supabaseOrThrow(): SupabaseClient {
-    if (!isSupabaseConfigured()) throw new Error("Authentication is not configured yet.");
+    if (!isSupabaseConfigured()) throw new Error("Sign-in isn't set up yet.");
     return createClient();
   }
 
@@ -212,7 +212,7 @@ export function ClientFollowups({
       });
       setFormOpen(false);
       resetForm();
-      setSuccess("Follow-up added.");
+      setSuccess("Follow-up planned.");
       setToastId(null);
     } catch (error) {
       reportPerf({
@@ -325,7 +325,7 @@ export function ClientFollowups({
               }}
               className="min-h-[44px] px-3"
             >
-              + Add follow-up
+              + Plan follow-up
             </Button>
           )}
         </div>
@@ -353,7 +353,7 @@ export function ClientFollowups({
           <div className="mt-3 flex flex-col gap-3">
             {formOpen && (
               <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
-                <Field id="followup-due" label="Due date" error={errors.dueDate}>
+                <Field id="followup-due" label="Follow up on" error={errors.dueDate}>
                   <TextInput
                     id="followup-due"
                     type="date"
@@ -366,9 +366,9 @@ export function ClientFollowups({
                 </Field>
                 <Field
                   id="followup-reason"
-                  label="Reason"
+                  label="Why"
                   error={errors.reason}
-                  hint="Max 40 characters."
+                  hint="What should you talk about? Max 40 characters."
                 >
                   <TextInput
                     id="followup-reason"
@@ -383,7 +383,7 @@ export function ClientFollowups({
                 </Field>
                 <Field
                   id="followup-note"
-                  label="Note (optional)"
+                  label="Notes (optional)"
                   error={errors.note}
                   hint="Max 200 characters."
                 >
@@ -443,7 +443,7 @@ export function ClientFollowups({
                 role="status"
                 className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"
               >
-                <p className="text-sm text-emerald-900">Marked done.</p>
+                <p className="text-sm text-emerald-900">Follow-up marked done.</p>
                 <Button
                   variant="ghost"
                   onClick={() => void handleReopen(toastId)}
@@ -456,7 +456,7 @@ export function ClientFollowups({
             )}
 
             {open.length === 0 ? (
-              <p className="text-sm text-stone-500">No follow-ups yet.</p>
+              <p className="text-sm text-stone-500">You&apos;re all caught up.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {open.map((item) => (
@@ -489,7 +489,7 @@ export function ClientFollowups({
             {completed.length > 0 && (
               <details className="rounded-lg border border-stone-200">
                 <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 [&::-webkit-details-marker]:hidden">
-                  <span>Completed ({completed.length})</span>
+                  <span>Done ({completed.length})</span>
                   <span aria-hidden="true" className="text-xs text-stone-500">
                     ▾
                   </span>
@@ -510,10 +510,10 @@ export function ClientFollowups({
                         variant="ghost"
                         onClick={() => void handleReopen(item.id)}
                         disabled={busy}
-                        aria-label={`Reopen ${item.reason}`}
+                        aria-label={`Open ${item.reason} again`}
                         className="min-h-[44px] min-w-[44px] shrink-0 px-3"
                       >
-                        Reopen
+                        Open again
                       </Button>
                     </li>
                   ))}

@@ -62,7 +62,7 @@ export function CustomMessageSection() {
         <div className="flex flex-col gap-4">
           <Field
             id="ms-recipient"
-            label="Recipient name (optional)"
+            label="Send to (optional)"
             hint="Shown above the preview for your reference only. Not added to the message."
           >
             <TextInput
@@ -79,7 +79,7 @@ export function CustomMessageSection() {
             id="ms-custom-phone"
             value={phone}
             onChange={(value) => setPhone(value)}
-            error={phoneCheck.ok ? null : (phoneCheck.error ?? "Invalid phone number.")}
+            error={phoneCheck.ok ? null : (phoneCheck.error ?? "Check the mobile number.")}
           />
 
           <Field id="ms-custom-text" label="Your message" error={error ?? undefined}>

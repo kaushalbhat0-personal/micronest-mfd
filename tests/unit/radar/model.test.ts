@@ -86,7 +86,7 @@ describe("parseAndBuildRadar", () => {
     const csv = [HEADER, ",,,,,,,", "Bad Date,,SIP,,99/99/9999,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.records).toHaveLength(0);
-    expect(report.fileError).toContain("No valid client rows");
+    expect(report.fileError).toContain("No clients could be added");
     expect(report.invalid.map((i) => i.rowNumber)).toEqual([2, 3]);
   });
 
@@ -101,7 +101,7 @@ describe("parseAndBuildRadar", () => {
   it("rejects future dates", () => {
     const csv = [HEADER, "Future,,SIP,,27/10/2026,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
-    expect(report.fileError).toContain("No valid client rows");
+    expect(report.fileError).toContain("No clients could be added");
     expect(report.invalid[0].reason).toContain("future");
   });
 });

@@ -139,7 +139,7 @@ describe("buildTodayItems", () => {
       TODAY,
     );
     expect(items.map((i) => i.why?.kind)).toEqual(["new", "reconnect"]);
-    expect(items[1].why?.detail).toContain("days since contact");
+    expect(items[1].why?.detail).toContain("days since you last spoke");
   });
 
   it("leaves why null for signal-free clients in the All view", () => {

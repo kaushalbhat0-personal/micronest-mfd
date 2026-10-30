@@ -118,7 +118,7 @@ export function ClientsWorkspace({
 
   // Domain view-model: per-client follow-ups + why + priority, same
   // source as the Today queue. Newly added/imported rows re-project
-  // through the same engine; follow-up edits live in Client Detail.
+  // through the same engine; follow-up edits live in the client view.
   const items = React.useMemo(
     () => buildTodayItems(records, initialFollowups, todayYMD),
     [records, initialFollowups, todayYMD],
@@ -216,11 +216,11 @@ export function ClientsWorkspace({
       <>
         <Card>
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-stone-900">Client sync isn&apos;t available.</p>
+            <p className="text-sm font-medium text-stone-900">Your clients aren&apos;t available.</p>
             <p className="text-sm leading-relaxed text-stone-600">
               {!configured
-                ? "Sign-in isn't set up yet. Your client list will live here once authentication is configured."
-                : "Please sign in to see your client relationship list."}
+                ? "Sign-in isn't set up yet. Your client list will appear here once it is."
+                : "Please sign in to see your clients."}
             </p>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               {!signedIn && configured && (
@@ -238,7 +238,7 @@ export function ClientsWorkspace({
                 className="sm:self-start"
               >
                 <ImportTriggerIcon />
-                Try import preview
+                Try a file upload
               </Button>
             </div>
           </div>
@@ -281,7 +281,7 @@ export function ClientsWorkspace({
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:gap-4">
             <StatCard
               icon={<AlertIcon aria-hidden="true" />}
-              label="Attention"
+              label="Needs attention"
               value={counts.attention}
               pressed={filter === "attention"}
               iconTone="bg-red-50 text-red-800"
@@ -319,7 +319,7 @@ export function ClientsWorkspace({
       )}
       <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
         <div className="sm:flex-1">
-          <Field id="client-search" label="Search clients">
+          <Field id="client-search" label="Search your clients">
             <span className="relative block">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-stone-500" />
               <TextInput
@@ -351,7 +351,7 @@ export function ClientsWorkspace({
             className="w-full sm:w-auto lg:min-w-40"
           >
             <ImportTriggerIcon />
-            Import
+            Add from file
           </Button>
         </div>
       </div>
@@ -377,7 +377,7 @@ export function ClientsWorkspace({
       {records.length > 0 && (
         <div
           role="group"
-          aria-label="Filter client book"
+          aria-label="Filter clients"
           className="scroll-x -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
         >
           {BOOK_FILTERS.map((f) => (
@@ -418,7 +418,7 @@ export function ClientsWorkspace({
                   Add client
                 </h2>
                 <p className="text-sm text-stone-600">
-                  They join your relationship book immediately.
+                  They&apos;ll show up in your client list right away.
                 </p>
               </div>
               <button
@@ -454,7 +454,7 @@ export function ClientsWorkspace({
                         {copy.body} {copy.matchedBy}
                       </p>
                       <p className="mt-1 text-xs">
-                        No second record was created and nothing was overwritten.
+                        No second client was added and nothing was overwritten.
                       </p>
                       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                         <Link
@@ -478,8 +478,8 @@ export function ClientsWorkspace({
       {records.length === 0 ? (
         <EmptyState
           icon={<UsersIcon />}
-          title="Bring your client book with you"
-          hint="Download the template and fill in your clients, import an existing CSV or XLSX list, or add your first client manually."
+          title="Bring your clients with you"
+          hint="Download the template and fill in your clients, upload an existing CSV or XLSX list, or add your first client manually."
           action={
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
               <Button variant="primary" onClick={openAdd}>
@@ -488,7 +488,7 @@ export function ClientsWorkspace({
               </Button>
               <Button variant="secondary" onClick={() => setImporting(true)}>
                 <ImportTriggerIcon />
-                Import client list
+                Add from file
               </Button>
               <Button
                 variant="ghost"
@@ -505,7 +505,7 @@ export function ClientsWorkspace({
           icon={filter === "all" ? <SearchIcon /> : <CheckIcon />}
           title={
             filter === "all"
-              ? "No clients found."
+              ? "No matching clients."
               : filter === "attention"
                 ? "Nothing needs attention."
                 : filter === "followups"
@@ -516,9 +516,9 @@ export function ClientsWorkspace({
             filter === "all"
               ? "Try searching a different name."
               : filter === "attention"
-                ? "Every client in your book is looked after."
+                ? "Every client is looked after."
                 : filter === "followups"
-                  ? "Follow-ups you add in Client Detail will appear here."
+                  ? "Follow-ups you plan for a client will appear here."
                   : "Clients you mark as new will appear here."
           }
         />

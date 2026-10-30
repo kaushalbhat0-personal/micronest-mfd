@@ -121,10 +121,10 @@ export type ClientFieldName =
 
 export function fieldForClientError(error: string | null): ClientFieldName | null {
   if (!error) return null;
-  if (error.startsWith("Client name")) return "name";
+  if (error.startsWith("Client name") || error.includes("client's name")) return "name";
   if (error.startsWith("Amount")) return "amount";
-  if (error.startsWith("Last Invested")) return "lastInvested";
-  if (error.startsWith("Last Contacted")) return "lastContacted";
+  if (error.includes("Last invested") || error.startsWith("Last Invested")) return "lastInvested";
+  if (error.includes("Last spoke") || error.startsWith("Last Contacted")) return "lastContacted";
   if (error.startsWith("Note")) return "note";
   return null;
 }
@@ -136,7 +136,8 @@ export function validateClientFields(
   context: ClientInputContext = "csv",
 ): RadarRowValidation {
   const name = input.name.trim();
-  if (name.length === 0) return { row: null, error: "Client name is missing.", warnings: [] };
+  if (name.length === 0)
+    return { row: null, error: "Please enter the client's name.", warnings: [] };
   if (name.length > MAX_NAME_LENGTH) {
     return {
       row: null,
@@ -151,9 +152,9 @@ export function validateClientFields(
   const amount = parseAmountInput(input.amount);
   if (amount.error) return { row: null, error: amount.error, warnings: [] };
 
-  const lastInvested = parseOptionalDate(input.lastInvested, "Last Invested", todayYMD);
+  const lastInvested = parseOptionalDate(input.lastInvested, "Last invested", todayYMD);
   if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
-  const lastContacted = parseOptionalDate(input.lastContacted, "Last Contacted", todayYMD);
+  const lastContacted = parseOptionalDate(input.lastContacted, "Last spoke", todayYMD);
   if (lastContacted.error) return { row: null, error: lastContacted.error, warnings: [] };
 
   const note = input.note.trim();
@@ -182,7 +183,7 @@ export function validateClientFields(
     if (normalizePhone(phone).ok) {
       phoneValid = true;
     } else {
-      warnings.push("Phone number needs checking — Call and WhatsApp are disabled for this row.");
+      warnings.push("Phone number needs checking — Call and WhatsApp are unavailable for this row.");
     }
   }
   if (investment.warning) warnings.push(investment.warning);
@@ -254,10 +255,10 @@ function parseOptionalDate(
   const date = normalizeFollowUpDate(raw);
   if (!date) {
     const shown = raw.length > 30 ? `${raw.slice(0, 30)}…` : raw;
-    return { date: null, error: `${label} "${shown}" is not a valid DD/MM/YYYY date.` };
+    return { date: null, error: `Please check the ${label} date — "${shown}" is not a valid DD/MM/YYYY date.` };
   }
   if (date > todayYMD) {
-    return { date: null, error: `${label} "${raw.trim()}" is in the future.` };
+    return { date: null, error: `The ${label} date "${raw.trim()}" can't be in the future.` };
   }
   return { date, error: null };
 }

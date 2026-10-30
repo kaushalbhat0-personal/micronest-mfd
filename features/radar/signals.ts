@@ -60,10 +60,10 @@ export function reasonsFor(
   }
   if (signals.includes("reconnect-due")) {
     if (input.lastContacted === null) {
-      reasons.push("Follow-up due · never contacted");
+      reasons.push("Follow-up due · haven't spoken yet");
     } else {
       const days = daysBetweenYMD(input.lastContacted, todayYMD);
-      reasons.push(`Follow-up due · ${days} day${days === 1 ? "" : "s"} since contact`);
+      reasons.push(`Follow-up due · ${days} day${days === 1 ? "" : "s"} since you last spoke`);
     }
   }
   if (signals.includes("new-client")) {

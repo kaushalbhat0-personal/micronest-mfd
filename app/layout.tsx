@@ -7,9 +7,9 @@ import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MicroNest — MFD Relationship Workspace",
+  title: "MicroNest MFD",
   description:
-    "One focused workspace that helps Mutual Fund Distributors maintain client relationships every day. Works alongside your existing financial software.",
+    "One focused place that helps mutual fund distributors maintain client relationships every day. Works alongside your existing financial software.",
 };
 
 /**
@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="border-t border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-4 py-4 text-xs leading-relaxed text-stone-500 sm:px-6 lg:px-8">
             Operational microtools that work alongside your existing financial software. Nothing
-            here replaces your system of record. Do not enter PAN, Aadhaar, bank, OTP or password
+            here replaces your main record. Do not enter PAN, Aadhaar, bank, OTP or password
             details in any tool.
           </div>
         </footer>

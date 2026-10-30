@@ -62,7 +62,7 @@ test.describe("Client management", () => {
 
   test("empty, add, and search", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByText(/bring your client book/i)).toBeVisible();
+    await expect(page.getByText(/bring your clients/i)).toBeVisible();
 
     await page.getByRole("button", { name: /add your first client/i }).click();
     await page.getByLabel("Client name").fill("Crud Arjun");
@@ -91,7 +91,7 @@ test.describe("Client management", () => {
     await expect(page.url()).not.toMatch(/zoy/i);
 
     await page.getByLabel("Search clients").fill("no-such-client");
-    await expect(page.getByText(/no clients found/i)).toBeVisible();
+    await expect(page.getByText(/no matching clients/i)).toBeVisible();
   });
 
   test("add validation rejects bad input without persisting", async ({ page }) => {
@@ -101,7 +101,7 @@ test.describe("Client management", () => {
     // The Next.js route announcer also carries role="alert": scope to the
     // field error like client-followups.spec.ts does.
     await expect(
-      page.getByRole("alert").filter({ hasText: /client name is missing/i }),
+      page.getByRole("alert").filter({ hasText: /please enter the client's name/i }),
     ).toBeVisible();
 
     await page.getByLabel("Client name").fill("No Save");
