@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -40,7 +41,7 @@ import { ClientForm } from "./client-form";
 import { ClientBookCard } from "./client-book-card";
 import { ImportDialog, ImportTriggerIcon } from "../import/import-dialog";
 import { downloadTextFile, buildTemplateCsv, TEMPLATE_FILENAME } from "../import/template-csv";
-import { identityOf } from "../import/duplicates";
+import { identityOf, manualDuplicateCopy, matchExisting } from "../import/duplicates";
 
 function storeErrorMessage(error: unknown): string {
   if (error instanceof RadarStoreError) return error.message;
@@ -79,6 +80,11 @@ export function ClientsWorkspace({
   const [importing, setImporting] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [duplicate, setDuplicate] = React.useState<{
+    existingId: string;
+    existingName: string;
+    kind: "mobile" | "name";
+  } | null>(null);
   const [formKey, setFormKey] = React.useState(0);
   const panelRef = React.useRef<HTMLDivElement>(null);
   const wasAdding = React.useRef(false);
@@ -114,6 +120,7 @@ export function ClientsWorkspace({
 
   function openAdd() {
     setSaveError(null);
+    setDuplicate(null);
     setAdding(true);
   }
 
@@ -138,6 +145,24 @@ export function ClientsWorkspace({
 
   async function handleAdd(input: ClientInput) {
     if (!isSupabaseConfigured()) return;
+    // Manual-Add duplicate guard: same shared engine as import (mobile
+    // first, exact name only when mobile is unavailable). Scoped to this
+    // user's RLS-loaded records — never a cross-user lookup. A match
+    // blocks creation; the existing record is never overwritten or deleted.
+    const candidate = identityOf(input.name, input.phone);
+    const owned = records.map((r) => identityOf(r.name, r.phone));
+    const hit = matchExisting(candidate, owned);
+    if (hit) {
+      const matched = records[hit.index];
+      setDuplicate({
+        existingId: matched.id,
+        existingName: matched.name,
+        kind: hit.kind,
+      });
+      setSaveError(null);
+      return;
+    }
+    setDuplicate(null);
     setSaving(true);
     setSaveError(null);
     try {
@@ -346,7 +371,10 @@ export function ClientsWorkspace({
           <button
             type="button"
             aria-label="Close add client dialog"
-            onClick={() => setAdding(false)}
+            onClick={() => {
+              setDuplicate(null);
+              setAdding(false);
+            }}
             className="absolute inset-0 cursor-default bg-stone-900/40"
           />
           <div
@@ -368,7 +396,10 @@ export function ClientsWorkspace({
               </div>
               <button
                 type="button"
-                onClick={() => setAdding(false)}
+                onClick={() => {
+                  setDuplicate(null);
+                  setAdding(false);
+                }}
                 aria-label="Close add client dialog"
                 className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-2xl leading-none text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
               >
@@ -381,8 +412,38 @@ export function ClientsWorkspace({
               saving={saving}
               externalError={saveError}
               onSubmit={handleAdd}
-              onCancel={() => setAdding(false)}
+              onCancel={() => {
+                setDuplicate(null);
+                setAdding(false);
+              }}
             />
+            {duplicate &&
+              (() => {
+                const copy = manualDuplicateCopy(duplicate.kind, duplicate.existingName);
+                return (
+                  <div className="mt-3">
+                    <Alert variant="warning" title={copy.title}>
+                      <p className="mt-1 text-xs">
+                        {copy.body} {copy.matchedBy}
+                      </p>
+                      <p className="mt-1 text-xs">
+                        No second record was created and nothing was overwritten.
+                      </p>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <Link
+                          href={`/workspace/clients/${duplicate.existingId}`}
+                          className={cn(buttonClasses("secondary"), "sm:self-start")}
+                        >
+                          View existing client
+                        </Link>
+                        <Button variant="ghost" onClick={() => setDuplicate(null)}>
+                          Go back and edit
+                        </Button>
+                      </div>
+                    </Alert>
+                  </div>
+                );
+              })()}
           </div>
         </div>
       )}

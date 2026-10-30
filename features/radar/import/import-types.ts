@@ -1,5 +1,6 @@
 import type { ClientInput } from "@/features/radar/repository";
 import type { RadarHeader } from "@/features/radar/template";
+import type { DuplicateMatchKind, DuplicateScope } from "./duplicates";
 
 /** Raw cell as read from CSV (always text) or XLSX (typed cells). */
 export type CellValue = string | number | boolean | null;
@@ -36,6 +37,17 @@ export interface PreviewRow {
   reasons: string[];
   /** Validated persistence input for ready/attention rows; absent otherwise. */
   input?: ClientInput;
+  /**
+   * Present on duplicate rows (status "skipped"): where the match came from
+   * and on what basis. Importable rows never carry it; duplicates never
+   * carry input — so an imported amount can never overwrite book data.
+   */
+  duplicate?: {
+    scope: DuplicateScope;
+    matchedBy: DuplicateMatchKind;
+    /** 1-based source line of the kept occurrence (file scope only). */
+    firstLine?: number | null;
+  };
   /** Original mapped field values for the error-CSV export. */
   fields: Record<string, string>;
 }

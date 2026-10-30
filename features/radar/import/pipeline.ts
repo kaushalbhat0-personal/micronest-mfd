@@ -9,7 +9,12 @@ import {
   type ValidatedClient,
 } from "@/features/radar/validation";
 import { cellToText, normalizeImportDate } from "./normalize";
-import { detectDuplicates, identityOf, type DuplicateIdentity } from "./duplicates";
+import {
+  classifyDuplicates,
+  duplicateReasonText,
+  identityOf,
+  type DuplicateIdentity,
+} from "./duplicates";
 import type {
   ColumnMapping,
   ImportRow,
@@ -82,19 +87,15 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
   const identities = candidates.map(({ display }) =>
     identityOf(display["Client Name"], display["Mobile"]),
   );
-  const isDuplicate = detectDuplicates(
-    identities.map((identity) => ({ identity })),
+  // Shared engine with the manual Add guard: book matches win, otherwise
+  // the first occurrence in the file wins. Later repeats and book matches
+  // never receive persistence input, so they can never overwrite anything.
+  const classified = classifyDuplicates(
+    identities,
     input.existing,
+    candidates.map(({ row }) => row.line),
   );
-
-  // First occurrence wins: report the source line a repeat duplicates.
-  const firstLineByKey = new Map<string, number>();
-  candidates.forEach((_, i) => {
-    if (isDuplicate[i]) return;
-    const identity = identities[i];
-    const key = identity.mobileKey ? `m:${identity.mobileKey}` : `n:${identity.nameKey}`;
-    if (!firstLineByKey.has(key)) firstLineByKey.set(key, candidates[i].row.line);
-  });
+  const isDuplicate = classified.map((c) => c.duplicate);
 
   const rows: PreviewRow[] = candidates.map(({ row, fields, display }, i) => {
     const base = {
@@ -103,19 +104,21 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
       fields: display,
     };
     if (isDuplicate[i]) {
-      const identity = identities[i];
-      const key = identity.mobileKey ? `m:${identity.mobileKey}` : `n:${identity.nameKey}`;
-      const firstLine = firstLineByKey.get(key);
-      const repeat = firstLine !== undefined && firstLine !== row.line;
+      const hit = classified[i];
+      const scope = hit.scope ?? "book";
+      const kind = hit.kind ?? (identities[i].mobileKey ? "mobile" : "name");
       return {
         ...base,
         name: display["Client Name"] || "Unnamed row",
         mobile: display["Mobile"] || "—",
         investmentType: display["Investment Type"] || "Other",
         status: "skipped" as const,
-        reasons: repeat
-          ? [`Duplicate of row ${firstLine} in this file.`]
-          : ["Already in your client book."],
+        reasons: [duplicateReasonText(scope, kind, hit.firstLine)],
+        duplicate: {
+          scope,
+          matchedBy: kind,
+          firstLine: hit.firstLine,
+        },
       };
     }
     const sensitive = detectSensitiveInput("Client name", display["Client Name"]);

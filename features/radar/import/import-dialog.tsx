@@ -59,6 +59,12 @@ function statusLabel(status: PreviewRow["status"]): string {
   return "Skipped";
 }
 
+/** Duplicate rows keep the "skipped" status but render as Duplicates. */
+function rowBadgeLabel(row: PreviewRow): string {
+  if (row.duplicate) return "Duplicate";
+  return statusLabel(row.status);
+}
+
 /**
  * Bulk client import (RCCF-MFD-44). Pure client-side flow: parse → sheet →
  * map → preview → validate → import → receipt. Files never leave the
@@ -98,6 +104,8 @@ export function ImportDialog({
   const attention = rows.filter((r) => r.status === "attention").length;
   const invalid = rows.filter((r) => r.status === "invalid").length;
   const skipped = rows.filter((r) => r.status === "skipped").length;
+  const duplicates = rows.filter((r) => r.duplicate).length;
+  const otherSkipped = skipped - duplicates;
   const nameMapped = mapping.some((m) => m === "Client Name");
 
   const reset = React.useCallback(() => {
@@ -218,6 +226,19 @@ export function ImportDialog({
     const preview = buildPreview({ sheet, mapping, existing });
     setRows(preview.rows);
     setStep("preview");
+  }
+
+  /**
+   * "Remove" only drops the row from the pending import — the existing
+   * Client Book record is never touched. Duplicates are already excluded
+   * from the import set; removing them just clears the review list.
+   */
+  function handleRemoveRow(key: string) {
+    setRows((prev) => prev.filter((r) => r.key !== key));
+  }
+
+  function handleRemoveDuplicates() {
+    setRows((prev) => prev.filter((r) => !r.duplicate));
   }
 
   async function handleImport() {
@@ -573,7 +594,8 @@ export function ImportDialog({
             ready={ready}
             attention={attention}
             invalid={invalid}
-            skipped={skipped}
+            duplicates={duplicates}
+            otherSkipped={otherSkipped}
             blankSkipped={sheet?.blankCount ?? 0}
             rows={rows}
             importableCount={importable.length}
@@ -581,6 +603,8 @@ export function ImportDialog({
             onBack={() => setStep("mapping")}
             onImport={handleImport}
             onDownloadErrors={handleDownloadErrors}
+            onRemoveRow={handleRemoveRow}
+            onRemoveDuplicates={handleRemoveDuplicates}
           />
         )}
 
@@ -621,6 +645,12 @@ export function ImportDialog({
                     <dd className="font-semibold">{receipt.failed}</dd>
                   </div>
                 )}
+                {duplicates > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt>Duplicates not imported</dt>
+                    <dd className="font-semibold">{duplicates}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-2">
                   <dt>Rows needing attention or skipped</dt>
                   <dd className="font-semibold">{receipt.skipped}</dd>
@@ -628,6 +658,9 @@ export function ImportDialog({
               </dl>
               <p className="mt-2 text-xs text-emerald-900/80">
                 {fileName} · {receipt.timestamp}
+              </p>
+              <p className="mt-1 text-xs text-emerald-900/80">
+                Nothing already in your Client Book was overwritten.
               </p>
             </Card>
             {(invalid > 0 || skipped > 0) && (
@@ -676,7 +709,8 @@ function PreviewStep({
   ready,
   attention,
   invalid,
-  skipped,
+  duplicates,
+  otherSkipped,
   blankSkipped,
   rows,
   importableCount,
@@ -684,13 +718,16 @@ function PreviewStep({
   onBack,
   onImport,
   onDownloadErrors,
+  onRemoveRow,
+  onRemoveDuplicates,
 }: {
   fileName: string;
   total: number;
   ready: number;
   attention: number;
   invalid: number;
-  skipped: number;
+  duplicates: number;
+  otherSkipped: number;
   blankSkipped: number;
   rows: PreviewRow[];
   importableCount: number;
@@ -698,6 +735,8 @@ function PreviewStep({
   onBack: () => void;
   onImport: () => void;
   onDownloadErrors: () => void;
+  onRemoveRow: (key: string) => void;
+  onRemoveDuplicates: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -718,14 +757,19 @@ function PreviewStep({
               <strong className="font-semibold text-amber-800">{attention}</strong> need attention
             </span>
           )}
+          {duplicates > 0 && (
+            <span>
+              <strong className="font-semibold text-stone-900">{duplicates}</strong> duplicates
+            </span>
+          )}
           {invalid > 0 && (
             <span>
               <strong className="font-semibold text-red-700">{invalid}</strong> invalid
             </span>
           )}
-          {skipped > 0 && (
+          {otherSkipped > 0 && (
             <span>
-              <strong className="font-semibold text-stone-900">{skipped}</strong> skipped
+              <strong className="font-semibold text-stone-900">{otherSkipped}</strong> skipped
             </span>
           )}
           {blankSkipped > 0 && (
@@ -737,6 +781,20 @@ function PreviewStep({
         <p className="mt-1 truncate text-xs text-stone-500" title={fileName}>
           {fileName}
         </p>
+        {duplicates > 0 && (
+          <div className="mt-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
+            <p className="text-sm font-semibold text-stone-900">
+              {duplicates} duplicate client{duplicates === 1 ? "" : "s"} found
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-stone-600">
+              These rows are already in your Client Book or appear more than once in this file. They
+              won&apos;t be imported, and nothing already in your Client Book will be overwritten.
+            </p>
+            <Button variant="secondary" onClick={onRemoveDuplicates} className="mt-2">
+              Remove duplicates
+            </Button>
+          </div>
+        )}
       </div>
 
       <ul
@@ -756,9 +814,19 @@ function PreviewStep({
             <span className="tnum truncate text-xs text-stone-600">{row.mobile}</span>
             <span className="truncate text-xs text-stone-600">{row.investmentType}</span>
             <span className="flex flex-col items-start gap-1">
-              <SignalBadge tone={statusTone(row.status)}>{statusLabel(row.status)}</SignalBadge>
+              <SignalBadge tone={statusTone(row.status)}>{rowBadgeLabel(row)}</SignalBadge>
               {row.reasons.length > 0 && (
                 <span className="text-xs leading-snug text-stone-600">{row.reasons.join(" ")}</span>
+              )}
+              {row.duplicate && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveRow(row.key)}
+                  aria-label={`Remove row ${row.line} from this import`}
+                  className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-xs font-semibold text-stone-700 underline-offset-2 hover:bg-stone-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                >
+                  Remove row
+                </button>
               )}
             </span>
           </li>
@@ -772,8 +840,12 @@ function PreviewStep({
           </p>
         </Alert>
       )}
+      <p className="text-xs leading-relaxed text-stone-500">
+        Only rows marked ready or needing attention will be imported. Nothing already in your Client
+        Book will be overwritten.
+      </p>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-        {(invalid > 0 || skipped > 0) && (
+        {(invalid > 0 || duplicates > 0 || otherSkipped > 0) && (
           <Button variant="ghost" onClick={onDownloadErrors} className="sm:mr-auto">
             <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Download rows needing attention

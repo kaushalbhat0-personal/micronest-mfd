@@ -190,4 +190,81 @@ describe("buildPreview", () => {
     });
     expect(preview.rows.map((r) => r.name)).toEqual(["Sharma, Rajesh", "Asha"]);
   });
+
+  it("classifies duplicates with scope, basis, and no persistence input", () => {
+    const sheet = sheetFrom(
+      ["Client Name", "Mobile", "Amount"],
+      [
+        ["Rahul Sharma", "9876543210", "5000"],
+        ["Rahul Sharma", "9876543210", "9000"],
+        ["Book Client", "+91 98111 11111", "7000"],
+      ],
+    );
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [{ mobileKey: "919811111111", nameKey: "book client" }],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows.map((r) => r.status)).toEqual(["ready", "skipped", "skipped"]);
+    // First occurrence keeps its amount; repeats carry no input so an
+    // imported amount can never overwrite book data.
+    expect(preview.rows[0].input).toMatchObject({ amountPaise: 500000 });
+    expect(preview.rows[1].duplicate).toMatchObject({
+      scope: "file",
+      matchedBy: "mobile",
+      firstLine: 2,
+    });
+    expect(preview.rows[1].reasons.join(" ")).toContain("Duplicate of row 2");
+    expect(preview.rows[1].reasons.join(" ")).toContain("Matched by mobile number");
+    expect(preview.rows[1].input).toBeUndefined();
+    expect(preview.rows[2].duplicate).toMatchObject({ scope: "book", matchedBy: "mobile" });
+    expect(preview.rows[2].reasons.join(" ")).toContain("Already in your client book");
+    expect(preview.rows[2].input).toBeUndefined();
+  });
+
+  it("classifies name-only file repeats by client name with first-wins", () => {
+    const sheet = sheetFrom(["Client Name"], [["Asha"], ["asha"], ["Meera"]]);
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows.map((r) => r.status)).toEqual(["ready", "skipped", "ready"]);
+    expect(preview.rows[1].duplicate).toMatchObject({
+      scope: "file",
+      matchedBy: "name",
+      firstLine: 2,
+    });
+    expect(preview.rows[1].input).toBeUndefined();
+  });
+
+  it("keeps the same name with different valid mobiles as distinct clients", () => {
+    const sheet = sheetFrom(
+      ["Client Name", "Mobile"],
+      [
+        ["Rahul Sharma", "9876543210"],
+        ["Rahul Sharma", "9811111111"],
+      ],
+    );
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
+
+  it("keeps blank-mobile rows with different names distinct", () => {
+    const sheet = sheetFrom(["Client Name"], [["Asha"], ["Meera"]]);
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
 });

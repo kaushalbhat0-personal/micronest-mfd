@@ -109,6 +109,33 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /try import preview/i })).toBeFocused();
     });
 
+    test("duplicates are counted, explained, and removable", async ({ page }) => {
+      await openImport(page, /try import preview/i);
+
+      await upload(page, "import-mixed.csv");
+      await expect(page.getByRole("button", { name: /review 5 rows/i })).toBeVisible();
+      await page.getByRole("button", { name: /review 5 rows/i }).click();
+      await expect(page.getByText("5 rows found")).toBeVisible();
+      // Dedicated duplicates summary — never hidden in a generic count.
+      await expect(page.getByText("2 duplicates")).toBeVisible();
+      await expect(page.getByText("2 duplicate clients found").first()).toBeVisible();
+      await expect(page.getByText(/duplicate of row 2/i).first()).toBeVisible();
+      await expect(page.getByText(/matched by mobile number/i).first()).toBeVisible();
+
+      // Per-row removal drops the row from the pending import only.
+      await expect(
+        page.getByRole("button", { name: /remove row 4 from this import/i }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: /remove row 4 from this import/i }).click();
+      await expect(page.getByText("1 duplicates")).toBeVisible();
+
+      // Bulk removal clears the rest.
+      await page.getByRole("button", { name: /remove duplicates/i }).click();
+      await expect(page.getByText("0 duplicates")).toHaveCount(0);
+      await expect(page.getByText(/duplicate of row 2/i)).toHaveCount(0);
+      await expectAxeClean(page);
+    });
+
     test("aliases, mixed rows, invalid files, and sheet selection", async ({ page }) => {
       await openImport(page, /try import preview/i);
 
@@ -267,6 +294,53 @@ test.describe("Client import", () => {
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText(/already in your client book/i).first()).toBeVisible();
       await expect(page.getByRole("button", { name: /nothing to import/i })).toBeDisabled();
+    });
+
+    test("manual add blocks an exact duplicate without overwriting", async ({ page }) => {
+      await page.goto("/workspace/clients");
+      await page.getByRole("button", { name: /^add client$/i }).click();
+      await page.getByLabel("Client name").fill("Dup Arjun");
+      await page.getByLabel(/mobile/i).fill("9876543210");
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Add client", exact: true })
+        .click();
+      await expect(page.getByRole("article", { name: /dup arjun/i })).toBeVisible();
+
+      // Same mobile, different name → blocked, matched by mobile.
+      await page.getByRole("button", { name: /^add client$/i }).click();
+      await page.getByLabel("Client name").fill("Different Name");
+      await page.getByLabel(/mobile/i).fill("+91 98765 43210");
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Add client", exact: true })
+        .click();
+      await expect(page.getByText("This client already exists")).toBeVisible();
+      await expect(page.getByText(/matched by mobile number/i).first()).toBeVisible();
+      // The existing record is untouched and no second record exists.
+      await expect(page.getByRole("article", { name: /different name/i })).toHaveCount(0);
+      const viewLink = page.getByRole("link", { name: /view existing client/i });
+      await expect(viewLink).toBeVisible();
+      await page.getByRole("button", { name: /go back and edit/i }).click();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("article", { name: /dup arjun/i })).toHaveCount(1);
+
+      // Same exact name without a mobile → blocked, matched by name.
+      await page.getByRole("button", { name: /^add client$/i }).click();
+      await page.getByLabel("Client name").fill("Name Only");
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Add client", exact: true })
+        .click();
+      await expect(page.getByRole("article", { name: /name only/i })).toBeVisible();
+      await page.getByRole("button", { name: /^add client$/i }).click();
+      await page.getByLabel("Client name").fill("  name   only ");
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Add client", exact: true })
+        .click();
+      await expect(page.getByText("A client with this name already exists")).toBeVisible();
+      await expect(page.getByRole("article", { name: /name only/i })).toHaveCount(1);
     });
   });
 });
