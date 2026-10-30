@@ -17,10 +17,12 @@ function mapFor(header: string[]) {
 const STANDARD = mapFor([...RADAR_HEADERS]);
 
 describe("validateRadarFileMeta", () => {
-  it("accepts .csv within size and rejects the rest", () => {
+  it("accepts .csv and .xlsx within size and rejects the rest", () => {
     expect(validateRadarFileMeta("radar.csv", 100)).toBeNull();
-    expect(validateRadarFileMeta("radar.xlsx", 100)).toContain(".csv");
-    expect(validateRadarFileMeta("radar.csv", 3 * 1024 * 1024)).toContain("2 MB");
+    expect(validateRadarFileMeta("radar.xlsx", 100)).toBeNull();
+    expect(validateRadarFileMeta("radar.xls", 100)).toContain(".csv");
+    expect(validateRadarFileMeta("radar.pdf", 100)).toContain(".csv");
+    expect(validateRadarFileMeta("radar.csv", 6 * 1024 * 1024)).toContain("5 MB");
   });
 });
 

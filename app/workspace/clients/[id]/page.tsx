@@ -26,7 +26,7 @@ interface ClientDetailPageProps {
  */
 export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:gap-6">
       <nav aria-label="Breadcrumb">
         <Link
           href="/workspace/clients"

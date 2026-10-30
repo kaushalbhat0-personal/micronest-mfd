@@ -5,6 +5,8 @@ import { normalizePhone, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { PhoneField } from "@/components/ui/phone-field";
+import { SignalBadge } from "@/components/ui/signal-badge";
+import { CheckIcon, MessageIcon, SendIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 interface MessagePreviewProps {
@@ -75,7 +77,20 @@ export function MessagePreview({
 
   return (
     <section aria-label="Generated message" className="today-enter flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-stone-900">Preview</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-900"
+          >
+            <MessageIcon className="h-4 w-4" />
+          </span>
+          Preview
+        </h2>
+        <SignalBadge tone="stone">
+          <span className="tnum">{message.length} characters</span>
+        </SignalBadge>
+      </div>
       {headerNote && <p className="text-xs text-stone-500">{headerNote}</p>}
 
       {blocked && (
@@ -94,7 +109,7 @@ export function MessagePreview({
 
       <output
         aria-live="polite"
-        className="whitespace-pre-wrap rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-900"
+        className="today-accent-reconnect whitespace-pre-wrap rounded-2xl border border-stone-200 bg-white p-4 text-sm leading-relaxed text-stone-900 shadow-sm sm:text-[15px]"
       >
         {message}
       </output>
@@ -107,7 +122,8 @@ export function MessagePreview({
 
       <div className="bg-app sticky bottom-0 flex flex-col gap-2 py-2 sm:flex-row">
         <Button onClick={handleCopy} disabled={blocked} className="sm:flex-1" aria-live="polite">
-          {copied ? "Copied ✓" : "Copy message"}
+          <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+          {copied ? "Copied" : "Copy message"}
         </Button>
         {showWhatsApp &&
           (waUrl ? (
@@ -117,6 +133,7 @@ export function MessagePreview({
               rel="noopener noreferrer"
               className={cn(buttonClasses("secondary"), "sm:flex-1")}
             >
+              <SendIcon aria-hidden="true" className="mr-2 h-4 w-4" />
               Open WhatsApp
             </a>
           ) : (

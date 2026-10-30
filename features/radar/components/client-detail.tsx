@@ -7,6 +7,14 @@ import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import {
+  CheckIcon,
+  EditIcon,
+  FileTextIcon,
+  MessageIcon,
+  PhoneIcon,
+  TrashIcon,
+} from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -197,23 +205,30 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
   const whyStyle = WHY_SEVERITY_STYLE[whySeverity];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <div className="flex items-start gap-3">
-          <ClientAvatar name={record.name} />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h2 className="text-lg font-semibold break-words text-stone-900">{record.name}</h2>
-            <p className="tnum text-xs text-stone-500">{identityMeta(record)}</p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:gap-6">
+      <Card padding="compact" className="lg:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+          <ClientAvatar name={record.name} className="h-16 w-16 text-xl lg:h-20 lg:w-20" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900 lg:text-2xl">
+              {record.name}
+            </h2>
+            <p className="tnum text-sm text-stone-600">{identityMeta(record)}</p>
+            <p className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+                {record.investmentType}
+              </span>
+              {record.isNewClient && (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
+                  New client
+                </span>
+              )}
+            </p>
           </div>
-          {record.isNewClient && (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
-              New
-            </span>
-          )}
         </div>
 
         {!record.phoneValid && (
-          <p className="mt-2 text-xs text-stone-500">
+          <p className="mt-3 text-xs text-stone-600">
             {record.phone
               ? "Phone number needs checking — Call and WhatsApp are unavailable."
               : "No mobile number — Message is still available."}
@@ -239,170 +254,224 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
         </div>
       )}
 
-      {reasons.length > 0 && (
-        <section
-          aria-label="Why contact"
-          className={cn("rounded-xl border p-4 shadow-sm", whyStyle.accent, whyStyle.box)}
-        >
-          <h3 className={cn("text-xs font-semibold", whyStyle.text)}>Why contact?</h3>
-          <ul className="mt-1.5 space-y-1">
-            {reasons.map((reason) => (
-              <li key={reason} className={cn("text-sm", whyStyle.text)}>
-                {reason}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <div className="grid grid-cols-2 gap-2">
-        {callUrl ? (
-          <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            Call
-          </a>
-        ) : (
-          <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            Call
-          </button>
-        )}
-        {waUrl ? (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(buttonClasses("primary"), "min-h-[48px]")}
-          >
-            WhatsApp
-          </a>
-        ) : (
-          <button type="button" disabled className={cn(buttonClasses("primary"), "min-h-[48px]")}>
-            WhatsApp
-          </button>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          variant="secondary"
-          onClick={() => setMessaging((v) => !v)}
-          className="min-h-[48px] sm:flex-1"
-        >
-          {messaging ? "Close message" : "Message"}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleContacted}
-          disabled={busy}
-          className="min-h-[48px] sm:flex-1"
-        >
-          {busy ? "Saving…" : "Mark contacted"}
-        </Button>
-      </div>
-
-      {messaging && (
-        <MessageStudioForm
-          key={record.id}
-          initialPurpose={handoff.purpose}
-          initialFields={handoff.fields}
-          initialPhone={handoff.phone}
-        />
-      )}
-
-      <ClientFollowups clientId={record.id} />
-
-      <Card>
-        <div className="flex flex-col gap-3">
-          <h3 className="eyebrow">Details</h3>
-          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Mobile</dt>
-              <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last invested</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
-            </div>
-            <div className="flex justify-between gap-2 sm:block">
-              <dt className="text-stone-500">Last contacted</dt>
-              <dd className="font-medium text-stone-900">{displayDate(record.lastContacted)}</dd>
-            </div>
-          </dl>
-
-          {record.note.length > 0 && (
-            <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{record.note}</p>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
+          {reasons.length > 0 && (
+            <section
+              aria-label="Why contact"
+              className={cn(
+                "order-1 rounded-xl border p-4 shadow-sm sm:p-5 lg:order-none lg:p-6",
+                whyStyle.accent,
+                whyStyle.box,
+              )}
+            >
+              <h3 className={cn("eyebrow", whyStyle.text)}>Why contact?</h3>
+              <ul className="mt-2 space-y-1.5">
+                {reasons.map((reason) => (
+                  <li
+                    key={reason}
+                    className={cn("text-base font-medium lg:text-lg", whyStyle.text)}
+                  >
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-        </div>
-      </Card>
 
-      <div className="border-t border-stone-200 pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-stone-900">Maintain</h3>
-          {!editing && !confirmingDelete && (
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setEditing(true)} className="px-3">
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmingDelete(true)}
-                className="px-3 text-red-700 hover:bg-red-50"
-              >
-                Delete
-              </Button>
+          <div className="order-3 lg:order-none">
+            <ClientFollowups clientId={record.id} />
+          </div>
+
+          <Card className="order-4 lg:order-none lg:p-6">
+            <div className="flex flex-col gap-3">
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <FileTextIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Details
+              </h3>
+              <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Mobile</dt>
+                  <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Last invested</dt>
+                  <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
+                </div>
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Last contacted</dt>
+                  <dd className="font-medium text-stone-900">
+                    {displayDate(record.lastContacted)}
+                  </dd>
+                </div>
+              </dl>
+
+              {record.note.length > 0 && (
+                <p className="rounded-lg bg-stone-50 p-3 text-sm leading-relaxed text-stone-700">
+                  {record.note}
+                </p>
+              )}
             </div>
-          )}
+          </Card>
         </div>
 
-        {editing && (
-          <div className="mt-3">
-            <ClientForm
-              key={formKey}
-              initial={toFormInitial(record)}
-              submitLabel="Save changes"
-              saving={busy}
-              externalError={saveError}
-              onSubmit={handleSaveEdit}
-              onCancel={() => {
-                setEditing(false);
-                setSaveError(null);
-              }}
-            />
-          </div>
-        )}
-
-        {confirmingDelete && (
-          <div
-            role="alertdialog"
-            aria-label="Confirm delete"
-            aria-describedby="delete-desc"
-            className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4"
-          >
-            <p className="text-sm font-medium text-stone-900">
-              Delete {record.name} from your workspace?
-            </p>
-            <p id="delete-desc" className="mt-1 text-xs leading-relaxed text-stone-600">
-              This permanently removes the client. This cannot be undone.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <Button
-                variant="primary"
-                onClick={handleDelete}
-                disabled={busy}
-                className="bg-red-700 hover:bg-red-800 focus-visible:ring-red-700 sm:flex-1"
-              >
-                {busy ? "Deleting…" : "Yes, delete"}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setConfirmingDelete(false)}
-                disabled={busy}
-                className="sm:flex-1"
-              >
-                Keep client
-              </Button>
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4 lg:sticky lg:top-20">
+          <Card padding="compact" className="order-2 lg:order-none lg:p-5">
+            <div className="flex flex-col gap-2.5">
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <PhoneIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Quick actions
+              </h3>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                {callUrl ? (
+                  <a href={callUrl} className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}>
+                    <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Call
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <PhoneIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Call
+                  </button>
+                )}
+                {waUrl ? (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={cn(buttonClasses("primary"), "min-h-[48px] w-full")}
+                  >
+                    <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                <Button
+                  variant="secondary"
+                  onClick={() => setMessaging((v) => !v)}
+                  className="min-h-[48px] sm:flex-1 lg:w-full"
+                >
+                  <MessageIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {messaging ? "Close message" : "Message"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleContacted}
+                  disabled={busy}
+                  className="min-h-[48px] sm:flex-1 lg:w-full"
+                >
+                  <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {busy ? "Saving…" : "Mark contacted"}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          </Card>
+
+          {messaging && (
+            <div className="order-2 lg:order-none">
+              <MessageStudioForm
+                key={record.id}
+                initialPurpose={handoff.purpose}
+                initialFields={handoff.fields}
+                initialPhone={handoff.phone}
+              />
+            </div>
+          )}
+
+          <Card padding="compact" className="order-5 lg:order-none lg:p-5">
+            <div className="flex flex-col gap-2">
+              <h3 className="eyebrow flex items-center gap-1.5">
+                <EditIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                Maintain
+              </h3>
+              {!editing && !confirmingDelete && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEditing(true)}
+                    className="min-h-[44px] flex-1"
+                  >
+                    <EditIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="min-h-[44px] flex-1 text-red-700 hover:bg-red-50"
+                  >
+                    <TrashIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {editing && (
+              <div className="mt-3">
+                <ClientForm
+                  key={formKey}
+                  initial={toFormInitial(record)}
+                  submitLabel="Save changes"
+                  saving={busy}
+                  externalError={saveError}
+                  onSubmit={handleSaveEdit}
+                  onCancel={() => {
+                    setEditing(false);
+                    setSaveError(null);
+                  }}
+                />
+              </div>
+            )}
+
+            {confirmingDelete && (
+              <div
+                role="alertdialog"
+                aria-label="Confirm delete"
+                aria-describedby="delete-desc"
+                className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4"
+              >
+                <p className="text-sm font-medium text-stone-900">
+                  Delete {record.name} from your workspace?
+                </p>
+                <p id="delete-desc" className="mt-1 text-xs leading-relaxed text-stone-600">
+                  This permanently removes the client. This cannot be undone.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="primary"
+                    onClick={handleDelete}
+                    disabled={busy}
+                    className="bg-red-700 hover:bg-red-800 focus-visible:ring-red-700 sm:flex-1"
+                  >
+                    {busy ? "Deleting…" : "Yes, delete"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={busy}
+                    className="sm:flex-1"
+                  >
+                    Keep client
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

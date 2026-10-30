@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 // returning visitors. Page shell and metadata here stay server-rendered.
 export default function MessageStudioPage() {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:gap-7">
       <nav aria-label="Breadcrumb">
         <Link
           href="/"
@@ -23,14 +23,18 @@ export default function MessageStudioPage() {
           ← Home
         </Link>
       </nav>
-      <section className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
-          Message Studio
-        </h1>
-        <p className="text-sm leading-relaxed text-stone-600">
-          Choose a purpose, enter 2–3 details, generate, copy — done. Then paste into WhatsApp or
-          email yourself. Or switch to Custom Message and write your own.
-        </p>
+      <section className="grid grid-cols-1 items-end gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex max-w-2xl flex-col gap-1.5">
+          <p className="eyebrow">Communication</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+            Message Studio
+          </h1>
+          <p className="text-sm leading-relaxed text-stone-600 sm:text-base">
+            Choose a purpose, enter 2–3 details, generate, copy — done. Then paste into WhatsApp or
+            email yourself. Or switch to Custom Message and write your own.
+          </p>
+        </div>
+        <p className="hidden text-sm text-stone-600 lg:block">Configure left · preview right</p>
       </section>
       <MessageStudioLoader />
     </div>

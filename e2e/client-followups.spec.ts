@@ -18,6 +18,15 @@ function futureYMD(daysAhead = 30): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Device-local YYYY-MM-DD, mirroring the app's todayLocalYMD. */
+function localYMD(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 function adminClient() {
   return createClient(TEST_URL!, TEST_SERVICE!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -147,6 +156,54 @@ test.describe("Client Detail follow-ups", () => {
     await page.getByRole("button", { name: /undo/i }).click();
     await expect(page.getByText(REASON)).toBeVisible();
     await expect(page.getByRole("heading", { name: /follow-ups 1/i })).toBeVisible();
+  });
+
+  test("open rows name their status: overdue, due today, dated upcoming", async ({ page }) => {
+    const clientId = await seedClient();
+    const admin = adminClient();
+    const userId = await userIdFor();
+    // Device-local frame, matching the app's todayLocalYMD: UTC-sliced
+    // dates drift by a day near midnight in offset timezones.
+    const past = localYMD(-6);
+    const today = localYMD(0);
+    const future = localYMD(9);
+    const { error } = await admin.from("client_followups").insert([
+      {
+        user_id: userId,
+        client_id: clientId,
+        due_date: past,
+        reason: "Overdue call back",
+      },
+      { user_id: userId, client_id: clientId, due_date: today, reason: "Today portfolio chat" },
+      { user_id: userId, client_id: clientId, due_date: future, reason: "Future review" },
+    ]);
+    expect(error).toBeNull();
+
+    await page.goto(`/workspace/clients/${clientId}`);
+    await expect(page.getByRole("heading", { name: /follow-ups 3/i })).toBeVisible();
+    await expect(page.getByText("6 days overdue").first()).toBeVisible();
+    await expect(page.getByText("Due today").first()).toBeVisible();
+
+    // Completing the overdue row removes its overdue state but keeps the rest.
+    await page.getByRole("button", { name: /mark overdue call back done/i }).click();
+    await expect(page.getByRole("status").filter({ hasText: /marked done/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /follow-ups 2/i })).toBeVisible();
+    await expect(page.getByText(/days overdue/i)).toHaveCount(0);
+    await expect(page.getByText("Due today").first()).toBeVisible();
+
+    // Client Book reflects the remaining open set with Today semantics.
+    await page.goto("/workspace/clients");
+    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
+    await expect(page.getByText(/days overdue/i)).toHaveCount(0);
+    await expect(page.getByText("Due today").first()).toBeVisible();
+
+    // Today still surfaces the client for the due-today row, but no
+    // longer as overdue: remaining state derives from the open set.
+    await page.goto("/workspace/today");
+    const card = page.getByRole("article", { name: /followup c2 owner/i });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText(/due today/i);
+    await expect(card.getByText(/overdue/i)).toHaveCount(0);
   });
 
   test("past due dates are rejected without persisting", async ({ page }) => {

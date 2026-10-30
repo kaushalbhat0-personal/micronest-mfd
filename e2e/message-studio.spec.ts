@@ -6,8 +6,8 @@ test.describe("Message Studio smoke", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
-    await page.getByRole("link", { name: /open message studio/i }).click();
+    await expect(page.getByRole("heading", { name: /from first conversation/i })).toBeVisible();
+    await page.getByRole("link", { name: /explore messages/i }).click();
     await expect(page).toHaveURL(/\/tools\/message-studio/);
 
     // Document Request is the default purpose.

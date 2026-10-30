@@ -22,7 +22,16 @@ export const RADAR_REQUIRED_HEADERS: RadarHeader[] = ["Client Name"];
 export const INVESTMENT_TYPES: InvestmentType[] = ["SIP", "Lumpsum", "Both", "Insurance", "Other"];
 
 /** Accepted truthy values for the New Client flag (trimmed, lowercase). */
-export const NEW_CLIENT_TRUTHY = ["y", "yes", "1"];
+export const NEW_CLIENT_TRUTHY = ["y", "yes", "true", "1", "new"];
+
+/** Explicit falsy values: recognized as "no" without a warning. */
+export const NEW_CLIENT_FALSY = ["n", "no", "false", "0", "existing"];
+
+/** Deterministic investment-type aliases beyond exact matching. */
+const INVESTMENT_ALIASES: Record<string, InvestmentType> = {
+  "lump sum": "Lumpsum",
+  lumpsum: "Lumpsum",
+};
 
 export interface InvestmentTypeResult {
   value: InvestmentType;
@@ -32,20 +41,27 @@ export interface InvestmentTypeResult {
 
 /**
  * Normalizes free-text investment type against the fixed enum.
- * Deterministic: exact match after trim+lowercase, no aliases, no guessing.
+ * Deterministic: exact match after trim+lowercase, then a small alias
+ * list — no guessing. Unknown values become Other with a warning.
  */
 export function normalizeInvestmentType(raw: string): InvestmentTypeResult {
   const clean = raw.trim().toLowerCase();
   if (clean.length === 0) return { value: "Other", warning: null };
+  const alias = INVESTMENT_ALIASES[clean];
+  if (alias) return { value: alias, warning: null };
   const match = INVESTMENT_TYPES.find((t) => t.toLowerCase() === clean);
   if (match) return { value: match, warning: null };
   return { value: "Other", warning: "Investment type not recognized — treated as Other." };
 }
 
-/** Parses the explicit New Client flag. Only Y/yes/1 count; never inferred. */
+/**
+ * Parses the explicit New Client flag. Truthy and explicitly-falsy values
+ * are silent; anything else warns and counts as no. Never inferred.
+ */
 export function parseNewClientFlag(raw: string): { value: boolean; warning: string | null } {
   const clean = raw.trim().toLowerCase();
   if (clean.length === 0) return { value: false, warning: null };
   if (NEW_CLIENT_TRUTHY.includes(clean)) return { value: true, warning: null };
+  if (NEW_CLIENT_FALSY.includes(clean)) return { value: false, warning: null };
   return { value: false, warning: "New Client value not recognized — treated as no." };
 }

@@ -18,11 +18,24 @@ test.describe("Workspace shell", () => {
     );
   });
 
-  test("home presents the workspace as the product, not three tools", async ({ page }) => {
+  test("home presents the relationship workflow, not three tools", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /sign in to your workspace/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /open message studio/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /from first conversation to long-term/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /^get started$/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /explore messages/i }).first()).toBeVisible();
+    // Lifecycle stages carry the positioning: reach out → book → attention → follow-up.
+    await expect(
+      page.getByRole("heading", { name: "Start the conversation", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /keep your entire client book in one place/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /know who needs your attention/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /never lose the next step/i })).toBeVisible();
     // Retired standalone products are no longer advertised.
     await expect(page.getByRole("heading", { name: /^client radar$/i })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /^follow-up workspace$/i })).toHaveCount(0);
@@ -51,7 +64,7 @@ test.describe("Workspace shell", () => {
 
   test("clients shell and invalid detail id render cleanly", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(0);
 
     await page.goto("/workspace/clients/not-a-client-id");
@@ -65,17 +78,22 @@ test.describe("Workspace shell", () => {
     expect(page.url()).not.toMatch(/name=|phone=|mobile=|note=/);
   });
 
-  test("workspace navigation links today and clients with touch targets", async ({ page }) => {
+  test("single header navigation links workspace and studio with touch targets", async ({
+    page,
+  }) => {
     await page.goto("/workspace/today");
-    const nav = page.getByRole("navigation", { name: /workspace/i });
-    await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^clients$/i })).toBeVisible();
-    for (const name of [/^today$/i, /^clients$/i]) {
+    // Phase A: the header is the only navigation system — no in-page pills.
+    const navs = page.getByRole("navigation");
+    await expect(navs).toHaveCount(1);
+    const nav = page.getByRole("navigation", { name: /primary/i });
+    await expect(nav.getByRole("link", { name: /^workspace$/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /^message studio$/i })).toBeVisible();
+    for (const name of [/^workspace$/i, /^message studio$/i]) {
       const box = await nav.getByRole("link", { name }).boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-    await nav.getByRole("link", { name: /^clients$/i }).click();
-    await expect(page).toHaveURL(/\/workspace\/clients/);
+    await nav.getByRole("link", { name: /^message studio$/i }).click();
+    await expect(page).toHaveURL(/\/tools\/message-studio/);
   });
 
   test("no client PII in workspace URLs or localStorage", async ({ page }) => {

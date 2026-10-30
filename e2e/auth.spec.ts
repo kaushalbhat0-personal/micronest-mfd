@@ -25,7 +25,7 @@ test.describe("Auth foundation", () => {
 
   test("public routes stay public without login", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /mfd relationship workspace/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /from first conversation/i })).toBeVisible();
 
     await page.goto("/tools/message-studio");
     await expect(page.getByRole("button", { name: /generate message/i })).toBeVisible();
@@ -42,7 +42,7 @@ test.describe("Auth foundation", () => {
     await expect(page.getByRole("heading", { name: /^today$/i })).toBeVisible();
 
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
   });
 
   test("unauthenticated workspace redirects to login preserving next", async ({ page }) => {

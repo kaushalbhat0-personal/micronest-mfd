@@ -13,16 +13,23 @@ export function isProtectedPath(pathname: string): boolean {
 }
 
 /**
+ * Where post-auth flows land when no valid destination was requested.
+ * The workspace — never the marketing homepage — so a dropped `next`
+ * can never strand a signed-in user on the public site.
+ */
+export const DEFAULT_POST_AUTH_PATH = "/workspace/today";
+
+/**
  * Accepts only same-origin absolute paths ("/workspace/today").
  * Rejects external URLs, protocol-relative URLs, and backslash tricks —
- * anything else becomes "/". Never trust a raw `next` query parameter.
+ * anything else becomes the fallback. Never trust a raw `next` query parameter.
  */
-export function safeNextPath(value: unknown): string {
-  if (typeof value !== "string" || value.length === 0) return "/";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+export function safeNextPath(value: unknown, fallback: string = DEFAULT_POST_AUTH_PATH): string {
+  if (typeof value !== "string" || value.length === 0) return fallback;
+  if (!value.startsWith("/") || value.startsWith("//")) return fallback;
   const second = value.charAt(1);
-  if (second === "\\" || second === "/") return "/";
-  if (value.includes("://")) return "/";
+  if (second === "\\" || second === "/") return fallback;
+  if (value.includes("://")) return fallback;
   return value;
 }
 

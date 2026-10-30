@@ -5,7 +5,7 @@ import { normalizeHeader } from "@/lib/csv";
 import { RADAR_HEADERS, RADAR_REQUIRED_HEADERS, type RadarHeader } from "./template";
 import { normalizeInvestmentType, parseNewClientFlag } from "./template";
 
-export const MAX_FILE_BYTES = 2 * 1024 * 1024;
+export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_DATA_ROWS = 500;
 
 export const MAX_NAME_LENGTH = 60;
@@ -247,11 +247,11 @@ function parseOptionalDate(
 
 /** File-level guards: extension and size. Content checks happen after parsing. */
 export function validateRadarFileMeta(fileName: string, fileSize: number): string | null {
-  if (!fileName.toLowerCase().endsWith(".csv")) {
-    return "Please upload a .csv file. Download the template to get the right format.";
+  if (!/\.csv$|\.xlsx$/i.test(fileName)) {
+    return "Please upload a .csv or .xlsx file. Download the template to get the right format.";
   }
   if (fileSize > MAX_FILE_BYTES) {
-    return "This file is larger than 2 MB. Split it into smaller files and upload separately.";
+    return "This file is larger than 5 MB. Split it into smaller files and upload separately.";
   }
   return null;
 }

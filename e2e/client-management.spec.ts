@@ -62,32 +62,32 @@ test.describe("Client management", () => {
 
   test("empty, add, and search", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByText(/no clients yet/i)).toBeVisible();
+    await expect(page.getByText(/bring your client book/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /add your first client/i }).click();
     await page.getByLabel("Client name").fill("Crud Arjun");
     await page.getByLabel(/mobile/i).fill("9876543210");
     await page.getByLabel("Investment type").selectOption("SIP");
     await page.getByLabel(/last invested/i).fill("2026-10-12");
     await page.getByLabel("New client").check();
     await page.getByLabel(/note/i).fill("Prefers evening calls");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
 
-    const entry = page.getByRole("link", { name: /crud arjun/i });
+    const entry = page.getByRole("article", { name: /crud arjun/i });
     await expect(entry).toBeVisible();
     await expect(entry).toContainText("SIP");
 
     await page.reload();
-    await expect(page.getByRole("link", { name: /crud arjun/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /crud arjun/i })).toBeVisible();
 
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Zoya Khan");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await expect(page.getByRole("link", { name: /zoya khan/i })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    await expect(page.getByRole("article", { name: /zoya khan/i })).toBeVisible();
 
     await page.getByLabel("Search clients").fill("zoy");
-    await expect(page.getByRole("link", { name: /zoya khan/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /crud arjun/i })).toHaveCount(0);
+    await expect(page.getByRole("article", { name: /zoya khan/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /crud arjun/i })).toHaveCount(0);
     await expect(page.url()).not.toMatch(/zoy/i);
 
     await page.getByLabel("Search clients").fill("no-such-client");
@@ -96,25 +96,29 @@ test.describe("Client management", () => {
 
   test("add validation rejects bad input without persisting", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await expect(page.getByRole("alert")).toContainText(/client name is missing/i);
+    await page.getByRole("button", { name: /^add client$/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    // The Next.js route announcer also carries role="alert": scope to the
+    // field error like client-followups.spec.ts does.
+    await expect(
+      page.getByRole("alert").filter({ hasText: /client name is missing/i }),
+    ).toBeVisible();
 
     await page.getByLabel("Client name").fill("No Save");
     await page.getByLabel(/mobile/i).fill("not-a-phone");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await expect(page.getByRole("link", { name: /no save/i })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    await expect(page.getByRole("article", { name: /no save/i })).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole("link", { name: /no save/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /no save/i })).toBeVisible();
   });
 
   test("edit persists across reload", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Edit Meera");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await page.getByRole("link", { name: /edit meera/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    await page.getByRole("link", { name: /view edit meera/i }).click();
 
     await expect(page.getByRole("heading", { name: /edit meera/i })).toBeVisible();
     await page.getByRole("button", { name: /^edit$/i }).click();
@@ -132,10 +136,10 @@ test.describe("Client management", () => {
 
   test("delete requires confirmation and persists", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Delete Kabir");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await page.getByRole("link", { name: /delete kabir/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    await page.getByRole("link", { name: /view delete kabir/i }).click();
 
     await page.getByRole("button", { name: /^delete$/i }).click();
     await expect(page.getByRole("alertdialog")).toBeVisible();
@@ -146,19 +150,19 @@ test.describe("Client management", () => {
     await page.getByRole("button", { name: /^delete$/i }).click();
     await page.getByRole("button", { name: /yes, delete/i }).click();
     await expect(page).toHaveURL(/\/workspace\/clients$/);
-    await expect(page.getByRole("link", { name: /delete kabir/i })).toHaveCount(0);
+    await expect(page.getByRole("article", { name: /delete kabir/i })).toHaveCount(0);
 
     await page.reload();
-    await expect(page.getByRole("link", { name: /delete kabir/i })).toHaveCount(0);
+    await expect(page.getByRole("article", { name: /delete kabir/i })).toHaveCount(0);
   });
 
   test("privacy: no PII in URL or storage, no service-role exposure", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await page.getByRole("button", { name: /\+ add client/i }).click();
+    await page.getByRole("button", { name: /^add client$/i }).click();
     await page.getByLabel("Client name").fill("Private Mohan");
     await page.getByLabel(/mobile/i).fill("9812345678");
-    await page.getByRole("button", { name: "Add client", exact: true }).click();
-    await page.getByRole("link", { name: /private mohan/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
+    await page.getByRole("link", { name: /view private mohan/i }).click();
     await expect(page.getByRole("heading", { name: /private mohan/i })).toBeVisible();
 
     expect(page.url()).not.toMatch(/mohan|9812345678|note=/i);

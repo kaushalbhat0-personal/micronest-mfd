@@ -32,15 +32,20 @@ describe("auth guard", () => {
   });
 
   it("rejects external, protocol-relative, and malformed destinations", () => {
-    expect(safeNextPath("https://evil.example")).toBe("/");
-    expect(safeNextPath("http://evil.example/x")).toBe("/");
-    expect(safeNextPath("//evil.example")).toBe("/");
-    expect(safeNextPath("/\\evil.example")).toBe("/");
-    expect(safeNextPath("javascript:alert(1)")).toBe("/");
-    expect(safeNextPath("")).toBe("/");
-    expect(safeNextPath(null)).toBe("/");
-    expect(safeNextPath(undefined)).toBe("/");
-    expect(safeNextPath(42)).toBe("/");
+    expect(safeNextPath("https://evil.example")).toBe("/workspace/today");
+    expect(safeNextPath("http://evil.example/x")).toBe("/workspace/today");
+    expect(safeNextPath("//evil.example")).toBe("/workspace/today");
+    expect(safeNextPath("/\\evil.example")).toBe("/workspace/today");
+    expect(safeNextPath("javascript:alert(1)")).toBe("/workspace/today");
+    expect(safeNextPath("")).toBe("/workspace/today");
+    expect(safeNextPath(null)).toBe("/workspace/today");
+    expect(safeNextPath(undefined)).toBe("/workspace/today");
+    expect(safeNextPath(42)).toBe("/workspace/today");
+  });
+
+  it("supports an explicit fallback for non-auth contexts", () => {
+    expect(safeNextPath(undefined, "/")).toBe("/");
+    expect(safeNextPath("https://evil.example", "/")).toBe("/");
   });
 
   it("builds login urls preserving the requested path", () => {
@@ -48,6 +53,6 @@ describe("auth guard", () => {
     expect(loginUrlFor("/workspace/clients?page=2")).toBe(
       "/login?next=%2Fworkspace%2Fclients%3Fpage%3D2",
     );
-    expect(loginUrlFor("https://evil.example")).toBe("/login?next=%2F");
+    expect(loginUrlFor("https://evil.example")).toBe("/login?next=%2Fworkspace%2Ftoday");
   });
 });
