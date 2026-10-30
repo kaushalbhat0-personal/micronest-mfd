@@ -79,10 +79,33 @@ export function FollowupStatusLine({
  * split is in-memory only and preserves repository ordering. Every mutation
  * persists first, then re-queries — no optimistic state, no second source.
  */
-export function ClientFollowups({ clientId }: { clientId: string }) {
-  const [rows, setRows] = React.useState<StoredFollowup[] | null>(null);
-  const [loading, setLoading] = React.useState(true);
+export function ClientFollowups({
+  clientId,
+  initialFollowups,
+}: {
+  clientId: string;
+  /**
+   * Server-loaded rows for the initial paint (detail page parallel fetch).
+   * Hydrates state so the browser skips its initial fetch. The repository
+   * stays the single source of truth: every mutation persists first and
+   * then re-queries, and the client-side fetch path (loading/error/retry)
+   * is preserved for when no seed is available.
+   */
+  initialFollowups?: StoredFollowup[];
+}) {
+  const [rows, setRows] = React.useState<StoredFollowup[] | null>(() => initialFollowups ?? null);
+  const [loading, setLoading] = React.useState(() => initialFollowups === undefined);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  // Adopt a fresh server seed when the mounted client changes (navigation).
+  // Render-phase adjustment runs before commit, so post-mutation rows for
+  // the current client are never clobbered by parent re-renders.
+  const [seededId, setSeededId] = React.useState(clientId);
+  if (seededId !== clientId) {
+    setSeededId(clientId);
+    setRows(initialFollowups ?? null);
+    setLoadError(null);
+    setLoading(initialFollowups === undefined);
+  }
   const [formOpen, setFormOpen] = React.useState(false);
   const [dueDate, setDueDate] = React.useState("");
   const [reason, setReason] = React.useState("");
@@ -111,6 +134,9 @@ export function ClientFollowups({ clientId }: { clientId: string }) {
   );
 
   React.useEffect(() => {
+    // Server seed is already in state — nothing to load. Without a seed
+    // (direct client-side use or a failed server read) fetch as before.
+    if (initialFollowups !== undefined) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -132,7 +158,7 @@ export function ClientFollowups({ clientId }: { clientId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [clientId, initialFollowups]);
 
   const { open, completed } = React.useMemo(() => splitStoredFollowups(rows ?? []), [rows]);
 

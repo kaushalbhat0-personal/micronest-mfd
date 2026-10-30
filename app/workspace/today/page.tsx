@@ -64,26 +64,35 @@ async function TodayBody({ searchParams }: TodayPageProps) {
       />
     );
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    // Proxy normally bounces signed-out sessions to /login first.
-    return (
-      <TodayWorkspace
-        initialClients={[]}
-        initialFollowups={[]}
-        initialFilter={initialFilter}
-        configured
-        signedIn={false}
-      />
-    );
-  }
-
+  // P0: one parallel batch. The session validation (auth.getUser) and the
+  // two independent reads fire together, so the page pays max(latency)
+  // instead of auth-then-data sequentially. proxy.ts still route-guards;
+  // this check remains the page-level authorization boundary (signed-in
+  // branching + userName) and every row stays RLS-scoped.
   let clients: StoredRadarClient[] = [];
   let followups: StoredFollowup[] = [];
+  let userName: string | undefined;
+  let signedIn = true;
   try {
-    [clients, followups] = await Promise.all([listClients(supabase), listOpenFollowups(supabase)]);
+    const [userResponse, clientRows, followupRows] = await Promise.all([
+      supabase.auth.getUser(),
+      listClients(supabase),
+      listOpenFollowups(supabase),
+    ]);
+    const user = userResponse.data.user;
+    if (!user) {
+      // Proxy normally bounces signed-out sessions to /login first.
+      signedIn = false;
+    } else {
+      clients = clientRows;
+      followups = followupRows;
+      // Real display name only — never invented. Falls back to no personalization.
+      const fullName =
+        typeof user.user_metadata?.full_name === "string"
+          ? user.user_metadata.full_name.trim()
+          : "";
+      userName = fullName ? fullName.split(/\s+/)[0] : undefined;
+    }
   } catch (error) {
     const copy =
       error instanceof RadarStoreError || error instanceof Error
@@ -103,10 +112,17 @@ async function TodayBody({ searchParams }: TodayPageProps) {
       </Card>
     );
   }
-  // Real display name only — never invented. Falls back to no personalization.
-  const fullName =
-    typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : "";
-  const userName = fullName ? fullName.split(/\s+/)[0] : undefined;
+  if (!signedIn) {
+    return (
+      <TodayWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        initialFilter={initialFilter}
+        configured
+        signedIn={false}
+      />
+    );
+  }
   return (
     <TodayWorkspace
       initialClients={clients}

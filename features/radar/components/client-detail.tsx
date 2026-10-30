@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { ClientFollowups } from "@/features/followups/components/client-followups";
+import type { StoredFollowup } from "@/features/followups/types";
 import { buildRadarHandoff, markContacted } from "../model";
 import { amountPaiseToInput, formatAmountContext } from "../template";
 import {
@@ -110,7 +111,18 @@ function identityMeta(
  * final). Message reuses the existing studio form via the radar handoff;
  * Phase D will promote this inline composer into a proper workspace sheet.
  */
-export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
+export function ClientDetail({
+  stored,
+  initialFollowups,
+}: {
+  stored: StoredRadarClient;
+  /**
+   * Server-loaded follow-ups (detail page parallel fetch). Hydrates the
+   * follow-up section so the browser skips its initial fetch; mutations
+   * still persist-first-then-requery through the repository.
+   */
+  initialFollowups?: StoredFollowup[];
+}) {
   const router = useRouter();
   const [todayYMD, setTodayYMD] = React.useState(() => todayLocalYMD());
   const [record, setRecord] = React.useState(() => toClientRecord(stored, 0, todayLocalYMD()));
@@ -286,7 +298,7 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
           )}
 
           <div className="order-3 lg:order-none">
-            <ClientFollowups clientId={record.id} />
+            <ClientFollowups clientId={record.id} initialFollowups={initialFollowups} />
           </div>
 
           <Card className="order-4 lg:order-none lg:p-6">

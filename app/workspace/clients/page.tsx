@@ -80,11 +80,31 @@ async function ClientsBody() {
       />
     );
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    // Proxy normally bounces signed-out sessions to /login first.
+  // P0: one parallel batch. The session validation (auth.getUser) and the
+  // two independent reads fire together, so the page pays max(latency)
+  // instead of auth-then-data sequentially. proxy.ts still route-guards;
+  // this check remains the page-level authorization boundary.
+  let clients: StoredRadarClient[] = [];
+  let followups: StoredFollowup[] = [];
+  let loadError: string | null = null;
+  let signedIn = true;
+  try {
+    const [userResponse, clientRows, followupRows] = await Promise.all([
+      supabase.auth.getUser(),
+      listClients(supabase),
+      listOpenFollowups(supabase),
+    ]);
+    if (!userResponse.data.user) {
+      // Proxy normally bounces signed-out sessions to /login first.
+      signedIn = false;
+    } else {
+      clients = clientRows;
+      followups = followupRows;
+    }
+  } catch (error) {
+    loadError = error instanceof RadarStoreError ? error.message : "We couldn't load your clients.";
+  }
+  if (!signedIn) {
     return (
       <ClientsWorkspace
         initialClients={[]}
@@ -94,15 +114,6 @@ async function ClientsBody() {
         signedIn={false}
       />
     );
-  }
-
-  let clients: StoredRadarClient[] = [];
-  let followups: StoredFollowup[] = [];
-  let loadError: string | null = null;
-  try {
-    [clients, followups] = await Promise.all([listClients(supabase), listOpenFollowups(supabase)]);
-  } catch (error) {
-    loadError = error instanceof RadarStoreError ? error.message : "We couldn't load your clients.";
   }
   return (
     <ClientsWorkspace

@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { isValidClientId } from "@/lib/workspace/params";
+import { listFollowupsForClient } from "@/features/followups/repository";
+import type { StoredFollowup } from "@/features/followups/types";
 import { getClient, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
 import { ClientDetail } from "@/features/radar/components/client-detail";
 
@@ -82,20 +84,36 @@ async function ClientDetailBody({ params }: ClientDetailPageProps) {
       <NotFoundCard copy="Client sync isn't set up yet. Please sign in once authentication is configured." />
     );
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // P0: one parallel batch. The session validation (auth.getUser), the
+  // client lookup, and the follow-up list fire together, so the page pays
+  // max(latency) instead of three sequential phases. proxy.ts still
+  // route-guards; the getUser result below remains the page-level
+  // authorization boundary. A follow-up read failure degrades to the
+  // existing client-side fetch path (ClientFollowups shows its own
+  // error + retry) instead of failing the whole page.
+  const [userResponse, clientOutcome, followupRows] = await Promise.all([
+    supabase.auth.getUser(),
+    getClient(supabase, id).then(
+      (value: StoredRadarClient) => ({ status: "ok" as const, value }),
+      (error: unknown) => ({ status: "error" as const, error }),
+    ),
+    listFollowupsForClient(supabase, id).then(
+      (value: StoredFollowup[]) => value,
+      () => undefined,
+    ),
+  ]);
+  const user = userResponse.data.user;
   if (!user) {
     // Proxy normally bounces signed-out sessions to /login first.
     redirect("/login?next=%2Fworkspace%2Fclients");
   }
 
-  let stored: StoredRadarClient | null = null;
-  try {
-    stored = await getClient(supabase, id);
-  } catch (error) {
-    const copy = error instanceof RadarStoreError ? error.message : "We couldn't find that client.";
+  if (clientOutcome.status === "error") {
+    const copy =
+      clientOutcome.error instanceof RadarStoreError
+        ? clientOutcome.error.message
+        : "We couldn't find that client.";
     return <NotFoundCard copy={copy} />;
   }
-  return <ClientDetail stored={stored} />;
+  return <ClientDetail stored={clientOutcome.value} initialFollowups={followupRows} />;
 }
