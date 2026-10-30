@@ -319,7 +319,6 @@ export function TodayWorkspace({
             iconTone="bg-stone-200 text-stone-700"
             valueTone="text-stone-900"
             onSelect={() => setFilter("followups")}
-            ariaLabel={`Upcoming: ${upcoming.length}. Show follow-ups.`}
           />
         </div>
       </section>

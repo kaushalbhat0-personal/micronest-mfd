@@ -10,13 +10,14 @@ interface StatCardProps {
   /** Toggle state when the stat mirrors a filter 1:1. */
   pressed?: boolean;
   onSelect: () => void;
-  ariaLabel?: string;
 }
 
 /**
  * Shared attention stat card: icon + tabular number + short label.
  * Used by the Today command center. Pressed state only when the stat
  * maps 1:1 to a filter — otherwise selection lives in the filter rail.
+ * The accessible name comes from the visible content (value + label),
+ * so the visible text always matches the announced name (WCAG 2.5.3).
  */
 export function StatCard({
   icon,
@@ -26,14 +27,12 @@ export function StatCard({
   iconTone,
   valueTone,
   onSelect,
-  ariaLabel,
 }: StatCardProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={pressed}
-      aria-label={ariaLabel ?? `${label}: ${value}`}
       className={cn(
         "flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-2xl border border-stone-200 bg-white px-2 py-3 shadow-sm lg:min-h-[112px] lg:flex-row lg:gap-3 lg:px-5 lg:py-4 lg:text-left",
         "transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900",

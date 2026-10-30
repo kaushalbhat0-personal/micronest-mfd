@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { listOpenFollowups } from "@/features/followups/repository";
+import type { StoredFollowup } from "@/features/followups/types";
 import { listClients, RadarStoreError, type StoredRadarClient } from "@/features/radar/repository";
 import { ClientsWorkspace } from "@/features/radar/components/clients-workspace";
 
@@ -12,9 +14,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Clients page (RCCF-MFD-19). Server loads the owned list once through the
- * repository (RLS final); search and add run client-side. Data resolution
- * streams behind Suspense so the shell prerenders (cacheComponents).
+ * Client Book (RCCF-MFD-49). Server loads the owned client list plus all
+ * open follow-ups once (RLS final); attention ranking, counts, and display
+ * copy are the shared view-model in features/radar (book.ts over today.ts).
+ * Data resolution streams behind Suspense so the shell prerenders
+ * (cacheComponents).
  */
 export default function ClientsPage() {
   return (
@@ -55,13 +59,25 @@ export default function ClientsPage() {
 async function ClientsBody() {
   if (!isSupabaseConfigured()) {
     return (
-      <ClientsWorkspace initialClients={[]} loadError={null} configured={false} signedIn={false} />
+      <ClientsWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        loadError={null}
+        configured={false}
+        signedIn={false}
+      />
     );
   }
   const supabase = await createServerSupabase();
   if (!supabase) {
     return (
-      <ClientsWorkspace initialClients={[]} loadError={null} configured={false} signedIn={false} />
+      <ClientsWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        loadError={null}
+        configured={false}
+        signedIn={false}
+      />
     );
   }
   const {
@@ -69,15 +85,32 @@ async function ClientsBody() {
   } = await supabase.auth.getUser();
   if (!user) {
     // Proxy normally bounces signed-out sessions to /login first.
-    return <ClientsWorkspace initialClients={[]} loadError={null} configured signedIn={false} />;
+    return (
+      <ClientsWorkspace
+        initialClients={[]}
+        initialFollowups={[]}
+        loadError={null}
+        configured
+        signedIn={false}
+      />
+    );
   }
 
   let clients: StoredRadarClient[] = [];
+  let followups: StoredFollowup[] = [];
   let loadError: string | null = null;
   try {
-    clients = await listClients(supabase);
+    [clients, followups] = await Promise.all([listClients(supabase), listOpenFollowups(supabase)]);
   } catch (error) {
     loadError = error instanceof RadarStoreError ? error.message : "We couldn't load your clients.";
   }
-  return <ClientsWorkspace initialClients={clients} loadError={loadError} configured signedIn />;
+  return (
+    <ClientsWorkspace
+      initialClients={clients}
+      initialFollowups={followups}
+      loadError={loadError}
+      configured
+      signedIn
+    />
+  );
 }
