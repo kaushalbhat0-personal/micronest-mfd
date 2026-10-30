@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -20,7 +21,6 @@ import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { ClientFollowups } from "@/features/followups/components/client-followups";
 import type { StoredFollowup } from "@/features/followups/types";
 import { buildRadarHandoff, markContacted } from "../model";
@@ -38,6 +38,28 @@ import { reasonsFor } from "../signals";
 import type { Signal } from "../types";
 import { radarWhatsAppText } from "../view";
 import { ClientForm, type ClientFormInitial } from "./client-form";
+
+// The message composer only renders after the user opens it, and it reads
+// browser-local prefs on first render (same reason the standalone studio
+// route loads it client-only). It stays out of the initial Client Detail
+// payload and loads on demand; the frame below holds its place with an
+// announced status so opening Message never flashes a blank state.
+const MessageStudioForm = dynamic(
+  () =>
+    import("@/features/message-studio/components/message-studio-form").then(
+      (m) => m.MessageStudioForm,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="lg:p-6">
+        <p role="status" className="text-sm text-stone-500">
+          Loading message composer…
+        </p>
+      </Card>
+    ),
+  },
+);
 
 function storeErrorMessage(error: unknown): string {
   if (error instanceof RadarStoreError) return error.message;

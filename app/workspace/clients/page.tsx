@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Card } from "@/components/ui/card";
+import { ClientCardSkeleton } from "@/components/ui/skeleton";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { listOpenFollowups } from "@/features/followups/repository";
@@ -43,11 +43,13 @@ export default function ClientsPage() {
 
       <Suspense
         fallback={
-          <Card>
-            <p className="text-sm text-stone-500" role="status">
-              Loading your clients…
-            </p>
-          </Card>
+          <div role="status" aria-label="Loading your clients">
+            <span className="sr-only">Loading your clients…</span>
+            <div className="flex flex-col gap-2.5 lg:gap-4" aria-hidden="true">
+              <ClientCardSkeleton />
+              <ClientCardSkeleton />
+            </div>
+          </div>
         }
       >
         <ClientsBody />

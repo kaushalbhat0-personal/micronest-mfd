@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/controls";
 import { SignalBadge } from "@/components/ui/signal-badge";
-import { DownloadIcon, UploadIcon } from "@/components/ui/icons";
+import { DownloadIcon } from "@/components/ui/icons";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
@@ -864,8 +864,4 @@ function PreviewStep({
       </div>
     </div>
   );
-}
-
-export function ImportTriggerIcon() {
-  return <UploadIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />;
 }

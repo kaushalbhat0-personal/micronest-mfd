@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -39,9 +40,35 @@ import { BOOK_FILTERS, countToday, filterBookItems, type BookFilter } from "../b
 import { buildTodayItems, upcomingFollowups } from "../today";
 import { ClientForm } from "./client-form";
 import { ClientBookCard } from "./client-book-card";
-import { ImportDialog, ImportTriggerIcon } from "../import/import-dialog";
+import { ImportTriggerIcon } from "../import/import-trigger-icon";
 import { downloadTextFile, buildTemplateCsv, TEMPLATE_FILENAME } from "../import/template-csv";
 import { identityOf, manualDuplicateCopy, matchExisting } from "../import/duplicates";
+
+// The import flow (dialog + preview pipeline + workbook parsing) only runs
+// after the user chooses Import, so it stays out of the initial Client Book
+// payload and loads on demand. The frame below mirrors the dialog shell
+// (same overlay/panel shape, status announced) so opening Import never
+// flashes a blank state on slow networks. Dialog accessibility, focus
+// management, Escape handling, and on-demand xlsx loading all live in the
+// deferred module, unchanged.
+const ImportDialog = dynamic(
+  () => import("../import/import-dialog").then((m) => m.ImportDialog),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        role="status"
+        aria-label="Preparing import"
+        className="fixed inset-0 z-30 flex items-end justify-center sm:items-center sm:p-6"
+      >
+        <div aria-hidden="true" className="absolute inset-0 cursor-default bg-stone-900/40" />
+        <div className="relative max-h-[92dvh] w-full rounded-t-3xl border border-stone-200 bg-white p-5 shadow-xl sm:max-w-2xl sm:rounded-3xl sm:p-6 lg:max-w-3xl">
+          <p className="text-sm text-stone-500">Preparing import…</p>
+        </div>
+      </div>
+    ),
+  },
+);
 
 function storeErrorMessage(error: unknown): string {
   if (error instanceof RadarStoreError) return error.message;

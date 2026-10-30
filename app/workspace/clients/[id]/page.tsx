@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { ClientCardSkeleton } from "@/components/ui/skeleton";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { isValidClientId } from "@/lib/workspace/params";
@@ -39,11 +40,12 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       </nav>
       <Suspense
         fallback={
-          <Card>
-            <p className="text-sm text-stone-500" role="status">
-              Loading client…
-            </p>
-          </Card>
+          <div role="status" aria-label="Loading client">
+            <span className="sr-only">Loading client…</span>
+            <div aria-hidden="true">
+              <ClientCardSkeleton />
+            </div>
+          </div>
         }
       >
         <ClientDetailBody params={params} />
