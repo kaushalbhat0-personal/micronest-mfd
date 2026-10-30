@@ -52,6 +52,7 @@ export function MobileBottomNav({
         </Link>
         <Link
           href="/workspace/clients"
+          aria-label="Client Book"
           aria-current={active === "clients" ? "page" : undefined}
           className={cn(
             ITEM_BASE,
@@ -67,11 +68,11 @@ export function MobileBottomNav({
             />
           )}
           <UsersIcon aria-hidden="true" className="h-5 w-5" />
-          Clients
+          Book
         </Link>
         <Link
           href="/tools/message-studio"
-          aria-label="Message Studio"
+          aria-label="Messages"
           aria-current={active === "studio" ? "page" : undefined}
           className={cn(
             ITEM_BASE,
@@ -87,7 +88,7 @@ export function MobileBottomNav({
             />
           )}
           <MessageIcon aria-hidden="true" className="h-5 w-5" />
-          Studio
+          Messages
         </Link>
         <button
           ref={moreButtonRef}

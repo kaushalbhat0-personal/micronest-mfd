@@ -88,9 +88,9 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       // Active state is never color alone: indicator + weight + aria-current.
       const today = bottom.getByRole("link", { name: /^today$/i });
       await expect(today).toHaveAttribute("aria-current", "page");
-      const clients = bottom.getByRole("link", { name: /^clients$/i });
-      const studio = bottom.getByRole("link", { name: /message studio/i });
-      await expect(studio).toContainText("Studio");
+      const clients = bottom.getByRole("link", { name: /^client book$/i });
+      const studio = bottom.getByRole("link", { name: /^messages$/i });
+      await expect(studio).toContainText("Messages");
 
       for (const item of [
         today,
@@ -108,14 +108,14 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(/\/workspace\/clients/);
       await expect(
-        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /^clients$/i }),
+        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /^client book$/i }),
       ).toHaveAttribute("aria-current", "page");
 
       await studio.focus();
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(/\/tools\/message-studio/);
       await expect(
-        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /message studio/i }),
+        page.getByTestId("mobile-bottom-nav").getByRole("link", { name: /^messages$/i }),
       ).toHaveAttribute("aria-current", "page");
 
       // More sheet: identity, Escape, focus return.
@@ -170,8 +170,8 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await expect(page.getByRole("navigation")).toHaveCount(1);
       const nav = page.getByRole("navigation", { name: /primary/i });
       await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
-      await expect(nav.getByRole("link", { name: /^clients$/i })).toBeVisible();
-      await expect(nav.getByRole("link", { name: /^message studio$/i })).toBeVisible();
+      await expect(nav.getByRole("link", { name: /^client book$/i })).toBeVisible();
+      await expect(nav.getByRole("link", { name: /^messages$/i })).toBeVisible();
       await expect(nav.getByRole("link", { name: /^today$/i })).toHaveAttribute(
         "aria-current",
         "page",

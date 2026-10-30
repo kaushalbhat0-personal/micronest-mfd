@@ -42,7 +42,7 @@ test.describe("Auth foundation", () => {
     await expect(page.getByRole("heading", { name: /^today$/i })).toBeVisible();
 
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
   });
 
   test("unauthenticated workspace redirects to login preserving next", async ({ page }) => {

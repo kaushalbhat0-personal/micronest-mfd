@@ -39,7 +39,7 @@ function topLinkClass(isActive: boolean): string {
 /**
  * Site header with premium brand + adaptive navigation (RCCF-MFD-43).
  * Signed out: MicroNest [MFD] · Workspace / Message Studio · Sign in.
- * Signed in: desktop/tablet top nav (Today / Clients / Message Studio +
+ * Signed in: desktop/tablet top nav (Today / Client Book / Messages +
  * avatar menu); mobile compact brand bar + fixed bottom navigation with a
  * More sheet for account functions. Static prerender stays signed-out until
  * the session resolves.
@@ -181,14 +181,14 @@ export function SiteHeader() {
                     aria-current={active === "clients" ? "page" : undefined}
                     className={topLinkClass(active === "clients")}
                   >
-                    Clients
+                    Client Book
                   </Link>
                   <Link
                     href="/tools/message-studio"
                     aria-current={active === "studio" ? "page" : undefined}
                     className={topLinkClass(active === "studio")}
                   >
-                    Message Studio
+                    Messages
                   </Link>
                 </nav>
                 {/* Mobile compact account access — opens the account sheet. */}

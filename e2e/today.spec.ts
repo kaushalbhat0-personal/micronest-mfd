@@ -102,7 +102,7 @@ test.describe("Today workspace", () => {
       page.getByRole("heading", { name: /good (morning|afternoon|evening)/i }),
     ).toBeVisible();
     await expect(page.getByText(/relationship radar is clear/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: /go to clients/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /go to client book/i })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(0);
   });
 

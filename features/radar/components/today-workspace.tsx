@@ -235,12 +235,12 @@ export function TodayWorkspace({
                 Add your first client to start today&apos;s list
               </p>
               <p className="text-sm leading-relaxed text-stone-600">
-                Add clients on the Clients page and they will appear here with the reason to contact
+                Add clients to your Client Book and they will appear here with the reason to contact
                 them.
               </p>
             </div>
             <Link href="/workspace/clients" className={cn(buttonClasses("primary"), "mt-1")}>
-              Go to Clients
+              Go to Client Book
             </Link>
           </div>
         </Card>

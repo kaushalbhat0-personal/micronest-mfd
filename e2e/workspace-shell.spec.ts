@@ -64,7 +64,7 @@ test.describe("Workspace shell", () => {
 
   test("clients shell and invalid detail id render cleanly", async ({ page }) => {
     await page.goto("/workspace/clients");
-    await expect(page.getByRole("heading", { name: /^clients$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^client book$/i })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(0);
 
     await page.goto("/workspace/clients/not-a-client-id");
