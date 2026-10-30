@@ -25,6 +25,13 @@ import {
   TEMPLATE_FILENAME,
   downloadTextFile,
 } from "./template-csv";
+import {
+  buildTemplateXlsx,
+  CLIENTS_SHEET_NAME,
+  downloadBinaryFile,
+  IMPORT_GUIDE_ROWS,
+  TEMPLATE_XLSX_FILENAME,
+} from "./template-xlsx";
 import { parseCsvSheet, parseXlsxWorkbook } from "./workbook";
 import type { ColumnMapping, ImportSheet, PreviewRow } from "./import-types";
 
@@ -164,10 +171,16 @@ export function ImportDialog({
     }
     setFileName(name);
     setSheets(usable);
+    // Prefer the template's Clients sheet (a downloaded template also
+    // carries a How to Fill guide sheet that must never be imported).
+    const clientsIndex = usable.findIndex(
+      (s) => s.name.trim().toLowerCase() === CLIENTS_SHEET_NAME.toLowerCase(),
+    );
+    const preferred = clientsIndex === -1 ? 0 : clientsIndex;
     if (usable.length === 1) {
       applySheet(usable, 0);
     } else {
-      setSheetIndex(0);
+      setSheetIndex(preferred);
       setStep("sheet");
     }
   }
@@ -310,15 +323,36 @@ export function ImportDialog({
                   in Excel or Google Sheets.
                 </p>
                 <div>
-                  <Button
-                    variant="primary"
-                    onClick={() =>
-                      downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")
-                    }
-                  >
-                    <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-                    Download CSV template
-                  </Button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")
+                      }
+                    >
+                      <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Download CSV template
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        void (async () => {
+                          const buffer = await buildTemplateXlsx();
+                          downloadBinaryFile(
+                            TEMPLATE_XLSX_FILENAME,
+                            buffer,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                          );
+                        })();
+                      }}
+                    >
+                      <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Download Excel template
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-stone-500">
+                    Excel includes a “How to Fill” guide sheet; CSV stays machine-clean.
+                  </p>
                 </div>
               </li>
               <li className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
@@ -337,13 +371,36 @@ export function ImportDialog({
                   </p>
                   <p>
                     <strong className="font-semibold text-stone-900">Optional:</strong> Mobile,
-                    Investment Type, Last Invested, Last Contacted, New Client, Note
+                    Investment Type, Amount, Last Invested, Last Contacted, New Client, Note
                   </p>
                   <p className="text-xs">
                     Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other ·
-                    Notes up to 200 characters · Blank optional fields are fine.
+                    Amount: ₹ number, e.g. 5000 (monthly SIP for SIP) · Notes up to 200 characters ·
+                    Blank optional fields are fine.
                   </p>
                 </div>
+                <details className="rounded-lg border border-stone-200 bg-white">
+                  <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900">
+                    <span>How to fill your template</span>
+                    <span aria-hidden="true" className="text-xs text-stone-500">
+                      8 fields · Client Name is required
+                    </span>
+                  </summary>
+                  <dl className="flex flex-col gap-2 border-t border-stone-200 px-3 py-3">
+                    {IMPORT_GUIDE_ROWS.map((row) => (
+                      <div key={row.column} className="flex flex-col gap-0.5">
+                        <dt className="text-sm font-semibold text-stone-900">
+                          {row.column}{" "}
+                          <span className="font-normal text-stone-500">
+                            ({row.required === "Yes" ? "required" : "optional"})
+                          </span>
+                        </dt>
+                        <dd className="text-sm leading-relaxed text-stone-600">{row.what}</dd>
+                        <dd className="tnum text-xs text-stone-500">Example: {row.example}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
               </li>
               <li className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-stone-900">

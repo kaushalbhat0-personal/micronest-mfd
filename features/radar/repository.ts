@@ -20,17 +20,20 @@ const TABLE = "radar_clients";
 
 /** Columns the UI is allowed to read or write. Ownership stays in RLS. */
 const CLIENT_COLUMNS =
-  "id,name,mobile,investment_type,last_invested,last_contacted,is_new_client,note";
+  "id,name,mobile,investment_type,amount_paise,last_invested,last_contacted,is_new_client,note";
 
 /**
- * Normalized client input for create/update — the same seven relationship
- * fields the validator owns. Dates are YYYY-MM-DD or null. No id, no
- * user_id, no timestamps, no signals: callers never supply those.
+ * Normalized client input for create/update — the same eight relationship
+ * fields the validator owns. Dates are YYYY-MM-DD or null; amount is
+ * integer paise or null. No id, no user_id, no timestamps, no signals:
+ * callers never supply those.
  */
 export interface ClientInput {
   name: string;
   phone: string;
   investmentType: InvestmentType;
+  /** Optional relationship-context amount in integer paise; null when absent. */
+  amountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
   isNewClient: boolean;
@@ -42,6 +45,7 @@ function toDbRow(input: ClientInput): Record<string, unknown> {
     name: input.name,
     mobile: input.phone,
     investment_type: input.investmentType,
+    amount_paise: input.amountPaise,
     last_invested: input.lastInvested,
     last_contacted: input.lastContacted,
     is_new_client: input.isNewClient,
@@ -55,6 +59,7 @@ export interface StoredRadarClient {
   name: string;
   phone: string;
   investmentType: InvestmentType;
+  amountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
   isNewClient: boolean;
@@ -83,6 +88,7 @@ interface DbRow {
   name: unknown;
   mobile: unknown;
   investment_type: unknown;
+  amount_paise: unknown;
   last_invested: unknown;
   last_contacted: unknown;
   is_new_client: unknown;
@@ -93,6 +99,22 @@ interface DbRow {
 
 function asText(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+/**
+ * Supabase may return BIGINT as a number or a decimal string; anything else
+ * (including negatives and fractions) is treated as absent. The database
+ * CHECK is the final guard; this keeps unknown shapes from crashing the UI.
+ */
+function asAmountPaise(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const parsed = Number(value.trim());
+    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
 }
 
 function asDate(value: unknown): string | null {
@@ -106,6 +128,7 @@ export function toStoredClient(row: DbRow): StoredRadarClient {
     name: asText(row.name),
     phone: asText(row.mobile),
     investmentType: toInvestmentType(row.investment_type),
+    amountPaise: asAmountPaise(row.amount_paise),
     lastInvested: asDate(row.last_invested),
     lastContacted: asDate(row.last_contacted),
     isNewClient: row.is_new_client === true,
@@ -132,6 +155,7 @@ export function toClientRecord(
     phone: stored.phone,
     phoneValid,
     investmentType: stored.investmentType,
+    amountPaise: stored.amountPaise,
     lastInvested: stored.lastInvested,
     lastContacted: stored.lastContacted,
     isNewClient: stored.isNewClient,
@@ -235,7 +259,7 @@ export async function createClient(
 }
 
 /**
- * Replaces the seven relationship fields of one owned record, addressed by
+ * Replaces the eight relationship fields of one owned record, addressed by
  * id only. RLS rejects rows the caller doesn't own (zero updated rows,
  * surfaced as an error — never silently accepted).
  */

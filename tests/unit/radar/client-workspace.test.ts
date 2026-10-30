@@ -13,6 +13,7 @@ const VALID: ClientFieldInput = {
   name: "Aarav Mehta",
   phone: "9876543210",
   investmentType: "SIP",
+  amount: "",
   lastInvested: "12/10/2026",
   lastContacted: "",
   isNewClient: false,
@@ -27,6 +28,7 @@ function record(name: string): ClientRecord {
     phone: "",
     phoneValid: false,
     investmentType: "Other",
+    amountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,
@@ -57,6 +59,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
         name: "Nina",
         phone: "",
         investmentType: "",
+        amount: "",
         lastInvested: "",
         lastContacted: "",
         isNewClient: false,
@@ -126,6 +129,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
 describe("fieldForClientError", () => {
   it("maps validator messages onto form fields", () => {
     expect(fieldForClientError("Client name is missing.")).toBe("name");
+    expect(fieldForClientError("Amount must be a number like 5000 or 5000.50.")).toBe("amount");
     expect(fieldForClientError('Last Invested "x" is not a valid DD/MM/YYYY date.')).toBe(
       "lastInvested",
     );

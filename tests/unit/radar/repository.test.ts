@@ -17,6 +17,7 @@ const STORED: StoredRadarClient = {
   name: "Aarav Mehta",
   phone: "9876543210",
   investmentType: "SIP",
+  amountPaise: null,
   lastInvested: "2026-10-12",
   lastContacted: null,
   isNewClient: false,
@@ -45,6 +46,7 @@ describe("radar repository mapping", () => {
         name: "Aarav",
         mobile: "9876543210",
         investment_type: "Both",
+        amount_paise: 500000,
         last_invested: "2026-10-01",
         last_contacted: null,
         is_new_client: true,
@@ -58,6 +60,7 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       phone: "9876543210",
       investmentType: "Both",
+      amountPaise: 500000,
       lastInvested: "2026-10-01",
       lastContacted: null,
       isNewClient: true,
@@ -71,6 +74,7 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       mobile: null,
       investment_type: "Crypto",
+      amount_paise: -5,
       last_invested: "12/10/2026",
       last_contacted: "not-a-date",
       is_new_client: "yes",
@@ -81,11 +85,28 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       phone: "",
       investmentType: "Other",
+      amountPaise: null,
       lastInvested: null,
       lastContacted: null,
       isNewClient: false,
       note: "",
     });
+  });
+
+  it("reads bigint amounts returned as text and projects them", () => {
+    const stored = toStoredClient({
+      id: "abc",
+      name: "Aarav",
+      mobile: "9876543210",
+      investment_type: "SIP",
+      amount_paise: "500000",
+      last_invested: null,
+      last_contacted: null,
+      is_new_client: false,
+      note: "",
+    });
+    expect(stored.amountPaise).toBe(500000);
+    expect(toClientRecord(stored, 0, "2026-10-25", 90).amountPaise).toBe(500000);
   });
 
   it("projects a stored client into a domain record with computed signals", () => {
@@ -171,6 +192,7 @@ describe("radar repository crud", () => {
     name: "Aarav Mehta",
     phone: "9876543210",
     investmentType: "SIP",
+    amountPaise: 500000,
     lastInvested: "2026-10-12",
     lastContacted: null,
     isNewClient: false,
@@ -207,6 +229,7 @@ describe("radar repository crud", () => {
       name: "Aarav Mehta",
       mobile: "9876543210",
       investment_type: "SIP",
+      amount_paise: 500000,
       last_invested: "2026-10-12",
       last_contacted: null,
       is_new_client: false,
@@ -234,7 +257,7 @@ describe("radar repository crud", () => {
     });
   });
 
-  it("updates the seven fields and maps auth failures", async () => {
+  it("updates the eight fields and maps auth failures", async () => {
     const table = stubTable({
       data: [{ ...STORED, mobile: "9876543210", note: "Updated note" }],
     });

@@ -2,7 +2,8 @@ export type Signal = "recent-investor" | "reconnect-due" | "new-client";
 
 /**
  * A client relationship record — not a financial record.
- * Holds identity + two dates + a flag. Everything else is computed.
+ * Holds identity + two dates + a flag + an optional relationship-context
+ * amount (integer paise). Everything else is computed.
  * Lives in React state only. Never persisted, never sent anywhere.
  */
 export interface ClientRecord {
@@ -16,6 +17,12 @@ export interface ClientRecord {
   /** False when missing or malformed — disables Call/WhatsApp, never drops the record. */
   phoneValid: boolean;
   investmentType: InvestmentType;
+  /**
+   * Optional relationship-context amount in integer paise (null when unknown).
+   * SIP/Both read as monthly; Lumpsum as the recorded amount. Never a
+   * valuation, holding, return, or account balance.
+   */
+  amountPaise: number | null;
   /** Most recent investment date, YYYY-MM-DD or null when unknown. */
   lastInvested: string | null;
   /** Most recent meaningful contact date, YYYY-MM-DD or null when never recorded. */

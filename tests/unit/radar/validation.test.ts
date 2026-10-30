@@ -64,7 +64,7 @@ describe("validateRadarHeaders", () => {
 describe("validateRadarRow", () => {
   it("accepts a complete valid row", () => {
     const result = validateRadarRow(
-      ["Rajesh", "9876543210", "SIP", "25/10/2026", "01/10/2026", "Y", "Met at branch"],
+      ["Rajesh", "9876543210", "SIP", "5000", "25/10/2026", "01/10/2026", "Y", "Met at branch"],
       STANDARD,
       TODAY,
     );
@@ -73,6 +73,7 @@ describe("validateRadarRow", () => {
       name: "Rajesh",
       phoneValid: true,
       investmentType: "SIP",
+      amountPaise: 500000,
       lastInvested: "2026-10-25",
       lastContacted: "2026-10-01",
       isNewClient: true,
@@ -82,53 +83,77 @@ describe("validateRadarRow", () => {
   });
 
   it("accepts a client with both dates blank (no signal, still valid)", () => {
-    const result = validateRadarRow(["Asha", "", "", "", "", "", ""], STANDARD, TODAY);
+    const result = validateRadarRow(["Asha", "", "", "", "", "", "", ""], STANDARD, TODAY);
     expect(result.error).toBeNull();
-    expect(result.row).toMatchObject({ lastInvested: null, lastContacted: null });
+    expect(result.row).toMatchObject({
+      lastInvested: null,
+      lastContacted: null,
+      amountPaise: null,
+    });
   });
 
   it("rejects missing and over-long names", () => {
-    expect(validateRadarRow(["", "", "", "", "", "", ""], STANDARD, TODAY).error).toContain(
+    expect(validateRadarRow(["", "", "", "", "", "", "", ""], STANDARD, TODAY).error).toContain(
       "missing",
     );
     expect(
-      validateRadarRow(["x".repeat(61), "", "", "", "", "", ""], STANDARD, TODAY).error,
+      validateRadarRow(["x".repeat(61), "", "", "", "", "", "", ""], STANDARD, TODAY).error,
     ).toContain("60");
   });
 
   it("rejects malformed and future dates", () => {
     expect(
-      validateRadarRow(["R", "", "", "99/99/9999", "", "", ""], STANDARD, TODAY).error,
+      validateRadarRow(["R", "", "", "", "99/99/9999", "", "", ""], STANDARD, TODAY).error,
     ).toContain("not a valid");
     expect(
-      validateRadarRow(["R", "", "", "27/10/2026", "", "", ""], STANDARD, TODAY).error,
+      validateRadarRow(["R", "", "", "", "27/10/2026", "", "", ""], STANDARD, TODAY).error,
     ).toContain("future");
     expect(
-      validateRadarRow(["R", "", "", "", "30/10/2026", "", ""], STANDARD, TODAY).error,
+      validateRadarRow(["R", "", "", "", "", "30/10/2026", "", ""], STANDARD, TODAY).error,
     ).toContain("future");
   });
 
   it("warns on invalid phone but keeps the row", () => {
-    const result = validateRadarRow(["R", "abc", "", "", "", "", ""], STANDARD, TODAY);
+    const result = validateRadarRow(["R", "abc", "", "", "", "", "", ""], STANDARD, TODAY);
     expect(result.error).toBeNull();
     expect(result.row?.phoneValid).toBe(false);
     expect(result.warnings.some((w) => w.includes("Phone number"))).toBe(true);
   });
 
   it("normalizes investment type and flag with warnings", () => {
-    const result = validateRadarRow(["R", "", "Crypto", "", "", "maybe", ""], STANDARD, TODAY);
+    const result = validateRadarRow(["R", "", "Crypto", "", "", "", "maybe", ""], STANDARD, TODAY);
     expect(result.error).toBeNull();
     expect(result.row?.investmentType).toBe("Other");
     expect(result.row?.isNewClient).toBe(false);
     expect(result.warnings).toHaveLength(2);
   });
 
+  it("accepts, normalizes, and rejects amounts", () => {
+    const blank = validateRadarRow(["R", "", "", "", "", "", "", ""], STANDARD, TODAY);
+    expect(blank.error).toBeNull();
+    expect(blank.row?.amountPaise).toBeNull();
+
+    const plain = validateRadarRow(["R", "", "", "5000", "", "", "", ""], STANDARD, TODAY);
+    expect(plain.error).toBeNull();
+    expect(plain.row?.amountPaise).toBe(500000);
+
+    const formatted = validateRadarRow(["R", "", "", "₹5,000.50", "", "", "", ""], STANDARD, TODAY);
+    expect(formatted.error).toBeNull();
+    expect(formatted.row?.amountPaise).toBe(500050);
+
+    const bad = validateRadarRow(["R", "", "", "five thousand", "", "", "", ""], STANDARD, TODAY);
+    expect(bad.error).toContain("Amount");
+
+    const negative = validateRadarRow(["R", "", "", "-500", "", "", "", ""], STANDARD, TODAY);
+    expect(negative.error).toContain("Amount");
+  });
+
   it("rejects over-long notes and sensitive content without echoing it", () => {
     expect(
-      validateRadarRow(["R", "", "", "", "", "", "x".repeat(201)], STANDARD, TODAY).error,
+      validateRadarRow(["R", "", "", "", "", "", "", "x".repeat(201)], STANDARD, TODAY).error,
     ).toContain("200");
     const pan = "ABCDE1234F";
-    const result = validateRadarRow(["R", "", "", "", "", "", `id ${pan}`], STANDARD, TODAY);
+    const result = validateRadarRow(["R", "", "", "", "", "", "", `id ${pan}`], STANDARD, TODAY);
     expect(result.error).toContain("sensitive");
     expect(result.error).not.toContain(pan);
   });
@@ -152,6 +177,7 @@ describe("validateRadarRow", () => {
     expect(result.row).toMatchObject({
       name: "Rajesh",
       investmentType: "SIP",
+      amountPaise: null,
       lastInvested: "2026-10-25",
     });
   });

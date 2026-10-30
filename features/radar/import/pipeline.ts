@@ -211,6 +211,7 @@ function toClientInput(validated: ValidatedClient): ClientInput {
     name: validated.name,
     phone: validated.phone,
     investmentType: validated.investmentType,
+    amountPaise: validated.amountPaise,
     lastInvested: validated.lastInvested,
     lastContacted: validated.lastContacted,
     isNewClient: validated.isNewClient,

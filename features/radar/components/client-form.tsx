@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Field, Select, TextArea, TextInput } from "@/components/ui/controls";
 import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
 import type { ClientInput } from "../repository";
-import { INVESTMENT_TYPES } from "../template";
+import { amountHintForType, amountLabelForType, INVESTMENT_TYPES } from "../template";
 import type { InvestmentType } from "../types";
 import { validateClientFields, fieldForClientError, type ClientFieldName } from "../validation";
 
@@ -19,6 +19,8 @@ export interface ClientFormInitial {
   name: string;
   phone: string;
   investmentType: InvestmentType;
+  /** Optional relationship-context amount as typed rupee text ("" when absent). */
+  amount: string;
   /** YYYY-MM-DD or "" for empty. Native date inputs speak this format. */
   lastInvested: string;
   lastContacted: string;
@@ -30,6 +32,7 @@ export const EMPTY_CLIENT_FORM: ClientFormInitial = {
   name: "",
   phone: "",
   investmentType: "Other",
+  amount: "",
   lastInvested: "",
   lastContacted: "",
   isNewClient: false,
@@ -56,6 +59,7 @@ function toClientInput(
       name: values.name,
       phone: values.phone,
       investmentType: values.investmentType,
+      amount: values.amount,
       lastInvested: toDisplayDate(values.lastInvested),
       lastContacted: toDisplayDate(values.lastContacted),
       isNewClient: values.isNewClient,
@@ -78,6 +82,7 @@ function toClientInput(
       name: result.row.name,
       phone: result.row.phone,
       investmentType: result.row.investmentType,
+      amountPaise: result.row.amountPaise,
       lastInvested: values.lastInvested === "" ? null : values.lastInvested,
       lastContacted: values.lastContacted === "" ? null : values.lastContacted,
       isNewClient: result.row.isNewClient,
@@ -101,7 +106,7 @@ interface ClientFormProps {
 }
 
 /**
- * Add/Edit form for the seven relationship fields. Validation is delegated
+ * Add/Edit form for the eight relationship fields. Validation is delegated
  * to the shared domain validator; this component only maps the verdict onto
  * fields. No ids, no user data, no timestamps are editable here.
  */
@@ -185,6 +190,23 @@ export function ClientForm({
               </option>
             ))}
           </Select>
+        </Field>
+
+        <Field
+          id="client-amount"
+          label={amountLabelForType(values.investmentType)}
+          error={errors.amount}
+          hint={amountHintForType(values.investmentType)}
+        >
+          <TextInput
+            id="client-amount"
+            placeholder="e.g. 5000"
+            value={values.amount}
+            onChange={set("amount")}
+            error={errors.amount}
+            autoComplete="off"
+            inputMode="decimal"
+          />
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

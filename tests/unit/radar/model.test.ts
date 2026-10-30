@@ -21,6 +21,7 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     phone: "9876543210",
     phoneValid: true,
     investmentType: "SIP",
+    amountPaise: null,
     lastInvested: "2026-10-20",
     lastContacted: "2026-08-01",
     isNewClient: false,
@@ -31,8 +32,19 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
 }
 
 describe("radar CSV contract", () => {
-  it("validator accepts the seven-column contract", () => {
+  it("validator accepts the eight-column contract", () => {
     expect(validateRadarHeaders([...RADAR_HEADERS]).error).toBeNull();
+  });
+
+  it("still accepts the previous seven-column template with a blank amount", () => {
+    const csv = [
+      "Client Name,Mobile,Investment Type,Last Invested,Last Contacted,New Client,Note",
+      "Old Seven,9876543210,SIP,01/01/2026,,Y,Legacy row",
+    ].join("\n");
+    const report = parseAndBuildRadar(csv, TODAY, 90);
+    expect(report.fileError).toBeNull();
+    expect(report.records).toHaveLength(1);
+    expect(report.records[0]).toMatchObject({ name: "Old Seven", amountPaise: null });
   });
 });
 
@@ -40,10 +52,10 @@ describe("parseAndBuildRadar", () => {
   it("builds signal-bearing records in priority order", () => {
     const csv = [
       HEADER,
-      "Old Investor,9876543210,SIP,01/01/2026,,",
-      "Fresh SIP,,SIP,25/10/2026,,",
-      "Quiet Amit,,Lumpsum,,01/01/2026,",
-      "New Meera,9876543210,Both,,,Y,Met at camp",
+      "Old Investor,9876543210,SIP,,01/01/2026,,",
+      "Fresh SIP,,SIP,5000,25/10/2026,,,",
+      "Quiet Amit,,Lumpsum,,,01/01/2026,,",
+      "New Meera,9876543210,Both,,,,Y,Met at camp",
     ].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
@@ -56,7 +68,7 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("keeps no-signal clients for the All view instead of discarding them", () => {
-    const csv = [HEADER, "Steady Sam,,Insurance,,26/10/2026,,"].join("\n");
+    const csv = [HEADER, "Steady Sam,,Insurance,,,26/10/2026,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
     expect(report.records).toHaveLength(1);
@@ -64,14 +76,14 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("preserves every valid row without dedupe", () => {
-    const csv = [HEADER, "Same Name,,SIP,,,", "Same Name,,SIP,,,"].join("\n");
+    const csv = [HEADER, "Same Name,,SIP,,,,", "Same Name,,SIP,,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.records).toHaveLength(2);
     expect(report.records[0].id).not.toBe(report.records[1].id);
   });
 
   it("rejects files with zero valid rows and reports invalid ones", () => {
-    const csv = [HEADER, ",,,,,,", "Bad Date,,SIP,99/99/9999,,,"].join("\n");
+    const csv = [HEADER, ",,,,,,,", "Bad Date,,SIP,,99/99/9999,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.records).toHaveLength(0);
     expect(report.fileError).toContain("No valid client rows");
@@ -79,7 +91,7 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("ignores extra columns without modelling them", () => {
-    const csv = [`${HEADER},PAN`, "Rajesh,9876543210,SIP,,,,,ABCDE1234F"].join("\n");
+    const csv = [`${HEADER},PAN`, "Rajesh,9876543210,SIP,,,,,,ABCDE1234F"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
     expect(report.ignoredColumns).toEqual(["PAN"]);
@@ -87,7 +99,7 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("rejects future dates", () => {
-    const csv = [HEADER, "Future,,SIP,27/10/2026,,,"].join("\n");
+    const csv = [HEADER, "Future,,SIP,,27/10/2026,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toContain("No valid client rows");
     expect(report.invalid[0].reason).toContain("future");
@@ -113,8 +125,8 @@ describe("serializeRadarCsv round-trip", () => {
   it("re-imports to identical normalized values", () => {
     const csv = [
       HEADER,
-      "Rajesh,9876543210,sip,25/10/2026,,Y,Note with, comma",
-      'Asha,,Lumpsum,,,,"Said ""later"""',
+      "Rajesh,9876543210,sip,2500,25/10/2026,,Y,Note with, comma",
+      'Asha,,Lumpsum,,,,,"Said ""later"""',
     ].join("\n");
     const first = parseAndBuildRadar(csv, TODAY, 90);
     expect(first.fileError).toBeNull();
@@ -128,6 +140,7 @@ describe("serializeRadarCsv round-trip", () => {
       phone: r.phone,
       phoneValid: r.phoneValid,
       investmentType: r.investmentType,
+      amountPaise: r.amountPaise,
       lastInvested: r.lastInvested,
       lastContacted: r.lastContacted,
       isNewClient: r.isNewClient,
@@ -138,7 +151,7 @@ describe("serializeRadarCsv round-trip", () => {
   });
 
   it("normalizes vocabulary on export (sip becomes SIP, unknown becomes Other)", () => {
-    const csv = [HEADER, "R,,sip,,,,", "S,,crypto,,,,,"].join("\n");
+    const csv = [HEADER, "R,,sip,,,,,", "S,,crypto,,,,,,"].join("\n");
     const exported = serializeRadarCsv(parseAndBuildRadar(csv, TODAY, 90).records);
     expect(exported).toContain(",SIP,");
     expect(exported).toContain(",Other,");

@@ -25,6 +25,7 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     phone: "9876543210",
     phoneValid: true,
     investmentType: "SIP",
+    amountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,

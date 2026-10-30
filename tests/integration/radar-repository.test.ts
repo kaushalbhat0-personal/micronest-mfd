@@ -182,6 +182,7 @@ suite("radar client crud", () => {
       name: "Crud Alpha",
       phone: "9876543210",
       investmentType: "Both",
+      amountPaise: 1200000,
       lastInvested: TODAY,
       lastContacted: null,
       isNewClient: true,
@@ -190,18 +191,25 @@ suite("radar client crud", () => {
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
 
     const found = await getStoredClient(clientA, created.id);
-    expect(found).toMatchObject({ name: "Crud Alpha", investmentType: "Both", isNewClient: true });
+    expect(found).toMatchObject({
+      name: "Crud Alpha",
+      investmentType: "Both",
+      amountPaise: 1200000,
+      isNewClient: true,
+    });
 
     const updated = await updateStoredClient(clientA, created.id, {
       name: "Crud Alpha Renamed",
       phone: "",
       investmentType: "SIP",
+      amountPaise: null,
       lastInvested: null,
       lastContacted: TODAY,
       isNewClient: false,
       note: "",
     });
     expect(updated).toMatchObject({ name: "Crud Alpha Renamed", phone: "", note: "" });
+    expect(updated.amountPaise).toBeNull();
 
     await deleteStoredClient(clientA, created.id);
     await expect(getStoredClient(clientA, created.id)).rejects.toMatchObject({ code: "load" });
@@ -212,6 +220,7 @@ suite("radar client crud", () => {
       name: "Crud Foreign",
       phone: "",
       investmentType: "Other",
+      amountPaise: null,
       lastInvested: null,
       lastContacted: null,
       isNewClient: false,
@@ -223,6 +232,7 @@ suite("radar client crud", () => {
         name: "Hijacked",
         phone: "",
         investmentType: "Other",
+        amountPaise: null,
         lastInvested: null,
         lastContacted: null,
         isNewClient: false,

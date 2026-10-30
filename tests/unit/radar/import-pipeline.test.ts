@@ -23,12 +23,13 @@ describe("buildPreview", () => {
         "Client Name",
         "Mobile",
         "Investment Type",
+        "Amount",
         "Last Invested",
         "Last Contacted",
         "New Client",
         "Note",
       ],
-      [["Rajesh Sharma", "9876543210", "SIP", "25/10/2026", "", "yes", "Met at branch"]],
+      [["Rajesh Sharma", "9876543210", "SIP", "5000", "25/10/2026", "", "yes", "Met at branch"]],
     );
     const preview = buildPreview({
       sheet,
@@ -38,8 +39,55 @@ describe("buildPreview", () => {
     });
     expect(preview.rows).toHaveLength(1);
     expect(preview.rows[0].status).toBe("ready");
-    expect(preview.rows[0].input).toMatchObject({ name: "Rajesh Sharma", investmentType: "SIP" });
+    expect(preview.rows[0].input).toMatchObject({
+      name: "Rajesh Sharma",
+      investmentType: "SIP",
+      amountPaise: 500000,
+    });
     expect(preview.summary).toMatchObject({ ready: 1, attention: 0, invalid: 0, skipped: 0 });
+  });
+
+  it("imports legacy seven-column files with a blank amount", () => {
+    const sheet = sheetFrom(
+      [
+        "Client Name",
+        "Mobile",
+        "Investment Type",
+        "Last Invested",
+        "Last Contacted",
+        "New Client",
+        "Note",
+      ],
+      [["Legacy Lal", "9876543210", "SIP", "25/10/2026", "", "yes", "Old template"]],
+    );
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows[0].status).toBe("ready");
+    expect(preview.rows[0].input).toMatchObject({ name: "Legacy Lal", amountPaise: null });
+  });
+
+  it("rejects malformed amounts and maps amount aliases", () => {
+    const sheet = sheetFrom(
+      ["Client", "Investment Amount"],
+      [
+        ["Bad Money", "not money"],
+        ["Good Money", "₹12,000"],
+      ],
+    );
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows[0].status).toBe("invalid");
+    expect(preview.rows[0].reasons.join(" ")).toContain("Amount");
+    expect(preview.rows[1].status).toBe("ready");
+    expect(preview.rows[1].input).toMatchObject({ amountPaise: 1200000 });
   });
 
   it("maps aliases and flags warnings as needing attention", () => {

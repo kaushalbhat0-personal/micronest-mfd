@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  amountHintForType,
+  amountLabelForType,
+  amountPaiseToInput,
+  formatAmountContext,
+  formatAmountPaise,
   NEW_CLIENT_TRUTHY,
   normalizeInvestmentType,
+  parseAmountInput,
   parseNewClientFlag,
   RADAR_HEADERS,
 } from "@/features/radar/template";
@@ -53,15 +59,65 @@ describe("parseNewClientFlag", () => {
 });
 
 describe("RADAR_HEADERS", () => {
-  it("declares the seven-column contract", () => {
+  it("declares the eight-column contract with Amount after Investment Type", () => {
     expect(RADAR_HEADERS).toEqual([
       "Client Name",
       "Mobile",
       "Investment Type",
+      "Amount",
       "Last Invested",
       "Last Contacted",
       "New Client",
       "Note",
     ]);
+  });
+});
+
+describe("parseAmountInput", () => {
+  it("treats blank as absent without error", () => {
+    expect(parseAmountInput("")).toEqual({ paise: null, error: null });
+    expect(parseAmountInput("   ")).toEqual({ paise: null, error: null });
+  });
+
+  it("parses plain and grouped rupee text into integer paise", () => {
+    expect(parseAmountInput("5000")).toEqual({ paise: 500000, error: null });
+    expect(parseAmountInput("5,000")).toEqual({ paise: 500000, error: null });
+    expect(parseAmountInput("₹5,000")).toEqual({ paise: 500000, error: null });
+    expect(parseAmountInput("Rs. 5000")).toEqual({ paise: 500000, error: null });
+    expect(parseAmountInput("5000.50")).toEqual({ paise: 500050, error: null });
+    expect(parseAmountInput("5000.5")).toEqual({ paise: 500050, error: null });
+  });
+
+  it("rejects malformed, negative, and oversized amounts", () => {
+    expect(parseAmountInput("five thousand").error).toContain("Amount");
+    expect(parseAmountInput("-500").error).toContain("Amount");
+    expect(parseAmountInput("5000.555").error).toContain("Amount");
+    expect(parseAmountInput("999999999999").error).toContain("too large");
+  });
+});
+
+describe("amount presentation", () => {
+  it("formats paise with en-IN grouping and no floating point", () => {
+    expect(formatAmountPaise(500000)).toBe("₹5,000");
+    expect(formatAmountPaise(500050)).toBe("₹5,000.50");
+    expect(formatAmountPaise(20000000)).toBe("₹2,00,000");
+  });
+
+  it("round-trips through the CSV/form input shape", () => {
+    expect(amountPaiseToInput(500000)).toBe("5000");
+    expect(amountPaiseToInput(500050)).toBe("5000.5");
+    expect(amountPaiseToInput(500005)).toBe("5000.05");
+    for (const paise of [0, 1, 10, 500000, 20000000]) {
+      expect(parseAmountInput(amountPaiseToInput(paise))).toEqual({ paise, error: null });
+    }
+  });
+
+  it("scopes Both to the monthly SIP amount and suffixes monthly types", () => {
+    expect(formatAmountContext("SIP", 500000)).toBe("₹5,000/month");
+    expect(formatAmountContext("Both", 500000)).toBe("₹5,000/month");
+    expect(formatAmountContext("Lumpsum", 20000000)).toBe("₹2,00,000");
+    expect(formatAmountContext("Other", null)).toBeNull();
+    expect(amountLabelForType("Both")).toContain("Monthly SIP");
+    expect(amountHintForType("Both")).toContain("lumpsum detail");
   });
 });

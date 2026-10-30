@@ -19,6 +19,7 @@ function record(overrides: Partial<ClientRecord> & { rowNumber: number }): Clien
     phone: "",
     phoneValid: false,
     investmentType: "SIP",
+    amountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,

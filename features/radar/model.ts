@@ -4,6 +4,7 @@ import { hashString } from "@/lib/hash";
 import { parseCsv, type ParsedCsv } from "@/lib/csv";
 import { computeSignals, DEFAULT_RECONNECT_INTERVAL_DAYS, sortRadarRecords } from "./signals";
 import type { ClientRecord, RadarReport } from "./types";
+import { amountPaiseToInput, RADAR_HEADERS } from "./template";
 import { MAX_DATA_ROWS, validateRadarHeaders, validateRadarRow } from "./validation";
 
 /**
@@ -59,6 +60,7 @@ export function buildRadarReport(
       phone: result.row.phone,
       phoneValid: result.row.phoneValid,
       investmentType: result.row.investmentType,
+      amountPaise: result.row.amountPaise,
       lastInvested: result.row.lastInvested,
       lastContacted: result.row.lastContacted,
       isNewClient: result.row.isNewClient,
@@ -161,12 +163,13 @@ function escapeCsvField(value: string): string {
  * yields the same normalized values — not byte-identical input.
  */
 export function serializeRadarCsv(records: ClientRecord[]): string {
-  const header = "Client Name,Mobile,Investment Type,Last Invested,Last Contacted,New Client,Note";
+  const header = [...RADAR_HEADERS].join(",");
   const lines = records.map((r) =>
     [
       r.name,
       r.phone,
       r.investmentType,
+      r.amountPaise === null ? "" : amountPaiseToInput(r.amountPaise),
       r.lastInvested ? formatDisplayDate(r.lastInvested) : "",
       r.lastContacted ? formatDisplayDate(r.lastContacted) : "",
       r.isNewClient ? "Y" : "",

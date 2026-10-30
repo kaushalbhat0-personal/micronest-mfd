@@ -23,6 +23,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { ClientFollowups } from "@/features/followups/components/client-followups";
 import { buildRadarHandoff, markContacted } from "../model";
+import { amountPaiseToInput, formatAmountContext } from "../template";
 import {
   deleteClient,
   RadarStoreError,
@@ -47,6 +48,7 @@ function toFormInitial(stored: StoredRadarClient): ClientFormInitial {
     name: stored.name,
     phone: stored.phone,
     investmentType: stored.investmentType,
+    amount: stored.amountPaise === null ? "" : amountPaiseToInput(stored.amountPaise),
     lastInvested: stored.lastInvested ?? "",
     lastContacted: stored.lastContacted ?? "",
     isNewClient: stored.isNewClient,
@@ -90,11 +92,15 @@ const WHY_SEVERITY_STYLE: Record<WhySeverity, { accent: string; box: string; tex
   },
 };
 
-function identityMeta(record: Pick<StoredRadarClient, "investmentType" | "lastContacted">): string {
+function identityMeta(
+  record: Pick<StoredRadarClient, "investmentType" | "amountPaise" | "lastContacted">,
+): string {
+  const amount = formatAmountContext(record.investmentType, record.amountPaise);
+  const base = amount ? `${record.investmentType} · ${amount}` : record.investmentType;
   if (record.lastContacted) {
-    return `${record.investmentType} · Last contacted ${formatDisplayDate(record.lastContacted)}`;
+    return `${base} · Last contacted ${formatDisplayDate(record.lastContacted)}`;
   }
-  return `${record.investmentType} · Never contacted`;
+  return `${base} · Never contacted`;
 }
 
 /**
@@ -293,6 +299,16 @@ export function ClientDetail({ stored }: { stored: StoredRadarClient }) {
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Mobile</dt>
                   <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-stone-500">Investment</dt>
+                  <dd className="font-medium text-stone-900">
+                    {record.investmentType}
+                    {(() => {
+                      const amount = formatAmountContext(record.investmentType, record.amountPaise);
+                      return amount ? ` · ${amount}` : "";
+                    })()}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Last invested</dt>

@@ -89,11 +89,11 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /import your client book/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Exact template headers: all seven map automatically, no manual step.
+      // Exact template headers: all eight map automatically, no manual step.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
-      expect(mappedCount).toBe(7);
+      expect(mappedCount).toBe(8);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
@@ -187,11 +187,11 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /import your client book/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Exact template headers: all seven map automatically, no manual step.
+      // Exact template headers: all eight map automatically, no manual step.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
-      expect(mappedCount).toBe(7);
+      expect(mappedCount).toBe(8);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();

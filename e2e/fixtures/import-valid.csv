@@ -1,4 +1,4 @@
-Client Name,Mobile,Investment Type,Last Invested,Last Contacted,New Client,Note
-Rajesh Sharma,9876543210,SIP,25/10/2026,,yes,Met at branch
+Client Name,Mobile,Investment Type,Amount,Last Invested,Last Contacted,New Client,Note
+Rajesh Sharma,9876543210,SIP,5000,25/10/2026,,yes,Met at branch
 Priya Mehta,,Lumpsum,,,,
-Amit Shah,+91 98222 33344,Both,01/10/2026,20/10/2026,no,Prefers evening calls
+Amit Shah,+91 98222 33344,Both,12000,01/10/2026,20/10/2026,no,Prefers evening calls

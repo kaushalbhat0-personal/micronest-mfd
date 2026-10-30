@@ -3,7 +3,7 @@ import { detectSensitiveInput } from "@/lib/sensitive";
 import { normalizeFollowUpDate } from "@/lib/dates";
 import { normalizeHeader } from "@/lib/csv";
 import { RADAR_HEADERS, RADAR_REQUIRED_HEADERS, type RadarHeader } from "./template";
-import { normalizeInvestmentType, parseNewClientFlag } from "./template";
+import { normalizeInvestmentType, parseAmountInput, parseNewClientFlag } from "./template";
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_DATA_ROWS = 500;
@@ -53,7 +53,7 @@ export function validateRadarHeaders(header: string[]): RadarHeaderValidation {
       return {
         map: null,
         ignored: [],
-        error: `Missing required column "${required}". Download the template and keep all seven headers.`,
+        error: `Missing required column "${required}". Download the template and keep all eight headers.`,
       };
     }
   }
@@ -69,6 +69,8 @@ export interface ValidatedClient {
   phoneWarning: boolean;
   investmentType: import("./types").InvestmentType;
   investmentWarning: string | null;
+  /** Optional relationship-context amount in integer paise; null when blank. */
+  amountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
   isNewClient: boolean;
@@ -85,13 +87,15 @@ export interface RadarRowValidation {
 /**
  * Raw client field values before validation. Dates are display strings
  * (DD/MM/YYYY) or empty; the New Client flag is already an explicit boolean.
- * Both the CSV pipeline and the Add/Edit form build this shape, so the rules
- * below run exactly once.
+ * Amount is the raw typed/pasted rupee text (or spreadsheet cell text) —
+ * blank means absent. Both the CSV pipeline and the Add/Edit form build
+ * this shape, so the rules below run exactly once.
  */
 export interface ClientFieldInput {
   name: string;
   phone: string;
   investmentType: string;
+  amount: string;
   lastInvested: string;
   lastContacted: string;
   isNewClient: boolean;
@@ -106,18 +110,26 @@ export type ClientInputContext = "csv" | "form";
  * alongside the validator so message drift breaks loudly.
  */
 export type ClientFieldName =
-  "name" | "phone" | "investmentType" | "lastInvested" | "lastContacted" | "isNewClient" | "note";
+  | "name"
+  | "phone"
+  | "investmentType"
+  | "amount"
+  | "lastInvested"
+  | "lastContacted"
+  | "isNewClient"
+  | "note";
 
 export function fieldForClientError(error: string | null): ClientFieldName | null {
   if (!error) return null;
   if (error.startsWith("Client name")) return "name";
+  if (error.startsWith("Amount")) return "amount";
   if (error.startsWith("Last Invested")) return "lastInvested";
   if (error.startsWith("Last Contacted")) return "lastContacted";
   if (error.startsWith("Note")) return "note";
   return null;
 }
 
-/** Single source of truth for the seven relationship fields. */
+/** Single source of truth for the eight relationship fields. */
 export function validateClientFields(
   input: ClientFieldInput,
   todayYMD: string,
@@ -135,6 +147,9 @@ export function validateClientFields(
 
   const investment = normalizeInvestmentType(input.investmentType);
   const isNewClient = input.isNewClient;
+
+  const amount = parseAmountInput(input.amount);
+  if (amount.error) return { row: null, error: amount.error, warnings: [] };
 
   const lastInvested = parseOptionalDate(input.lastInvested, "Last Invested", todayYMD);
   if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
@@ -180,6 +195,7 @@ export function validateClientFields(
       phoneWarning: warnings.some((w) => w.startsWith("Phone number")),
       investmentType: investment.value,
       investmentWarning: investment.warning,
+      amountPaise: amount.paise,
       lastInvested: lastInvested.date,
       lastContacted: lastContacted.date,
       isNewClient,
@@ -210,6 +226,7 @@ export function validateRadarRow(
       name: pick("Client Name"),
       phone: pick("Mobile"),
       investmentType: pick("Investment Type"),
+      amount: pick("Amount"),
       lastInvested: pick("Last Invested"),
       lastContacted: pick("Last Contacted"),
       isNewClient: flag.value,

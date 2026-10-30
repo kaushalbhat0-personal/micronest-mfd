@@ -24,6 +24,14 @@ const ALIASES: Record<string, RadarHeader> = {
   "investment type": "Investment Type",
   investment: "Investment Type",
   type: "Investment Type",
+  // Amount (relationship context — never portfolio value or returns)
+  amount: "Amount",
+  "investment amount": "Amount",
+  investmentamount: "Amount",
+  "amount invested": "Amount",
+  "sip amount": "Amount",
+  "lumpsum amount": "Amount",
+  "lump sum amount": "Amount",
   // Last invested
   "last invested": "Last Invested",
   "last investment": "Last Invested",
