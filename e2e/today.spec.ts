@@ -180,6 +180,32 @@ test.describe("Today workspace", () => {
     await expect(page.getByText(/future sip check/i)).toBeVisible();
   });
 
+  test("contacted card states the fact and offers undo without the toast", async ({ page }) => {
+    await seedQueue();
+    await page.goto("/workspace/today");
+    const card = page.getByRole("article", { name: /today overdue owner/i });
+    await expect(card).toBeVisible();
+
+    // Before contact the card offers the action.
+    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toBeVisible();
+
+    await card.getByRole("button", { name: /^mark contacted$/i }).click();
+    await expect(page.getByRole("status")).toContainText(/marked today overdue owner/i);
+
+    // After contact the card states the fact instead of repeating the action.
+    await expect(card.getByText(/contacted today/i)).toBeVisible();
+    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toHaveCount(0);
+
+    // Dismiss the toast: the in-card Undo still restores the queue.
+    await page
+      .getByRole("status")
+      .getByRole("button", { name: /^dismiss$/i })
+      .click();
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await card.getByRole("button", { name: /^undo/i }).click();
+    await expect(card.getByRole("button", { name: /^mark contacted$/i })).toBeVisible();
+  });
+
   test("?filter=followups preselects the Follow-ups chip", async ({ page }) => {
     await seedQueue();
     await page.goto("/workspace/today?filter=followups");

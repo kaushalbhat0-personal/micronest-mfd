@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { radarWhatsAppText } from "../view";
-import type { TodayItem, TodayWhy } from "../today";
+import { wasContactedToday, type TodayItem, type TodayWhy } from "../today";
 
 function whyStyle(kind: TodayWhy["kind"]): { text: string; dot: string } {
   switch (kind) {
@@ -111,18 +111,35 @@ function contactLine(item: TodayItem): string {
 interface TodayCardProps {
   item: TodayItem;
   index: number;
+  /** Device-local day the queue was built for. */
+  todayYMD: string;
   onContacted: (id: string) => void;
+  onUndo: (id: string) => void;
+  /** True when the pre-contact value is still known (same session). */
+  canUndo: boolean;
   pending?: boolean;
 }
 
 /**
  * One person to contact: who, why, one obvious action.
  * Secondary actions live behind the overflow menu — never four equal grids.
+ * After contact, the card states the fact ("Contacted today") instead of
+ * offering the action again; Undo stays available while the prior value
+ * is known.
  */
-export function TodayCard({ item, index, onContacted, pending }: TodayCardProps) {
+export function TodayCard({
+  item,
+  index,
+  todayYMD,
+  onContacted,
+  onUndo,
+  canUndo,
+  pending,
+}: TodayCardProps) {
   const { record, why, primary } = item;
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const contacted = wasContactedToday(record, todayYMD);
 
   const callUrl = buildCallUrl(record.phone);
   const waUrl = record.phoneValid
@@ -177,7 +194,22 @@ export function TodayCard({ item, index, onContacted, pending }: TodayCardProps)
   const showCall = callUrl && primary !== "call";
   const showWhatsApp = waUrl && primary !== "whatsapp";
 
-  const markContactedNode = (
+  const markContactedNode = contacted ? (
+    <span className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-emerald-900">
+      <CheckIcon />
+      Contacted today
+      {canUndo && (
+        <button
+          type="button"
+          onClick={() => onUndo(record.id)}
+          aria-label={`Undo marking ${record.name} as contacted`}
+          className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-sm font-medium text-emerald-900 underline decoration-emerald-300 underline-offset-4 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+        >
+          Undo
+        </button>
+      )}
+    </span>
+  ) : (
     <button
       type="button"
       onClick={() => onContacted(record.id)}

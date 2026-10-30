@@ -10,6 +10,7 @@ import {
   parseTodayFilter,
   primaryActionFor,
   upcomingFollowups,
+  wasContactedToday,
 } from "@/features/radar/today";
 import type { ClientRecord } from "@/features/radar/types";
 import type { StoredFollowup } from "@/features/followups/types";
@@ -201,6 +202,12 @@ describe("upcomingFollowups + contactedToday", () => {
       record({ id: "y", name: "Yesterday", lastContacted: "2026-10-25" }),
     ];
     expect(contactedToday(records, TODAY).map((r) => r.id)).toEqual(["t"]);
+  });
+
+  it("flags the per-card contacted state from the persisted field only", () => {
+    expect(wasContactedToday(record({ lastContacted: TODAY }), TODAY)).toBe(true);
+    expect(wasContactedToday(record({ lastContacted: "2026-10-25" }), TODAY)).toBe(false);
+    expect(wasContactedToday(record({ lastContacted: null }), TODAY)).toBe(false);
   });
 });
 

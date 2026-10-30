@@ -88,6 +88,8 @@ export function TodayWorkspace({
   const [followups] = React.useState<StoredFollowup[]>(initialFollowups);
   const [filter, setFilter] = React.useState<TodayFilter>(initialFilter);
   const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set());
+  /** Pre-contact Last Contacted values still known in this session (for Undo). */
+  const [undoPrev, setUndoPrev] = React.useState<Map<string, string | null>>(new Map());
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -142,11 +144,12 @@ export function TodayWorkspace({
       const supabase: SupabaseClient = createClient();
       await updateLastContacted(supabase, id, today);
       setRecords((prev) => prev.map((r) => (r.id === id ? markContacted(r, today) : r)));
+      setUndoPrev((prev) => new Map(prev).set(id, prevLastContacted));
       showToast({
         tone: "success",
         message: `Marked ${target.name} as contacted.`,
         actionLabel: "Undo",
-        onAction: () => void undoContacted(id, prevLastContacted),
+        onAction: () => void undoContacted(id),
       });
     } catch (error) {
       showToast({ tone: "error", message: storeErrorMessage(error) });
@@ -159,8 +162,11 @@ export function TodayWorkspace({
     }
   }
 
-  async function undoContacted(id: string, prevLastContacted: string | null) {
-    if (!isSupabaseConfigured()) return;
+  async function undoContacted(id: string) {
+    const prevLastContacted = undoPrev.get(id);
+    // Unknown without the same-session record — the card then shows the
+    // contacted state without an Undo affordance rather than guessing.
+    if (prevLastContacted === undefined || !isSupabaseConfigured()) return;
     try {
       const supabase: SupabaseClient = createClient();
       const updated = await updateLastContacted(supabase, id, prevLastContacted);
@@ -171,6 +177,11 @@ export function TodayWorkspace({
           r.id === id ? toClientRecord(updated, Math.max(0, r.rowNumber - 1), today) : r,
         ),
       );
+      setUndoPrev((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (error) {
       showToast({ tone: "error", message: storeErrorMessage(error) });
     }
@@ -371,7 +382,10 @@ export function TodayWorkspace({
                 key={item.record.id}
                 item={item}
                 index={index}
+                todayYMD={todayYMD}
                 onContacted={handleContacted}
+                onUndo={(uid) => void undoContacted(uid)}
+                canUndo={undoPrev.has(item.record.id)}
                 pending={pendingIds.has(item.record.id)}
               />
             ))

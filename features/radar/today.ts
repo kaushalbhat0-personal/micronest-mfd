@@ -288,6 +288,19 @@ export function contactedToday(records: ClientRecord[], todayYMD: string): Clien
   return records.filter((r) => r.lastContacted === todayYMD);
 }
 
+/**
+ * Execution state for one queue card. True when the persisted
+ * Last Contacted already equals today — i.e. the MFD has dealt with
+ * this relationship in this session or an earlier one today. The only
+ * source is the existing field; no separate activity state exists.
+ */
+export function wasContactedToday(
+  record: Pick<ClientRecord, "lastContacted">,
+  todayYMD: string,
+): boolean {
+  return record.lastContacted === todayYMD;
+}
+
 export function greetingFor(date: Date = new Date()): string {
   const hour = date.getHours();
   if (hour < 12) return "Good morning";
