@@ -123,7 +123,7 @@ test.describe("Navigation brand + mobile bottom nav", () => {
       await more.click();
       const sheet = page.getByRole("dialog", { name: /account/i });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByText(email)).toBeVisible();
+      await expect(sheet.getByText(email).first()).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(sheet).toHaveCount(0);
       await expect(more).toBeFocused();

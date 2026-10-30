@@ -203,9 +203,9 @@ test.describe("Client import", () => {
       await expect(page.getByText("Import complete")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
       await expect(page.getByRole("dialog", { name: /import your client book/i })).toHaveCount(0);
-      await expect(page.getByRole("link", { name: /rajesh sharma/i })).toBeVisible();
-      await expect(page.getByRole("link", { name: /priya mehta/i })).toBeVisible();
-      await expect(page.getByRole("link", { name: /amit shah/i })).toBeVisible();
+      await expect(page.getByRole("article", { name: /rajesh sharma/i })).toBeVisible();
+      await expect(page.getByRole("article", { name: /priya mehta/i })).toBeVisible();
+      await expect(page.getByRole("article", { name: /amit shah/i })).toBeVisible();
     });
 
     test("aliases resolve, mixed rows explain themselves, errors export", async ({ page }) => {

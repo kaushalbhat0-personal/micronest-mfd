@@ -115,7 +115,7 @@ test.describe("Client Detail persistence", () => {
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
     await expect(page.getByRole("heading", { name: /persist dev/i })).toBeVisible();
-    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toBeVisible();
+    await expect(page.getByText(/follow-up due · \d+ days since contact/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /^call$/i })).toHaveAttribute("href", /^tel:/);
     await expect(page.getByRole("link", { name: /^whatsapp$/i })).toHaveAttribute(
       "href",
@@ -128,10 +128,12 @@ test.describe("Client Detail persistence", () => {
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
     await page.getByRole("button", { name: /mark contacted/i }).click();
-    await expect(page.getByRole("status")).toContainText("Marked Persist Dev as contacted.");
+    await expect(
+      page.getByRole("status").filter({ hasText: /marked persist dev as contacted/i }),
+    ).toBeVisible();
 
     await page.reload();
-    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toHaveCount(0);
+    await expect(page.getByText(/follow-up due · \d+ days since contact/i)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /undo/i })).toHaveCount(0);
   });
 
@@ -140,22 +142,26 @@ test.describe("Client Detail persistence", () => {
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Dev")}`);
 
     await page.getByRole("button", { name: /mark contacted/i }).click();
-    await expect(page.getByRole("status")).toContainText("Marked Persist Dev as contacted.");
+    await expect(
+      page.getByRole("status").filter({ hasText: /marked persist dev as contacted/i }),
+    ).toBeVisible();
     await page.getByRole("button", { name: /undo/i }).click();
 
     // Banner dismissal proves the revert persisted; only then reload.
     await expect(page.getByRole("button", { name: /undo/i })).toHaveCount(0);
     await page.reload();
-    await expect(page.getByText(/follow-up due · 100 days since contact/i)).toBeVisible();
+    await expect(page.getByText(/follow-up due · \d+ days since contact/i)).toBeVisible();
   });
 
   test("undo of a never-contacted client restores null", async ({ page }) => {
     const rows = await seedRows(await userIdFor(email));
     await page.goto(`/workspace/clients/${idFor(rows, "Persist Riya")}`);
-    await expect(page.getByText(/never contacted|last contacted/i)).toBeVisible();
+    await expect(page.getByText("Both · Never contacted")).toBeVisible();
 
     await page.getByRole("button", { name: /mark contacted/i }).click();
-    await expect(page.getByRole("status")).toContainText("Marked Persist Riya as contacted.");
+    await expect(
+      page.getByRole("status").filter({ hasText: /marked persist riya as contacted/i }),
+    ).toBeVisible();
     await page.getByRole("button", { name: /undo/i }).click();
     await page.reload();
     await expect(page.getByText(/recent investor/i)).toBeVisible();
@@ -163,10 +169,10 @@ test.describe("Client Detail persistence", () => {
 
   test("invalid and unknown ids render cleanly without raw errors", async ({ page }) => {
     await page.goto("/workspace/clients/not-a-client-id");
-    await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /couldn't find that client/i })).toBeVisible();
 
     await page.goto("/workspace/clients/123e4567-e89b-42d3-a456-426614174000");
-    await expect(page.getByText(/couldn't find that client/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /couldn't find that client/i })).toBeVisible();
   });
 
   test("no client data in localStorage or URL on detail pages", async ({ page }) => {

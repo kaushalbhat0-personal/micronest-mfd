@@ -77,6 +77,9 @@ test.describe("Today workspace", () => {
           mobile: "9811111111",
           investment_type: "SIP",
           last_contacted: ymd(-90),
+          // Explicit: bulk inserts send the union of keys, so an omitted
+          // flag would arrive as explicit NULL and bypass the column default.
+          is_new_client: false,
         },
         {
           user_id: userId,
@@ -110,31 +113,20 @@ test.describe("Today workspace", () => {
     await seedQueue();
     await page.goto("/workspace/today");
 
-    // Attention strip renders with counts. Overdue and Due today are
-    // shortcuts into the shared follow-ups filter (no pressed state —
-    // two controls must never announce the same selection); only
-    // Reconnect mirrors its filter 1:1.
+    // Attention strip renders with counts. Stats select their filter
+    // (pressed only on a 1:1 mapping); Upcoming shortcuts into the
+    // shared follow-ups filter.
     const strip = page.getByLabel("Attention summary");
-    await expect(strip.getByRole("button", { name: /overdue/i })).toContainText("1");
-    await expect(strip.getByRole("button", { name: /reconnect/i })).toContainText("1");
-    await expect(strip.getByRole("button", { name: /overdue/i })).not.toHaveAttribute(
+    await expect(strip.getByRole("button", { name: /attention/i })).toContainText("2");
+    await expect(strip.getByRole("button", { name: /new/i })).toContainText("1");
+    await expect(strip.getByRole("button", { name: /follow-ups/i })).toContainText("1");
+    await expect(strip.getByRole("button", { name: /upcoming/i })).toContainText("1");
+    // The default filter is attention, so it mirrors 1:1 as pressed.
+    await expect(strip.getByRole("button", { name: /attention/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    await expect(strip.getByRole("button", { name: /due today/i })).not.toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await expect(strip.getByRole("button", { name: /reconnect/i })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    await strip.getByRole("button", { name: /reconnect/i }).click();
-    await expect(strip.getByRole("button", { name: /reconnect/i })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await strip.getByRole("button", { name: /overdue/i }).click();
+    await strip.getByRole("button", { name: /upcoming/i }).click();
     await expect(
       page
         .getByRole("group", { name: /filter today/i })
@@ -146,10 +138,16 @@ test.describe("Today workspace", () => {
     await expect(card).toBeVisible();
     await expect(card.getByText(/follow-up overdue/i)).toBeVisible();
     await expect(card.getByRole("link", { name: /^call$/i })).toBeVisible();
-    // No four-button grid: WhatsApp hides behind the overflow menu.
+    // No four-button grid: WhatsApp hides behind the overflow menu on
+    // mobile, and renders as a compact icon action on desktop.
     await expect(card.getByRole("link", { name: /^whatsapp$/i })).toHaveCount(0);
-    await card.getByRole("button", { name: /more actions/i }).click();
-    await expect(card.getByRole("menuitem", { name: /whatsapp/i })).toBeVisible();
+    const whatsappInline = card.getByRole("link", { name: /whatsapp today overdue owner/i });
+    if (await whatsappInline.isVisible()) {
+      await expect(whatsappInline).toHaveAttribute("href", /^https:\/\/wa\.me\//);
+    } else {
+      await card.getByRole("button", { name: /more actions/i }).click();
+      await expect(card.getByRole("menuitem", { name: /whatsapp/i })).toBeVisible();
+    }
 
     // Filters narrow the queue.
     const filters = page.getByRole("group", { name: /filter today/i });
@@ -193,7 +191,8 @@ test.describe("Today workspace", () => {
     await expect(page.getByRole("status")).toContainText(/marked today overdue owner/i);
 
     // After contact the card states the fact instead of repeating the action.
-    await expect(card.getByText(/contacted today/i)).toBeVisible();
+    // Two copies render (mobile + desktop arrangements); assert the visible one.
+    await expect(card.locator('span:text("Contacted today"):visible')).toBeVisible();
     await expect(card.getByRole("button", { name: /^mark contacted$/i })).toHaveCount(0);
 
     // Dismiss the toast: the in-card Undo still restores the queue.

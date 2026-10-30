@@ -18,6 +18,15 @@ function futureYMD(daysAhead = 30): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Device-local YYYY-MM-DD, mirroring the app's todayLocalYMD. */
+function localYMD(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 function adminClient() {
   return createClient(TEST_URL!, TEST_SERVICE!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -153,15 +162,16 @@ test.describe("Client Detail follow-ups", () => {
     const clientId = await seedClient();
     const admin = adminClient();
     const userId = await userIdFor();
-    const past = new Date();
-    past.setDate(past.getDate() - 6);
-    const today = new Date().toISOString().slice(0, 10);
-    const future = futureYMD(9);
+    // Device-local frame, matching the app's todayLocalYMD: UTC-sliced
+    // dates drift by a day near midnight in offset timezones.
+    const past = localYMD(-6);
+    const today = localYMD(0);
+    const future = localYMD(9);
     const { error } = await admin.from("client_followups").insert([
       {
         user_id: userId,
         client_id: clientId,
-        due_date: past.toISOString().slice(0, 10),
+        due_date: past,
         reason: "Overdue call back",
       },
       { user_id: userId, client_id: clientId, due_date: today, reason: "Today portfolio chat" },

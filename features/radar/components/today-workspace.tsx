@@ -90,6 +90,9 @@ export function TodayWorkspace({
   const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set());
   /** Pre-contact Last Contacted values still known in this session (for Undo). */
   const [undoPrev, setUndoPrev] = React.useState<Map<string, string | null>>(new Map());
+  // Mutable mirror: toast actions close over the render they were created
+  // in, so they must read the ref to see contacts recorded afterwards.
+  const undoPrevRef = React.useRef(new Map<string, string | null>());
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -144,6 +147,7 @@ export function TodayWorkspace({
       const supabase: SupabaseClient = createClient();
       await updateLastContacted(supabase, id, today);
       setRecords((prev) => prev.map((r) => (r.id === id ? markContacted(r, today) : r)));
+      undoPrevRef.current.set(id, prevLastContacted);
       setUndoPrev((prev) => new Map(prev).set(id, prevLastContacted));
       showToast({
         tone: "success",
@@ -163,7 +167,7 @@ export function TodayWorkspace({
   }
 
   async function undoContacted(id: string) {
-    const prevLastContacted = undoPrev.get(id);
+    const prevLastContacted = undoPrevRef.current.get(id);
     // Unknown without the same-session record — the card then shows the
     // contacted state without an Undo affordance rather than guessing.
     if (prevLastContacted === undefined || !isSupabaseConfigured()) return;
@@ -182,6 +186,7 @@ export function TodayWorkspace({
         next.delete(id);
         return next;
       });
+      undoPrevRef.current.delete(id);
     } catch (error) {
       showToast({ tone: "error", message: storeErrorMessage(error) });
     }
