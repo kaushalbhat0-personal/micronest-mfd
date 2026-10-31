@@ -16,6 +16,7 @@ export const RADAR_FILTERS: Array<{ id: RadarFilter; label: string }> = [
  * picks which slice of the already-prioritized collection to show.
  * The attention slice is ACTIONABLE only: recent-investor context alone
  * never qualifies (MFD-66 single source of truth: hasActionableSignal).
+ * New is the derived new-relationship signal (MFD-70), never a stored flag.
  */
 export function filterRadarRecords(records: ClientRecord[], filter: RadarFilter): ClientRecord[] {
   if (filter === "all") return records;
@@ -68,7 +69,7 @@ export function withReconnectInterval(
   const next = records.map((r) => ({
     ...r,
     signals: computeSignals(
-      { lastInvested: r.lastInvested, lastContacted: r.lastContacted, isNewClient: r.isNewClient },
+      { lastInvested: r.lastInvested, lastContacted: r.lastContacted },
       todayYMD,
       intervalDays,
     ),

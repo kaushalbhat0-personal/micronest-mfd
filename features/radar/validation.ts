@@ -8,7 +8,7 @@ import {
   RADAR_REQUIRED_HEADERS,
   type RadarHeader,
 } from "./template";
-import { normalizeInvestmentType, parseAmountInput, parseNewClientFlag } from "./template";
+import { normalizeInvestmentType, parseAmountInput } from "./template";
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_DATA_ROWS = 500;
@@ -81,8 +81,6 @@ export interface ValidatedClient {
   lumpsumAmountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
-  isNewClient: boolean;
-  newClientWarning: string | null;
   note: string;
 }
 
@@ -107,7 +105,6 @@ export interface ClientFieldInput {
   lumpsumAmount: string;
   lastInvested: string;
   lastContacted: string;
-  isNewClient: boolean;
   note: string;
 }
 
@@ -126,7 +123,6 @@ export type ClientFieldName =
   | "lumpsumAmount"
   | "lastInvested"
   | "lastContacted"
-  | "isNewClient"
   | "note";
 
 export function fieldForClientError(error: string | null): ClientFieldName | null {
@@ -158,7 +154,6 @@ export function validateClientFields(
   }
 
   const investment = normalizeInvestmentType(input.investmentType);
-  const isNewClient = input.isNewClient;
 
   const sip = parseAmountInput(input.sipAmount);
   if (sip.error)
@@ -215,8 +210,6 @@ export function validateClientFields(
       lumpsumAmountPaise: lumpsum.paise,
       lastInvested: lastInvested.date,
       lastContacted: lastContacted.date,
-      isNewClient,
-      newClientWarning: null,
       note,
     },
     error: null,
@@ -274,8 +267,9 @@ export function validateRadarRow(
     return (fields[index] ?? "").trim();
   };
 
-  // CSV-only concern: the free-text flag column. The form owns a real checkbox.
-  const flag = parseNewClientFlag(pick("New Client"));
+  // CSV-only concern removed (MFD-70): the retired New Client column is
+  // no longer mapped, so its value never reaches the lifecycle. Files
+  // that still carry it report it under ignored columns.
   const legacy = directLegacyAmount(
     pick(LEGACY_AMOUNT_HEADER),
     pick("SIP Amount"),
@@ -291,7 +285,6 @@ export function validateRadarRow(
       lumpsumAmount: legacy.lumpsumText,
       lastInvested: pick("Last Invested"),
       lastContacted: pick("Last Contacted"),
-      isNewClient: flag.value,
       note: pick("Note"),
     },
     todayYMD,
@@ -299,10 +292,9 @@ export function validateRadarRow(
   );
   if (!result.row) return result;
   const warnings = [...result.warnings];
-  if (flag.warning) warnings.push(flag.warning);
   if (legacy.warning) warnings.push(legacy.warning);
   return {
-    row: { ...result.row, newClientWarning: flag.warning },
+    row: { ...result.row },
     error: null,
     warnings,
   };

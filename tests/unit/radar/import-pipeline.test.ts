@@ -27,7 +27,6 @@ describe("buildPreview", () => {
         "Lumpsum Amount",
         "Last Invested",
         "Last Contacted",
-        "New Client",
         "Note",
       ],
       [
@@ -39,7 +38,6 @@ describe("buildPreview", () => {
           "",
           "25/10/2026",
           "",
-          "yes",
           "Met at branch",
         ],
       ],
@@ -58,6 +56,8 @@ describe("buildPreview", () => {
       sipAmountPaise: 500000,
       lumpsumAmountPaise: null,
     });
+    // MFD-70: no lifecycle flag flows into the persistence input.
+    expect(preview.rows[0].input).not.toHaveProperty("isNewClient");
     expect(preview.summary).toMatchObject({
       ready: 1,
       attention: 0,
@@ -106,6 +106,9 @@ describe("buildPreview", () => {
     });
     expect(preview.rows[0].status).toBe("ready");
     expect(preview.rows[0].input).toMatchObject({ name: "Legacy Lal", sipAmountPaise: null });
+    // MFD-70: the retired flag column is ignored — the value never
+    // reaches the persistence input, so it cannot override the lifecycle.
+    expect(preview.rows[0].input).not.toHaveProperty("isNewClient");
   });
 
   it("rejects malformed amounts and maps amount aliases", () => {
@@ -319,7 +322,6 @@ describe("buildPreview upserts", () => {
       lumpsumAmountPaise: null,
       lastInvested: "2026-09-01",
       lastContacted: "2026-09-10",
-      isNewClient: false,
       note: "Keeps this note",
     },
     {
@@ -331,7 +333,6 @@ describe("buildPreview upserts", () => {
       lumpsumAmountPaise: null,
       lastInvested: null,
       lastContacted: null,
-      isNewClient: false,
       note: "",
     },
   ];
@@ -368,7 +369,6 @@ describe("buildPreview upserts", () => {
       sipAmountPaise: 900000,
       lastInvested: "2026-09-01",
       lastContacted: "2026-09-10",
-      isNewClient: false,
       note: "Keeps this note",
     });
     expect(preview.summary).toMatchObject({ updated: 1, ready: 0, skipped: 0 });

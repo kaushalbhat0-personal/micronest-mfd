@@ -44,7 +44,7 @@ describe("normalizeInvestmentType", () => {
   });
 });
 
-describe("parseNewClientFlag", () => {
+describe("parseNewClientFlag (retired legacy parser)", () => {
   it.each([...NEW_CLIENT_TRUTHY, "Y", "YES", "1", " y "])("treats %s as true", (raw) => {
     expect(parseNewClientFlag(raw)).toEqual({ value: true, warning: null });
   });
@@ -65,7 +65,7 @@ describe("parseNewClientFlag", () => {
 });
 
 describe("RADAR_HEADERS", () => {
-  it("declares the nine-column contract with separate SIP and Lumpsum amounts", () => {
+  it("declares the eight-column contract with separate SIP and Lumpsum amounts", () => {
     expect(RADAR_HEADERS).toEqual([
       "Client Name",
       "Mobile",
@@ -74,13 +74,12 @@ describe("RADAR_HEADERS", () => {
       "Lumpsum Amount",
       "Last Invested",
       "Last Contacted",
-      "New Client",
       "Note",
     ]);
   });
 
-  it("keeps the legacy single Amount column mappable but out of the template", () => {
-    expect(LEGACY_AMOUNT_HEADER).toBe("Amount");
+  it("keeps the retired New Client column out of the template but legacy-parseable", () => {
+    expect(RADAR_HEADERS).not.toContain("New Client");
     expect(RADAR_HEADERS).not.toContain("Amount");
     expect(MAPPABLE_HEADERS).toEqual([...RADAR_HEADERS, "Amount"]);
   });

@@ -73,7 +73,6 @@ export interface BookRecord {
   lumpsumAmountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
-  isNewClient: boolean;
   note: string;
 }
 

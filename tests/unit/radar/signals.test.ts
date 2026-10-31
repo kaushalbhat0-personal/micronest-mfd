@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   computeSignals,
   DEFAULT_RECONNECT_INTERVAL_DAYS,
+  investmentRecency,
+  isNewRelationship,
+  NEW_INVESTMENT_DAYS,
   radarPriorityClass,
   reasonsFor,
   RECONNECT_INTERVAL_OPTIONS,
@@ -23,12 +26,55 @@ function record(overrides: Partial<ClientRecord> & { rowNumber: number }): Clien
     lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "",
     signals: [],
     ...overrides,
   };
 }
+
+describe("investmentRecency boundaries (MFD-70)", () => {
+  it.each([
+    ["2026-10-26", "new"], // 0 days
+    ["2026-10-25", "new"], // 1 day
+    ["2026-10-24", "new"], // 2 days
+    ["2026-10-23", "new"], // 3 days
+    ["2026-10-22", "recent"], // 4 days
+    ["2026-09-27", "recent"], // 29 days
+    ["2026-09-26", "recent"], // 30 days
+    ["2026-09-25", "older"], // 31 days
+    ["2026-05-01", "older"],
+  ])("invested %s gives recency %s", (invested, expected) => {
+    expect(investmentRecency(invested, TODAY)).toBe(expected);
+  });
+
+  it("null and future-dated investments never classify as new/recent", () => {
+    expect(investmentRecency(null, TODAY)).toBe("none");
+    expect(investmentRecency("2026-10-27", TODAY)).toBe("none");
+    expect(investmentRecency("2027-01-01", TODAY)).toBe("none");
+  });
+
+  it("uses fixed product windows", () => {
+    expect(NEW_INVESTMENT_DAYS).toBe(3);
+    expect(RECENT_INVESTOR_DAYS).toBe(30);
+  });
+});
+
+describe("isNewRelationship lifecycle (MFD-70)", () => {
+  it.each([
+    [null, null, true], // manual add, no history
+    ["2026-10-26", null, true], // invested today
+    ["2026-10-23", null, true], // 3 days
+    ["2026-10-22", null, true], // 4 days
+    ["2026-09-26", null, true], // 30 days
+    ["2026-09-25", null, false], // 31 days: established quiet
+    ["2026-05-01", null, false], // old history: established quiet
+    [null, TODAY, false], // first contact graduates
+    ["2026-10-26", TODAY, false],
+    ["2026-10-12", "2026-07-24", false], // contacted long ago
+  ])("invested=%s contacted=%s gives new=%s", (invested, contacted, expected) => {
+    expect(isNewRelationship(invested, contacted, TODAY)).toBe(expected);
+  });
+});
 
 describe("computeSignals / recent-investor", () => {
   it.each([
@@ -38,31 +84,57 @@ describe("computeSignals / recent-investor", () => {
     ["2026-09-26", true],
     ["2026-09-25", false],
   ])("invested %s with 30-day rule gives recent=%s", (invested, expected) => {
-    const signals = computeSignals(
-      { lastInvested: invested, lastContacted: TODAY, isNewClient: false },
-      TODAY,
-      90,
-    );
+    const signals = computeSignals({ lastInvested: invested, lastContacted: TODAY }, TODAY, 90);
     expect(signals.includes("recent-investor")).toBe(expected);
   });
 
-  it("null lastInvested never qualifies", () => {
-    const signals = computeSignals(
-      { lastInvested: null, lastContacted: TODAY, isNewClient: false },
-      TODAY,
-      90,
-    );
-    expect(signals).not.toContain("recent-investor");
+  it("null and future lastInvested never qualify", () => {
+    expect(
+      computeSignals({ lastInvested: null, lastContacted: TODAY }, TODAY, 90),
+    ).not.toContain("recent-investor");
+    expect(
+      computeSignals({ lastInvested: "2026-10-27", lastContacted: TODAY }, TODAY, 90),
+    ).not.toContain("recent-investor");
+  });
+});
+
+describe("computeSignals / new relationship (MFD-70)", () => {
+  it("never-contacted with no history or new/recent investment is new, never reconnect", () => {
+    for (const invested of [null, "2026-10-26", "2026-10-23", "2026-10-22", "2026-09-26"]) {
+      const signals = computeSignals({ lastInvested: invested, lastContacted: null }, TODAY, 90);
+      expect(signals).toContain("new-client");
+      expect(signals).not.toContain("reconnect-due");
+    }
   });
 
-  it("uses the fixed 30-day product rule", () => {
-    expect(RECENT_INVESTOR_DAYS).toBe(30);
+  it("never-contacted with older investment is established quiet: reconnect, not new", () => {
+    for (const invested of ["2026-09-25", "2026-05-01", "2025-01-01"]) {
+      const signals = computeSignals({ lastInvested: invested, lastContacted: null }, TODAY, 90);
+      expect(signals).toEqual(["reconnect-due"]);
+    }
+  });
+
+  it("first contact graduates the new relationship", () => {
+    const before = computeSignals({ lastInvested: null, lastContacted: null }, TODAY, 90);
+    expect(before).toContain("new-client");
+    const after = computeSignals({ lastInvested: null, lastContacted: TODAY }, TODAY, 90);
+    expect(after).not.toContain("new-client");
+    expect(after).not.toContain("reconnect-due");
+  });
+
+  it("new and reconnect are mutually exclusive across the matrix", () => {
+    const investedOptions = [null, "2026-10-26", "2026-10-22", "2026-09-26", "2026-09-25", "2026-05-01"];
+    const contactedOptions = [null, TODAY, "2026-10-22", "2026-07-21"];
+    for (const invested of investedOptions) {
+      for (const contacted of contactedOptions) {
+        const signals = computeSignals({ lastInvested: invested, lastContacted: contacted }, TODAY, 90);
+        expect(signals.includes("new-client") && signals.includes("reconnect-due")).toBe(false);
+      }
+    }
   });
 });
 
 describe("computeSignals / reconnect-due", () => {
-  const base = { lastInvested: null as string | null, isNewClient: false };
-
   it.each([
     ["2026-10-26", false],
     ["2026-10-25", false],
@@ -70,19 +142,25 @@ describe("computeSignals / reconnect-due", () => {
     ["2026-07-28", true],
     ["2026-07-27", true],
   ])("contacted %s with 90-day interval gives due=%s", (contacted, expected) => {
-    const signals = computeSignals({ ...base, lastContacted: contacted }, TODAY, 90);
+    const signals = computeSignals({ lastInvested: null, lastContacted: contacted }, TODAY, 90);
+    // Contacted clients are never new relationships, so these are pure reconnect checks.
+    expect(signals.includes("new-client")).toBe(false);
     expect(signals.includes("reconnect-due")).toBe(expected);
   });
 
-  it("null lastContacted is always due (never recorded)", () => {
+  it("null lastContacted with older history is due at every interval", () => {
     for (const interval of RECONNECT_INTERVAL_OPTIONS) {
-      const signals = computeSignals({ ...base, lastContacted: null }, TODAY, interval);
+      const signals = computeSignals(
+        { lastInvested: "2026-05-01", lastContacted: null },
+        TODAY,
+        interval,
+      );
       expect(signals.includes("reconnect-due")).toBe(true);
     }
   });
 
   it.each([30, 60, 120, 180])("honours a %s-day interval", (interval) => {
-    const signals = computeSignals({ ...base, lastContacted: "2026-10-26" }, TODAY, interval);
+    const signals = computeSignals({ lastInvested: null, lastContacted: "2026-10-26" }, TODAY, interval);
     expect(signals.includes("reconnect-due")).toBe(false);
   });
 
@@ -90,75 +168,26 @@ describe("computeSignals / reconnect-due", () => {
     expect(DEFAULT_RECONNECT_INTERVAL_DAYS).toBe(90);
     expect(RECONNECT_INTERVAL_OPTIONS).toEqual([30, 60, 90, 120, 180]);
   });
-});
-
-describe("computeSignals / new-client and coexistence", () => {
-  it("flags never-contacted new clients only", () => {
-    const flagged = computeSignals(
-      { lastInvested: null, lastContacted: null, isNewClient: true },
-      TODAY,
-      90,
-    );
-    expect(flagged).toContain("new-client");
-    const unflagged = computeSignals(
-      { lastInvested: "2026-10-26", lastContacted: null, isNewClient: false },
-      TODAY,
-      90,
-    );
-    expect(unflagged).not.toContain("new-client");
-  });
-
-  it("resolves the new-client reason once the client has been spoken to", () => {
-    const before = computeSignals(
-      { lastInvested: null, lastContacted: null, isNewClient: true },
-      TODAY,
-      90,
-    );
-    expect(before).toContain("new-client");
-    const after = computeSignals(
-      { lastInvested: null, lastContacted: TODAY, isNewClient: true },
-      TODAY,
-      90,
-    );
-    expect(after).not.toContain("new-client");
-    expect(after).not.toContain("reconnect-due");
-  });
 
   it("resolves the reconnect reason on contact but lets it return later", () => {
     const due = computeSignals(
-      { lastInvested: null, lastContacted: "2026-07-21", isNewClient: false },
+      { lastInvested: "2026-05-01", lastContacted: "2026-07-21" },
       TODAY,
       90,
     );
     expect(due).toContain("reconnect-due");
     const contacted = computeSignals(
-      { lastInvested: null, lastContacted: TODAY, isNewClient: false },
+      { lastInvested: "2026-05-01", lastContacted: TODAY },
       TODAY,
       90,
     );
     expect(contacted).not.toContain("reconnect-due");
     const stale = computeSignals(
-      { lastInvested: null, lastContacted: "2026-07-21", isNewClient: false },
+      { lastInvested: "2026-05-01", lastContacted: "2026-07-21" },
       "2026-10-26",
       30,
     );
     expect(stale).toContain("reconnect-due");
-  });
-
-  it("coexists: recent investor plus reconnect due plus new client", () => {
-    const signals = computeSignals(
-      { lastInvested: "2026-10-26", lastContacted: null, isNewClient: true },
-      TODAY,
-      90,
-    );
-    expect(signals).toEqual(["recent-investor", "reconnect-due", "new-client"]);
-  });
-
-  it("keeps the stored new-client flag untouched — only the signal resolves", () => {
-    // The flag is explicit metadata; computeSignals never clears it.
-    const input = { lastInvested: null, lastContacted: TODAY, isNewClient: true };
-    computeSignals(input, TODAY, 90);
-    expect(input.isNewClient).toBe(true);
   });
 });
 
@@ -168,12 +197,15 @@ describe("reasonsFor", () => {
       reasonsFor({ lastInvested: "2026-10-12", lastContacted: null }, ["recent-investor"], TODAY),
     ).toEqual(["Recent investor · invested 12/10/2026"]);
     expect(
+      reasonsFor({ lastInvested: "2026-10-25", lastContacted: null }, ["recent-investor"], TODAY),
+    ).toEqual(["New investment · invested 25/10/2026"]);
+    expect(
       reasonsFor({ lastInvested: null, lastContacted: null }, ["reconnect-due"], TODAY),
     ).toEqual(["Follow-up due · haven't spoken yet"]);
     expect(
       reasonsFor({ lastInvested: null, lastContacted: "2026-07-21" }, ["reconnect-due"], TODAY),
     ).toEqual(["Follow-up due · 97 days since you last spoke"]);
-    expect(reasonsFor({ lastInvested: null, lastContacted: TODAY }, ["new-client"], TODAY)).toEqual(
+    expect(reasonsFor({ lastInvested: null, lastContacted: null }, ["new-client"], TODAY)).toEqual(
       ["New client"],
     );
   });
@@ -218,8 +250,7 @@ describe("sortRadarRecords", () => {
       record({
         rowNumber: 4,
         lastInvested: null,
-        lastContacted: TODAY,
-        isNewClient: true,
+        lastContacted: null,
         signals: ["new-client"],
       }),
       record({
@@ -243,8 +274,7 @@ describe("sortRadarRecords", () => {
       }),
     ];
     // MFD-66: actionable first (recent-boosted, then new, then
-    // reconnect), then recent-only context, then no signal. Contacted
-    // recent-only clients (rows 8, 1) sort below every actionable client.
+    // reconnect), then recent-only context, then no signal.
     expect(sortRadarRecords(records, TODAY).map((r) => r.rowNumber)).toEqual([
       2, 5, 4, 3, 6, 8, 1, 7,
     ]);

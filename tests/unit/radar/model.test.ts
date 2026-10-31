@@ -26,16 +26,16 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     lumpsumAmountPaise: null,
     lastInvested: "2026-10-20",
     lastContacted: "2026-08-01",
-    isNewClient: false,
     note: "",
-    signals: ["recent-investor", "reconnect-due"],
+    signals: ["recent-investor"],
     ...overrides,
   };
 }
 
 describe("radar CSV contract", () => {
-  it("validator accepts the nine-column contract", () => {
+  it("validator accepts the eight-column contract without a New Client column", () => {
     expect(validateRadarHeaders([...RADAR_HEADERS]).error).toBeNull();
+    expect(RADAR_HEADERS).not.toContain("New Client");
   });
 
   it("still accepts the previous seven-column template with blank amounts", () => {
@@ -51,6 +51,9 @@ describe("radar CSV contract", () => {
       sipAmountPaise: null,
       lumpsumAmountPaise: null,
     });
+    // The legacy flag never overrides the derived lifecycle.
+    expect(report.records[0].signals).toEqual(["reconnect-due"]);
+    expect(report.ignoredColumns).toContain("New Client");
   });
 });
 
@@ -58,10 +61,10 @@ describe("parseAndBuildRadar", () => {
   it("builds signal-bearing records in priority order", () => {
     const csv = [
       HEADER,
-      "Old Investor,9876543210,SIP,,,01/01/2026,,,",
-      "Fresh SIP,,SIP,5000,,25/10/2026,,,",
-      "Quiet Amit,,Lumpsum,,,,01/01/2026,,",
-      "New Meera,9876543210,Both,,,,,Y,Met at camp",
+      "Old Investor,9876543210,SIP,,,01/01/2026,,",
+      "Fresh SIP,,SIP,5000,,25/10/2026,,",
+      "Quiet Amit,,Lumpsum,,,,01/01/2026,",
+      "New Meera,9876543210,Both,,,,,Met at camp",
     ].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
@@ -71,10 +74,14 @@ describe("parseAndBuildRadar", () => {
       "Old Investor",
       "Quiet Amit",
     ]);
+    // Fresh SIP invested yesterday: new investment + new relationship.
+    expect(report.records[0].signals).toEqual(["recent-investor", "new-client"]);
+    // New Meera has no history and was never contacted: new relationship.
+    expect(report.records[1].signals).toEqual(["new-client"]);
   });
 
   it("keeps no-signal clients for the All view instead of discarding them", () => {
-    const csv = [HEADER, "Steady Sam,,Insurance,,,,26/10/2026,,"].join("\n");
+    const csv = [HEADER, "Steady Sam,,Insurance,,,,26/10/2026,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
     expect(report.records).toHaveLength(1);
@@ -82,14 +89,14 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("preserves every valid row without dedupe", () => {
-    const csv = [HEADER, "Same Name,,SIP,,,,", "Same Name,,SIP,,,,"].join("\n");
+    const csv = [HEADER, "Same Name,,SIP,,,,,", "Same Name,,SIP,,,,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.records).toHaveLength(2);
     expect(report.records[0].id).not.toBe(report.records[1].id);
   });
 
   it("rejects files with zero valid rows and reports invalid ones", () => {
-    const csv = [HEADER, ",,,,,,,,", "Bad Date,,SIP,,,99/99/9999,,,"].join("\n");
+    const csv = [HEADER, ",,,,,,,", "Bad Date,,SIP,,,99/99/9999,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.records).toHaveLength(0);
     expect(report.fileError).toContain("No clients could be added");
@@ -97,7 +104,7 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("ignores extra columns without modelling them", () => {
-    const csv = [`${HEADER},PAN`, "Rajesh,9876543210,SIP,,,,,,,ABCDE1234F"].join("\n");
+    const csv = [`${HEADER},PAN`, "Rajesh,9876543210,SIP,,,,,,ABCDE1234F"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toBeNull();
     expect(report.ignoredColumns).toEqual(["PAN"]);
@@ -105,7 +112,7 @@ describe("parseAndBuildRadar", () => {
   });
 
   it("rejects future dates", () => {
-    const csv = [HEADER, "Future,,SIP,,,27/10/2026,,,"].join("\n");
+    const csv = [HEADER, "Future,,SIP,,,27/10/2026,,"].join("\n");
     const report = parseAndBuildRadar(csv, TODAY, 90);
     expect(report.fileError).toContain("No clients could be added");
     expect(report.invalid[0].reason).toContain("future");
@@ -114,11 +121,18 @@ describe("parseAndBuildRadar", () => {
 
 describe("markContacted", () => {
   it("sets Last Contacted to today and recomputes signals", () => {
-    const before = record({ lastContacted: null, signals: ["recent-investor", "reconnect-due"] });
+    const before = record({ lastInvested: null, lastContacted: null, signals: ["new-client"] });
+    const after = markContacted(before, TODAY, 90);
+    expect(after.lastContacted).toBe(TODAY);
+    expect(after.signals).toEqual([]);
+    expect(after.name).toBe(before.name);
+  });
+
+  it("keeps recent-investment context after contact", () => {
+    const before = record({ lastContacted: null, signals: ["recent-investor", "new-client"] });
     const after = markContacted(before, TODAY, 90);
     expect(after.lastContacted).toBe(TODAY);
     expect(after.signals).toEqual(["recent-investor"]);
-    expect(after.name).toBe(before.name);
   });
 
   it("overwrites an old contact date", () => {
@@ -126,16 +140,14 @@ describe("markContacted", () => {
     expect(after.lastContacted).toBe(TODAY);
   });
 
-  it("clears a new-client attention state on contact without touching the flag", () => {
+  it("graduates a new relationship on contact", () => {
     const before = record({
       lastInvested: null,
       lastContacted: null,
-      isNewClient: true,
-      signals: ["reconnect-due", "new-client"],
+      signals: ["new-client"],
     });
     const after = markContacted(before, TODAY, 90);
     expect(after.signals).toEqual([]);
-    expect(after.isNewClient).toBe(true);
   });
 
   it("drops a contacted client below clients that still need attention", () => {
@@ -145,8 +157,7 @@ describe("markContacted", () => {
         rowNumber: 2,
         lastInvested: null,
         lastContacted: null,
-        isNewClient: true,
-        signals: ["reconnect-due", "new-client"],
+        signals: ["new-client"],
       }),
       TODAY,
       90,
@@ -169,7 +180,7 @@ describe("serializeRadarCsv round-trip", () => {
   it("re-imports to identical normalized values", () => {
     const csv = [
       HEADER,
-      "Rajesh,9876543210,sip,2500,,25/10/2026,,Y,Note with, comma",
+      "Rajesh,9876543210,sip,2500,,25/10/2026,,Note with, comma",
       'Asha,,Lumpsum,,,,,,"Said ""later"""',
     ].join("\n");
     const first = parseAndBuildRadar(csv, TODAY, 90);
@@ -188,7 +199,6 @@ describe("serializeRadarCsv round-trip", () => {
       lumpsumAmountPaise: r.lumpsumAmountPaise,
       lastInvested: r.lastInvested,
       lastContacted: r.lastContacted,
-      isNewClient: r.isNewClient,
       note: r.note,
       signals: r.signals,
     });

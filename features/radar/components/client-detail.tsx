@@ -74,7 +74,7 @@ function storeErrorMessage(error: unknown): string {
 function toFormInitial(
   stored: Pick<
     StoredRadarClient,
-    "name" | "phone" | "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastInvested" | "lastContacted" | "isNewClient" | "note"
+    "name" | "phone" | "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastInvested" | "lastContacted" | "note"
   >,
 ): ClientFormInitial {
   return {
@@ -87,7 +87,6 @@ function toFormInitial(
       stored.lumpsumAmountPaise === null ? "" : amountPaiseToInput(stored.lumpsumAmountPaise),
     lastInvested: stored.lastInvested ?? "",
     lastContacted: stored.lastContacted ?? "",
-    isNewClient: stored.isNewClient,
     note: stored.note,
   };
 }
@@ -278,7 +277,7 @@ export function ClientDetail({
               <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
                 {record.investmentType}
               </span>
-              {record.isNewClient && (
+              {record.signals.includes("new-client") && (
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900">
                   New client
                 </span>

@@ -18,12 +18,14 @@ import type { ClientRecord, InvestmentType } from "./types";
 
 const TABLE = "radar_clients";
 
-/** Columns the UI is allowed to read or write. Ownership stays in RLS. */
+/** Columns the UI is allowed to read or write. Ownership stays in RLS.
+ * is_new_client is intentionally absent (MFD-70): the lifecycle derives
+ * New from dates, and the column keeps whatever value it has. */
 const CLIENT_COLUMNS =
-  "id,name,mobile,investment_type,sip_amount_paise,lumpsum_amount_paise,amount_paise,last_invested,last_contacted,is_new_client,note";
+  "id,name,mobile,investment_type,sip_amount_paise,lumpsum_amount_paise,amount_paise,last_invested,last_contacted,note";
 
 /**
- * Normalized client input for create/update — the nine relationship fields
+ * Normalized client input for create/update — the eight relationship fields
  * the validator owns. Dates are YYYY-MM-DD or null; amounts are integer
  * paise or null. No id, no user_id, no timestamps, no signals: callers
  * never supply those.
@@ -38,7 +40,6 @@ export interface ClientInput {
   lumpsumAmountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
-  isNewClient: boolean;
   note: string;
 }
 
@@ -72,7 +73,6 @@ function toDbRow(input: ClientInput): Record<string, unknown> {
     ),
     last_invested: input.lastInvested,
     last_contacted: input.lastContacted,
-    is_new_client: input.isNewClient,
     note: input.note,
   };
 }
@@ -95,7 +95,6 @@ export interface StoredRadarClient {
   amountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
-  isNewClient: boolean;
   note: string;
 }
 
@@ -126,7 +125,6 @@ interface DbRow {
   amount_paise: unknown;
   last_invested: unknown;
   last_contacted: unknown;
-  is_new_client: unknown;
   note: unknown;
   /** Present on real rows; deliberately never read — ownership stays in RLS. */
   user_id?: unknown;
@@ -168,7 +166,6 @@ export function toStoredClient(row: DbRow): StoredRadarClient {
     amountPaise: asAmountPaise(row.amount_paise),
     lastInvested: asDate(row.last_invested),
     lastContacted: asDate(row.last_contacted),
-    isNewClient: row.is_new_client === true,
     note: asText(row.note),
   };
 }
@@ -196,13 +193,11 @@ export function toClientRecord(
     lumpsumAmountPaise: stored.lumpsumAmountPaise,
     lastInvested: stored.lastInvested,
     lastContacted: stored.lastContacted,
-    isNewClient: stored.isNewClient,
     note: stored.note,
     signals: computeSignals(
       {
         lastInvested: stored.lastInvested,
         lastContacted: stored.lastContacted,
-        isNewClient: stored.isNewClient,
       },
       todayYMD,
       reconnectIntervalDays,

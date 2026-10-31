@@ -48,11 +48,8 @@ const ALIASES: Record<string, RadarHeader> = {
   "last contact": "Last Contacted",
   "last contacted date": "Last Contacted",
   "contact date": "Last Contacted",
-  // New client
-  "new client": "New Client",
-  new: "New Client",
-  "is new": "New Client",
-  "new investor": "New Client",
+  // Retired New Client column (MFD-70): lifecycle is date-derived, so
+  // these headers no longer map anywhere and land in "Don't import".
   // Note
   note: "Note",
   notes: "Note",

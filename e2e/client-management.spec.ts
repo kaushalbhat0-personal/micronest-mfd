@@ -69,7 +69,6 @@ test.describe("Client management", () => {
     await page.getByLabel(/mobile/i).fill("9876543210");
     await page.getByLabel("Investment type").selectOption("SIP");
     await page.getByLabel(/last invested/i).fill("2026-10-12");
-    await page.getByLabel("New client").check();
     await page.getByLabel(/note/i).fill("Prefers evening calls");
     await page.getByRole("dialog").getByRole("button", { name: "Add client", exact: true }).click();
 

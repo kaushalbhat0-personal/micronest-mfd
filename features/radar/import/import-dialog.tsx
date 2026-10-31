@@ -433,7 +433,7 @@ export function ImportDialog({
                   <p>
                     <strong className="font-semibold text-stone-900">Optional:</strong> Mobile,
                     Investment Type, SIP Amount, Lumpsum Amount, Last Invested, Last Contacted,
-                    New Client, Note
+                    Note
                   </p>
                   <p className="text-xs">
                     Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other
@@ -447,7 +447,7 @@ export function ImportDialog({
                   <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900">
                     <span>How to fill your template</span>
                     <span aria-hidden="true" className="text-xs text-stone-500">
-                      9 fields · Client Name is required
+                      8 fields · Client Name is required
                     </span>
                   </summary>
                   <dl className="flex flex-col gap-2 border-t border-stone-200 px-3 py-3">

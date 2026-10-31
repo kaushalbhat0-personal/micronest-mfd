@@ -283,7 +283,6 @@ function prefillUpdateDisplay(
       ? formatDisplayDate(stored.lastContacted)
       : "";
   }
-  if (blank("New Client")) filled["New Client"] = stored.isNewClient ? "Y" : "";
   if (blank("Note")) filled["Note"] = stored.note;
   return filled;
 }
@@ -352,7 +351,6 @@ function toClientInput(validated: ValidatedClient): ClientInput {
     lumpsumAmountPaise: validated.lumpsumAmountPaise,
     lastInvested: validated.lastInvested,
     lastContacted: validated.lastContacted,
-    isNewClient: validated.isNewClient,
     note: validated.note,
   };
 }

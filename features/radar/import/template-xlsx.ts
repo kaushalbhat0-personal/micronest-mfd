@@ -66,14 +66,8 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
   {
     column: "Last Contacted",
     required: "No",
-    what: "Date you last spoke with the client, as DD/MM/YYYY. Blank is fine.",
+    what: "Date you last spoke with the client, as DD/MM/YYYY. Blank means never contacted. Whether a client counts as New is calculated from this and Last Invested — no manual flag needed.",
     example: "20/10/2026",
-  },
-  {
-    column: "New Client",
-    required: "No",
-    what: "TRUE marks a new client, FALSE (or blank) an existing one. Accepts yes/no, y/n, 1/0.",
-    example: "TRUE",
   },
   {
     column: "Note",

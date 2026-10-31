@@ -154,6 +154,10 @@ test.describe("Today workspace", () => {
     await filters.getByRole("button", { name: /new/i }).click();
     await expect(page.getByRole("article", { name: /today newcomer/i })).toBeVisible();
     await expect(page.getByRole("article", { name: /today overdue owner/i })).toHaveCount(0);
+    // MFD-70: a new relationship never appears under Reconnect.
+    await filters.getByRole("button", { name: /reconnect/i }).click();
+    await expect(page.getByRole("article", { name: /today overdue owner/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today newcomer/i })).toHaveCount(0);
     await filters.getByRole("button", { name: /needs attention/i }).click();
     await expect(page.getByRole("article")).toHaveCount(2);
 

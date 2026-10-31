@@ -32,8 +32,7 @@ export interface ClientRecord {
   lastInvested: string | null;
   /** Most recent meaningful contact date, YYYY-MM-DD or null when never recorded. */
   lastContacted: string | null;
-  /** Explicit CSV flag only — never inferred. */
-  isNewClient: boolean;
+  /** Lifecycle is calendar-derived (see signals.ts) — no manual new flag. */
   note: string;
   signals: Signal[];
 }

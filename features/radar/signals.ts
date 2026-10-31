@@ -4,6 +4,9 @@ import type { ClientRecord, Signal } from "./types";
 /** Fixed product rule: invested within the last 30 days (inclusive). */
 export const RECENT_INVESTOR_DAYS = 30;
 
+/** Fixed product rule: invested within the last 3 days (inclusive). A subset of the recent window. */
+export const NEW_INVESTMENT_DAYS = 3;
+
 /** The only reconnect intervals the UI may offer. The domain accepts any positive integer. */
 export const RECONNECT_INTERVAL_OPTIONS = [30, 60, 90, 120, 180] as const;
 
@@ -12,24 +15,61 @@ export const DEFAULT_RECONNECT_INTERVAL_DAYS = 90;
 export interface SignalInput {
   lastInvested: string | null;
   lastContacted: string | null;
-  isNewClient: boolean;
 }
 
 /**
- * Computes radar signals from two dates and one explicit flag.
- * Deterministic: same inputs + same today + same interval = same signals.
+ * Investment recency derived from the calendar only. No flags, no contact
+ * state — pure distance from today. Future-dated investments never classify
+ * as new/recent (data error, not a fresh investment).
+ */
+export type InvestmentRecency = "new" | "recent" | "older" | "none";
+
+export function investmentRecency(
+  lastInvested: string | null,
+  todayYMD: string,
+): InvestmentRecency {
+  if (lastInvested === null) return "none";
+  const age = daysBetweenYMD(lastInvested, todayYMD);
+  if (age < 0) return "none";
+  if (age <= NEW_INVESTMENT_DAYS) return "new";
+  if (age <= RECENT_INVESTOR_DAYS) return "recent";
+  return "older";
+}
+
+/**
+ * Relationship lifecycle derived from contact state + investment history.
+ * A never-contacted person with no investment history, or with a
+ * new/recent investment, is a NEW relationship — first contact is still
+ * owed. A never-contacted person whose investment history is older than
+ * the recent window is an established (quiet) relationship instead.
+ * First contact graduates the lifecycle unconditionally.
+ */
+export function isNewRelationship(
+  lastInvested: string | null,
+  lastContacted: string | null,
+  todayYMD: string,
+): boolean {
+  if (lastContacted !== null) return false;
+  const recency = investmentRecency(lastInvested, todayYMD);
+  return recency === "none" || recency === "new" || recency === "recent";
+}
+
+/**
+ * Computes radar signals from two dates. Deterministic: same inputs + same
+ * today + same interval = same signals.
  *
- * Attention semantics (the product rule "once I have spoken to this
- * client, stop telling me to speak to them for that same reason"):
- * - "new-client" fires only while the client was never contacted
- *   (isNewClient AND lastContacted === null). Speaking to a new client
- *   resolves that reason; the stored is_new_client flag itself is left
- *   untouched as explicit metadata.
- * - "reconnect-due" is purely date-driven, so a contacted client becomes
- *   due again naturally once the interval passes.
+ * Calendar-derived lifecycle (MFD-70 replaces the persistent is_new_client
+ * flag — the database column may remain unread, but nothing here consults
+ * it):
+ * - "new-client" fires exactly while isNewRelationship holds. Contact
+ *   graduates the lifecycle; silence beyond the interval on an established
+ *   relationship becomes "reconnect-due", never "new-client" again.
+ * - "reconnect-due" is suppressed while the relationship is new, and fires
+ *   for established quiet (never-contacted + older history counts as
+ *   established). New and reconnect are mutually exclusive by construction.
  *
  * Product rule (MFD-66): "recent-investor" is CONTEXT, not attention.
- * A client who only invested recently — with no new-client state, no
+ * A client who only invested recently — with no new relationship, no
  * reconnect due, and no open follow-up — must NOT count as needing
  * attention. It may still render as a "Recent" badge/line, but it never
  * inflates counts, filters, or priority on its own. Actionable attention
@@ -43,21 +83,21 @@ export function computeSignals(
 ): Signal[] {
   const signals: Signal[] = [];
 
-  if (
-    input.lastInvested !== null &&
-    daysBetweenYMD(input.lastInvested, todayYMD) <= RECENT_INVESTOR_DAYS
-  ) {
+  const recency = investmentRecency(input.lastInvested, todayYMD);
+  if (recency === "new" || recency === "recent") {
     signals.push("recent-investor");
   }
-  // Blank Last Contacted means never recorded — that is the most due of all.
-  if (
+  const newRelationship = isNewRelationship(input.lastInvested, input.lastContacted, todayYMD);
+  if (newRelationship) {
+    signals.push("new-client");
+  } else if (
     input.lastContacted === null ||
     daysBetweenYMD(input.lastContacted, todayYMD) >= reconnectIntervalDays
   ) {
+    // Established quiet: never-contacted here means older investment
+    // history (the new lifecycle already claimed the rest), so this is a
+    // relationship gone quiet — not a fresh one.
     signals.push("reconnect-due");
-  }
-  if (input.isNewClient && input.lastContacted === null) {
-    signals.push("new-client");
   }
   return signals;
 }
@@ -86,7 +126,9 @@ export function reasonsFor(
 ): string[] {
   const reasons: string[] = [];
   if (signals.includes("recent-investor") && input.lastInvested) {
-    reasons.push(`Recent investor · invested ${formatDisplayDate(input.lastInvested)}`);
+    const age = daysBetweenYMD(input.lastInvested, todayYMD);
+    const label = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New investment" : "Recent investor";
+    reasons.push(`${label} · invested ${formatDisplayDate(input.lastInvested)}`);
   }
   if (signals.includes("reconnect-due")) {
     if (input.lastContacted === null) {

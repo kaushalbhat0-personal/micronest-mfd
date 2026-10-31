@@ -9,7 +9,7 @@ describe("normalizeAliasKey", () => {
 });
 
 describe("autoMapColumns", () => {
-  it("maps known aliases to canonical fields", () => {
+  it("maps known aliases to canonical fields, leaving retired lifecycle headers unmapped", () => {
     expect(
       autoMapColumns([
         "Client",
@@ -28,7 +28,8 @@ describe("autoMapColumns", () => {
       "Amount",
       "Last Invested",
       "Last Contacted",
-      "New Client",
+      // MFD-70: the retired New Client column no longer maps anywhere.
+      null,
       "Note",
     ]);
   });

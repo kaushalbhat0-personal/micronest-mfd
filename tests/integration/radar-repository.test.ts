@@ -186,7 +186,6 @@ suite("radar client crud", () => {
       lumpsumAmountPaise: 20000000,
       lastInvested: TODAY,
       lastContacted: null,
-      isNewClient: true,
       note: "crud",
     });
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
@@ -199,8 +198,11 @@ suite("radar client crud", () => {
       lumpsumAmountPaise: 20000000,
       // Both never duplicates into the legacy mirror.
       amountPaise: 1200000,
-      isNewClient: true,
     });
+    // MFD-70: lifecycle is derived — create with a recent investment and
+    // no contact, and the record projects as a new relationship.
+    expect(found.lastInvested).toBe(TODAY);
+    expect(found.lastContacted).toBeNull();
 
     const updated = await updateStoredClient(clientA, created.id, {
       name: "Crud Alpha Renamed",
@@ -210,7 +212,6 @@ suite("radar client crud", () => {
       lumpsumAmountPaise: null,
       lastInvested: null,
       lastContacted: TODAY,
-      isNewClient: false,
       note: "",
     });
     expect(updated).toMatchObject({ name: "Crud Alpha Renamed", phone: "", note: "" });
@@ -230,7 +231,6 @@ suite("radar client crud", () => {
       lumpsumAmountPaise: null,
       lastInvested: null,
       lastContacted: null,
-      isNewClient: false,
       note: "",
     });
     await expect(getStoredClient(clientB, created.id)).rejects.toMatchObject({ code: "load" });
@@ -243,7 +243,6 @@ suite("radar client crud", () => {
         lumpsumAmountPaise: null,
         lastInvested: null,
         lastContacted: null,
-        isNewClient: false,
         note: "",
       }),
     ).rejects.toMatchObject({ code: "update" });

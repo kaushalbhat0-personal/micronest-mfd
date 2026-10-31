@@ -12,13 +12,14 @@ import type { ClientRecord } from "@/features/radar/types";
 import type { StoredFollowup } from "@/features/followups/types";
 
 /**
- * MFD-66 — Credentialed Attention & Contact verification, domain level.
+ * MFD-66 + MFD-70 — credentialed attention & contact verification, domain level.
  * Recent-investor is CONTEXT, never attention. Actionable attention is
- * only new-client / reconnect-due (plus open follow-ups in the queue).
- * Contact resolves only the contact-resolved reasons; follow-ups,
- * flags, and amounts are never touched by a contact.
+ * only new-relationship / reconnect-due (plus open follow-ups in the queue).
+ * New is calendar-derived (lastContacted + investment recency) — no flag.
+ * Contact graduates the new relationship and resolves reconnect; follow-ups,
+ * amounts, and history are never touched by a contact.
  */
-const TODAY = "2026-10-31";
+const TODAY = "2026-10-26";
 
 function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
   return {
@@ -32,7 +33,6 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     lumpsumAmountPaise: 2000000,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "Prefers mornings",
     signals: [],
     ...overrides,
@@ -52,47 +52,43 @@ function followup(overrides: Partial<StoredFollowup> = {}): StoredFollowup {
   };
 }
 
-function signalsFor(rec: Pick<ClientRecord, "lastInvested" | "lastContacted" | "isNewClient">) {
+function signalsFor(rec: Pick<ClientRecord, "lastInvested" | "lastContacted">) {
   return computeSignals(
-    {
-      lastInvested: rec.lastInvested,
-      lastContacted: rec.lastContacted,
-      isNewClient: rec.isNewClient,
-    },
+    { lastInvested: rec.lastInvested, lastContacted: rec.lastContacted },
     TODAY,
     90,
   );
 }
 
-describe("MFD-66 attention model", () => {
-  it("Test A — new client: contact resolves attention without touching the flag", () => {
-    const before = record({ id: "a", lastContacted: null, isNewClient: true });
+describe("MFD-66 attention model (MFD-70 derived lifecycle)", () => {
+  it("Test A — new relationship: contact graduates it", () => {
+    // Never contacted, no history: new relationship, actionable.
+    const before = record({ id: "a", lastContacted: null, lastInvested: null });
     const beforeSignals = signalsFor(before);
-    expect(beforeSignals).toContain("new-client");
+    expect(beforeSignals).toEqual(["new-client"]);
     expect(hasActionableSignal(beforeSignals)).toBe(true);
 
     const after = markContacted({ ...before, signals: beforeSignals }, TODAY, 90);
     expect(after.lastContacted).toBe(TODAY);
     expect(after.signals).toEqual([]);
     expect(hasActionableSignal(after.signals)).toBe(false);
-    // The stored flag is explicit metadata — contact resolves the reason,
-    // never the flag.
-    expect(after.isNewClient).toBe(true);
 
     const beforeItems = buildTodayItems([{ ...before, signals: beforeSignals }], [], TODAY);
     expect(countToday(beforeItems).attention).toBe(1);
     expect(filterTodayItems(beforeItems, "attention").map((i) => i.record.id)).toEqual(["a"]);
+    expect(filterTodayItems(beforeItems, "new").map((i) => i.record.id)).toEqual(["a"]);
 
     const afterItems = buildTodayItems([after], [], TODAY);
     expect(countToday(afterItems).attention).toBe(0);
     expect(filterTodayItems(afterItems, "attention")).toHaveLength(0);
+    expect(filterTodayItems(afterItems, "new")).toHaveLength(0);
     // Contacted client drops below the client that still needs attention.
     const due = record({ id: "due", signals: ["reconnect-due"], lastContacted: "2026-07-21" });
     expect(sortRadarRecords([after, due], TODAY).map((r) => r.id)).toEqual(["due", "a"]);
   });
 
   it("Test B — reconnect-due: contact resolves the reason", () => {
-    const before = record({ id: "b", lastContacted: "2026-07-21" });
+    const before = record({ id: "b", lastContacted: "2026-07-21", lastInvested: "2026-05-01" });
     const beforeSignals = signalsFor(before);
     expect(beforeSignals).toEqual(["reconnect-due"]);
 
@@ -107,7 +103,7 @@ describe("MFD-66 attention model", () => {
   });
 
   it("Test C — recent investor only: informational, never attention", () => {
-    // Mirrors the production reports: invested 25/10/2026, no other reason.
+    // Contacted recently with a fresh investment: context only.
     const recent = record({
       id: "c",
       lastInvested: "2026-10-25",
@@ -126,6 +122,7 @@ describe("MFD-66 attention model", () => {
     expect(countToday(items).attention).toBe(0);
     expect(filterTodayItems(items, "attention")).toHaveLength(0);
     expect(filterTodayItems(items, "all")).toHaveLength(1);
+    expect(filterTodayItems(items, "new")).toHaveLength(0);
     // Still visible in Clients with its Recent context line.
     expect(filterBookItems(items, "all", "")).toHaveLength(1);
     expect(filterBookItems(items, "attention", "")).toHaveLength(0);
@@ -138,7 +135,7 @@ describe("MFD-66 attention model", () => {
     const items = buildTodayItems([rec], [], TODAY);
     expect(countToday(items).attention).toBe(0);
     expect(items[0].why?.kind).toBe("recent");
-    // Ordering: recent-only context sorts below actionable, above no-signal.
+    // Ordering: actionable sorts above recent-only context, above no-signal.
     const actionable = record({ id: "act", signals: ["reconnect-due"], lastContacted: "2026-07-21" });
     const quiet = record({ id: "q", signals: [] });
     expect(sortRadarRecords([rec, actionable, quiet], TODAY).map((r) => r.id)).toEqual([
@@ -172,7 +169,7 @@ describe("MFD-66 attention model", () => {
   });
 
   it("Test F — multiple reasons: contact removes only the contact-resolved reason", () => {
-    const both = record({ id: "f", lastContacted: "2026-07-21", signals: ["reconnect-due"] });
+    const both = record({ id: "f", lastContacted: "2026-07-21", lastInvested: "2026-05-01", signals: ["reconnect-due"] });
     const fu = followup({ id: "of", clientId: "f", dueDate: "2026-10-20", reason: "Overdue call" });
     const before = buildTodayItems([both], [fu], TODAY);
     expect(countToday(before).attention).toBe(1);
@@ -191,26 +188,24 @@ describe("MFD-66 attention model", () => {
     expect(cleared[0].why).toBeNull();
   });
 
-  it("contact preserves amounts, note, type, and flags", () => {
+  it("contact preserves amounts, note, type, and history", () => {
     const before = record({
       id: "g",
       lastInvested: "2026-10-25",
       lastContacted: null,
-      isNewClient: true,
       investmentType: "Both",
       sipAmountPaise: 500000,
       lumpsumAmountPaise: 2000000,
       note: "Do not lose",
-      signals: ["recent-investor", "reconnect-due", "new-client"],
+      signals: ["new-client"],
     });
     const after = markContacted(before, TODAY, 90);
-    expect(after.isNewClient).toBe(true);
     expect(after.investmentType).toBe("Both");
     expect(after.sipAmountPaise).toBe(500000);
     expect(after.lumpsumAmountPaise).toBe(2000000);
     expect(after.note).toBe("Do not lose");
     expect(after.lastInvested).toBe("2026-10-25");
-    // Recent context survives contact; actionable reasons resolve.
+    // Recent context survives contact; the lifecycle reason graduates.
     expect(after.signals).toEqual(["recent-investor"]);
     expect(hasActionableSignal(after.signals)).toBe(false);
   });
@@ -226,10 +221,21 @@ describe("MFD-66 attention model", () => {
     expect(countToday(items).attention).toBe(summarizeRadar(items.map((i) => i.record)).attention);
   });
 
+  it("MFD-70: new relationship + recent investment never headlines reconnect", () => {
+    const fresh = record({ id: "n", lastInvested: "2026-10-25", lastContacted: null });
+    const sig = signalsFor(fresh);
+    expect(sig).toEqual(["recent-investor", "new-client"]);
+    const items = buildTodayItems([{ ...fresh, signals: sig }], [], TODAY);
+    expect(items[0].why?.kind).toBe("new");
+    expect(countToday(items).attention).toBe(1);
+    expect(filterTodayItems(items, "new")).toHaveLength(1);
+    expect(filterTodayItems(items, "reconnect")).toHaveLength(0);
+  });
+
   it("produced 25/10/2026-style report rows are recent-only when contact is fresh", () => {
     for (const invested of ["2026-10-25", "2026-10-17", "2026-10-16"]) {
       const sig = computeSignals(
-        { lastInvested: invested, lastContacted: TODAY, isNewClient: false },
+        { lastInvested: invested, lastContacted: TODAY },
         TODAY,
         90,
       );

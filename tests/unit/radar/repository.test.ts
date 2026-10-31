@@ -23,7 +23,6 @@ const STORED: StoredRadarClient = {
   amountPaise: null,
   lastInvested: "2026-10-12",
   lastContacted: null,
-  isNewClient: false,
   note: "Met at review camp",
 };
 
@@ -42,7 +41,7 @@ function stubClient(resfsm: { data?: unknown; error?: { code?: string; message: 
 }
 
 describe("radar repository mapping", () => {
-  it("maps a db row to its persistence shape, ignoring unknown fields", () => {
+  it("maps a db row to its persistence shape, ignoring unknown and retired fields", () => {
     expect(
       toStoredClient({
         id: "abc",
@@ -70,7 +69,6 @@ describe("radar repository mapping", () => {
       amountPaise: 500000,
       lastInvested: "2026-10-01",
       lastContacted: null,
-      isNewClient: true,
       note: "hi",
     });
   });
@@ -86,7 +84,6 @@ describe("radar repository mapping", () => {
       amount_paise: -5,
       last_invested: "12/10/2026",
       last_contacted: "not-a-date",
-      is_new_client: "yes",
       note: 7,
     });
     expect(stored).toEqual({
@@ -99,7 +96,6 @@ describe("radar repository mapping", () => {
       amountPaise: null,
       lastInvested: null,
       lastContacted: null,
-      isNewClient: false,
       note: "",
     });
   });
@@ -115,7 +111,6 @@ describe("radar repository mapping", () => {
       amount_paise: "500000",
       last_invested: null,
       last_contacted: null,
-      is_new_client: false,
       note: "",
     });
     expect(stored.sipAmountPaise).toBe(500000);
@@ -145,8 +140,9 @@ describe("radar repository mapping", () => {
       investmentType: "SIP",
       note: "Met at review camp",
     });
-    // Invested 13 days ago → recent-investor; never contacted → reconnect-due.
-    expect(record.signals).toEqual(["recent-investor", "reconnect-due"]);
+    // Invested 13 days ago → recent-investor; never contacted with a
+    // recent investment → derived new relationship (MFD-70).
+    expect(record.signals).toEqual(["recent-investor", "new-client"]);
   });
 
   it("marks bad phones invalid without dropping the record", () => {
@@ -221,7 +217,6 @@ describe("radar repository crud", () => {
     lumpsumAmountPaise: null,
     lastInvested: "2026-10-12",
     lastContacted: null,
-    isNewClient: false,
     note: "Met at review camp",
   } as const;
 
@@ -260,7 +255,6 @@ describe("radar repository crud", () => {
       amount_paise: 500000,
       last_invested: "2026-10-12",
       last_contacted: null,
-      is_new_client: false,
       note: "Met at review camp",
     });
   });
@@ -303,7 +297,7 @@ describe("radar repository crud", () => {
     });
   });
 
-  it("updates the nine fields and maps auth failures", async () => {
+  it("updates the eight fields and maps auth failures", async () => {
     const table = stubTable({
       data: [{ ...STORED, mobile: "9876543210", note: "Updated note" }],
     });

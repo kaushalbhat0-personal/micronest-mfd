@@ -27,7 +27,6 @@ export interface ClientFormInitial {
   /** YYYY-MM-DD or "" for empty. Native date inputs speak this format. */
   lastInvested: string;
   lastContacted: string;
-  isNewClient: boolean;
   note: string;
 }
 
@@ -39,7 +38,6 @@ export const EMPTY_CLIENT_FORM: ClientFormInitial = {
   lumpsumAmount: "",
   lastInvested: "",
   lastContacted: "",
-  isNewClient: false,
   note: "",
 };
 
@@ -67,7 +65,6 @@ function toClientInput(
       lumpsumAmount: values.lumpsumAmount,
       lastInvested: toDisplayDate(values.lastInvested),
       lastContacted: toDisplayDate(values.lastContacted),
-      isNewClient: values.isNewClient,
       note: values.note,
     },
     todayYMD,
@@ -91,7 +88,6 @@ function toClientInput(
       lumpsumAmountPaise: result.row.lumpsumAmountPaise,
       lastInvested: values.lastInvested === "" ? null : values.lastInvested,
       lastContacted: values.lastContacted === "" ? null : values.lastContacted,
-      isNewClient: result.row.isNewClient,
       note: result.row.note,
     },
     errors: {},
@@ -114,7 +110,8 @@ interface ClientFormProps {
 /**
  * Add/Edit form for the eight relationship fields. Validation is delegated
  * to the shared domain validator; this component only maps the verdict onto
- * fields. No ids, no user data, no timestamps are editable here.
+ * fields. No ids, no user data, no timestamps are editable here. Whether a
+ * client is New is derived from dates by the domain — never edited here.
  */
 export function ClientForm({
   initial = EMPTY_CLIENT_FORM,
@@ -132,11 +129,7 @@ export function ClientForm({
   const set =
     <K extends keyof ClientFormInitial>(key: K) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      const next =
-        event.target.type === "checkbox" && event.target instanceof HTMLInputElement
-          ? (event.target.checked as ClientFormInitial[K])
-          : (event.target.value as ClientFormInitial[K]);
-      setValues((prev) => ({ ...prev, [key]: next }));
+      setValues((prev) => ({ ...prev, [key]: event.target.value as ClientFormInitial[K] }));
     };
 
   function handleSubmit(event: React.FormEvent) {
@@ -257,22 +250,6 @@ export function ClientForm({
               max={todayLocalYMD()}
             />
           </Field>
-        </div>
-
-        <div className="flex items-center">
-          <label
-            htmlFor="client-new"
-            className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-stone-800"
-          >
-            <input
-              id="client-new"
-              type="checkbox"
-              checked={values.isNewClient}
-              onChange={set("isNewClient")}
-              className="h-5 w-5 accent-emerald-900"
-            />
-            New client
-          </label>
         </div>
 
         <Field

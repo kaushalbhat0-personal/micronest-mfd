@@ -17,7 +17,6 @@ const VALID: ClientFieldInput = {
   lumpsumAmount: "",
   lastInvested: "12/10/2026",
   lastContacted: "",
-  isNewClient: false,
   note: "Prefers evening calls",
 };
 
@@ -33,7 +32,6 @@ function record(name: string): ClientRecord {
     lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "",
     signals: [],
   };
@@ -50,7 +48,6 @@ describe("validateClientFields (shared by CSV and form)", () => {
       investmentType: "SIP",
       lastInvested: "2026-10-12",
       lastContacted: null,
-      isNewClient: false,
       note: "Prefers evening calls",
     });
   });
@@ -65,7 +62,6 @@ describe("validateClientFields (shared by CSV and form)", () => {
         lumpsumAmount: "",
         lastInvested: "",
         lastContacted: "",
-        isNewClient: false,
         note: "",
       },
       TODAY,
@@ -93,10 +89,12 @@ describe("validateClientFields (shared by CSV and form)", () => {
     ).toContain("in the future");
   });
 
-  it("passes the boolean flag through untouched", () => {
-    expect(
-      validateClientFields({ ...VALID, isNewClient: true }, TODAY, "form").row?.isNewClient,
-    ).toBe(true);
+  it("derives lifecycle from dates, never from a stored flag", () => {
+    // MFD-70: there is no New Client boolean anywhere in the validated
+    // output; New is derived from lastInvested/lastContacted downstream.
+    expect("isNewClient" in (validateClientFields({ ...VALID }, TODAY, "form").row ?? {})).toBe(
+      false,
+    );
   });
 
   it("rejects sensitive notes with form-appropriate copy", () => {

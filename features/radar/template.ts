@@ -18,7 +18,6 @@ export const RADAR_HEADERS = [
   "Lumpsum Amount",
   "Last Invested",
   "Last Contacted",
-  "New Client",
   "Note",
 ] as const;
 
@@ -68,8 +67,10 @@ export function normalizeInvestmentType(raw: string): InvestmentTypeResult {
 }
 
 /**
- * Parses the explicit New Client flag. Truthy and explicitly-falsy values
- * are silent; anything else warns and counts as no. Never inferred.
+ * Legacy parser for the retired New Client CSV column. The lifecycle no
+ * longer reads this value (MFD-70 derives New from dates); files that
+ * still carry the column land in "Ignored columns" and the value is
+ * dropped. Kept exported for mapping-UI copy only.
  */
 export function parseNewClientFlag(raw: string): { value: boolean; warning: string | null } {
   const clean = raw.trim().toLowerCase();

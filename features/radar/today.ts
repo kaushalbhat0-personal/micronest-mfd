@@ -1,7 +1,7 @@
 import { formatDisplayDate } from "@/lib/dates";
 import { getFollowUpStatus } from "../followups/dates";
 import type { StoredFollowup } from "../followups/types";
-import { hasActionableSignal, sortRadarRecords } from "./signals";
+import { hasActionableSignal, NEW_INVESTMENT_DAYS, sortRadarRecords } from "./signals";
 import type { ClientRecord } from "./types";
 
 export type TodayFilter = "all" | "attention" | "followups" | "reconnect" | "new";
@@ -113,10 +113,15 @@ function whyFor(
   if (today) {
     return { kind: "followup-today", title: "Follow-up due today", detail: today.reason };
   }
-  // Actionable derived signals outrank informational context: a client who
-  // is both due and a recent investor leads with the reconnect reason.
+  // Actionable derived lifecycle outranks informational context: a new
+  // relationship leads even when it also carries recent-investment
+  // context, and reconnect only fires for established relationships
+  // (the engine guarantees new + reconnect never co-fire).
   // "recent" stays visible as context but never as the top why when an
   // actionable reason exists.
+  if (record.signals.includes("new-client")) {
+    return { kind: "new", title: "New client", detail: "Say hello and set the rhythm" };
+  }
   if (record.signals.includes("reconnect-due")) {
     const detail =
       record.lastContacted === null
@@ -124,13 +129,12 @@ function whyFor(
         : `${daysSince(record.lastContacted, todayYMD)} days since you last spoke`;
     return { kind: "reconnect", title: "Reconnect due", detail };
   }
-  if (record.signals.includes("new-client")) {
-    return { kind: "new", title: "New client", detail: "Say hello and set the rhythm" };
-  }
   if (record.signals.includes("recent-investor") && record.lastInvested) {
+    const age = daysSince(record.lastInvested, todayYMD);
+    const title = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New investment" : "Recent investor";
     return {
       kind: "recent",
-      title: "Recent investor",
+      title,
       detail: `Invested ${formatDisplayDate(record.lastInvested)}`,
     };
   }
@@ -253,7 +257,9 @@ export function filterTodayItems(items: TodayItem[], filter: TodayFilter): Today
     case "reconnect":
       return items.filter((i) => i.record.signals.includes("reconnect-due"));
     case "new":
-      return items.filter((i) => i.record.isNewClient);
+      // Derived lifecycle: the New slice is the new-relationship signal,
+      // recomputed from dates at projection time — never the stored flag.
+      return items.filter((i) => i.record.signals.includes("new-client"));
   }
 }
 
@@ -267,7 +273,7 @@ export function countToday(items: TodayItem[]): TodayCounts {
     dueToday: items.filter((i) => i.hasDueToday).length,
     reconnect: items.filter((i) => i.record.signals.includes("reconnect-due")).length,
     followups: items.filter((i) => i.followups.length > 0).length,
-    fresh: items.filter((i) => i.record.isNewClient).length,
+    fresh: items.filter((i) => i.record.signals.includes("new-client")).length,
   };
 }
 

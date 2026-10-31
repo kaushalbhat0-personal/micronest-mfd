@@ -29,7 +29,6 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "",
     signals: [],
     ...overrides,
@@ -134,7 +133,7 @@ describe("buildTodayItems", () => {
     const items = buildTodayItems(
       [
         record({ id: "r1", signals: ["reconnect-due"], lastContacted: "2026-08-25" }),
-        record({ id: "n1", name: "New", signals: ["new-client"], isNewClient: true }),
+        record({ id: "n1", name: "New", signals: ["new-client"] }),
       ],
       [],
       TODAY,
@@ -180,7 +179,7 @@ describe("filterTodayItems + countToday", () => {
     return buildTodayItems(
       [
         record({ id: "o", name: "Over", signals: ["reconnect-due"], lastContacted: "2026-01-01" }),
-        record({ id: "n", name: "New", signals: ["new-client"], isNewClient: true }),
+        record({ id: "n", name: "New", signals: ["new-client"] }),
         record({ id: "q", name: "Quiet", signals: [] }),
       ],
       [followup({ id: "f", clientId: "o", dueDate: "2026-10-20", reason: "Late" })],

@@ -20,7 +20,6 @@ function record(overrides: Partial<ClientRecord> & { name: string }): ClientReco
     lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "",
     signals: [],
     ...rest,
@@ -71,11 +70,20 @@ describe("radar view helpers", () => {
   it("recomputes signals when the interval changes", () => {
     const rows = [
       record({ name: "Due At 90", lastContacted: "2026-07-17", signals: ["reconnect-due"] }),
-      record({ name: "Never", lastContacted: null, signals: ["reconnect-due"] }),
+      record({ name: "Never", lastContacted: null, signals: ["new-client"] }),
+      record({
+        name: "Never Old History",
+        lastContacted: null,
+        lastInvested: "2026-01-01",
+        signals: ["reconnect-due"],
+      }),
     ];
     const relaxed = withReconnectInterval(rows, "2026-10-25", 180);
     expect(relaxed.find((r) => r.name === "Due At 90")?.signals).toEqual([]);
-    expect(relaxed.find((r) => r.name === "Never")?.signals).toEqual(["reconnect-due"]);
+    // Never-contacted with no history stays a new relationship at any interval.
+    expect(relaxed.find((r) => r.name === "Never")?.signals).toEqual(["new-client"]);
+    // Never-contacted with older history stays established-quiet → reconnect.
+    expect(relaxed.find((r) => r.name === "Never Old History")?.signals).toEqual(["reconnect-due"]);
   });
 
   it("builds a plain WhatsApp greeting without advice", () => {

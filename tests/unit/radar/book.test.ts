@@ -18,7 +18,6 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
-    isNewClient: false,
     note: "",
     signals: [],
     ...overrides,
@@ -61,7 +60,7 @@ describe("filterBookItems", () => {
     const items = buildTodayItems(
       [
         record({ id: "hot", name: "Hot", signals: ["reconnect-due"] }),
-        record({ id: "fresh", name: "Fresh", signals: ["new-client"], isNewClient: true }),
+        record({ id: "fresh", name: "Fresh", signals: ["new-client"] }),
         record({ id: "plain", name: "Plain", signals: [] }),
       ],
       [followup({ id: "f1", clientId: "plain", dueDate: "2026-10-20", reason: "Ring back" })],
@@ -97,7 +96,7 @@ describe("book summary counts", () => {
     const items = buildTodayItems(
       [
         record({ id: "a", name: "A", signals: ["reconnect-due"] }),
-        record({ id: "b", name: "B", signals: ["new-client"], isNewClient: true }),
+        record({ id: "b", name: "B", signals: ["new-client"] }),
         record({ id: "c", name: "C", signals: [] }),
       ],
       [followup({ id: "f1", clientId: "c", dueDate: TODAY, reason: "Call" })],
@@ -131,7 +130,7 @@ describe("bookPillForItem", () => {
       "Recent",
     );
     expect(pillFor({ signals: ["reconnect-due"] }, null)?.label).toBe("Reconnect");
-    expect(pillFor({ signals: ["new-client"], isNewClient: true }, null)?.label).toBe("New");
+    expect(pillFor({ signals: ["new-client"] }, null)?.label).toBe("New");
   });
 
   it("shows no pill when the client carries no signal and no follow-up", () => {

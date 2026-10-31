@@ -49,7 +49,6 @@ export function buildRadarReport(
     const input = {
       lastInvested: result.row.lastInvested,
       lastContacted: result.row.lastContacted,
-      isNewClient: result.row.isNewClient,
     };
     records.push({
       id: hashString(
@@ -64,7 +63,6 @@ export function buildRadarReport(
       lumpsumAmountPaise: result.row.lumpsumAmountPaise,
       lastInvested: result.row.lastInvested,
       lastContacted: result.row.lastContacted,
-      isNewClient: result.row.isNewClient,
       note: result.row.note,
       signals: computeSignals(input, todayYMD, reconnectIntervalDays),
     });
@@ -115,7 +113,7 @@ export function markContacted(
 ): ClientRecord {
   const lastContacted = todayYMD;
   const signals = computeSignals(
-    { lastInvested: record.lastInvested, lastContacted, isNewClient: record.isNewClient },
+    { lastInvested: record.lastInvested, lastContacted },
     todayYMD,
     reconnectIntervalDays,
   );
@@ -176,7 +174,6 @@ export function serializeRadarCsv(records: ClientRecord[]): string {
       r.lumpsumAmountPaise === null ? "" : amountPaiseToInput(r.lumpsumAmountPaise),
       r.lastInvested ? formatDisplayDate(r.lastInvested) : "",
       r.lastContacted ? formatDisplayDate(r.lastContacted) : "",
-      r.isNewClient ? "Y" : "",
       r.note,
     ]
       .map(escapeCsvField)
