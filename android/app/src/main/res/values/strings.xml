@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MicroNest</string>
+    <string name="title_activity_main">MicroNest</string>
+    <string name="package_name">com.micronest.app</string>
+    <string name="custom_url_scheme">com.micronest.app</string>
+</resources>

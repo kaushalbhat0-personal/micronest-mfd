@@ -18,6 +18,28 @@ export function GoogleSignInButton({ next, disabled }: GoogleSignInButtonProps) 
     setPending(true);
     setFailed(false);
     try {
+      // MFD-64 P0: native shell uses the system browser + micronest://
+      // deep-link flow; web keeps the existing origin + /auth/callback flow.
+      const { isNative } = await import("@/lib/native/runtime");
+      if (isNative()) {
+        const { buildNativeRedirectTo } = await import("@/lib/native/auth");
+        const { createNativeClient } = await import("@/lib/native/session-store");
+        const { Browser } = await import("@capacitor/browser");
+        const supabase = await createNativeClient();
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: buildNativeRedirectTo(next),
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error || !data?.url) {
+          setFailed(true);
+          return;
+        }
+        await Browser.open({ url: data.url });
+        return;
+      }
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",

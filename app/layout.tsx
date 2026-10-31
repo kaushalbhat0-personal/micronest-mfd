@@ -4,6 +4,8 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BrandMark } from "@/components/brand-mark";
 import { SiteHeader } from "@/components/site-header";
+import { NativeAppProvider } from "@/lib/native/provider";
+import { NativeRouteGuard } from "@/lib/native/guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,12 +43,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={<SiteHeaderFallback />}>
           <SiteHeader />
         </Suspense>
-        <main
-          id="main"
-          className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"
-        >
-          {children}
-        </main>
+        {/* MFD-64 P0: single native lifecycle/deep-link boundary + native-only
+            route guard. Both no-op on web; see lib/native/*. */}
+        <NativeAppProvider>
+          <NativeRouteGuard>
+            <main
+              id="main"
+              className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"
+            >
+              {children}
+            </main>
+          </NativeRouteGuard>
+        </NativeAppProvider>
         <footer className="border-t border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-4 py-4 text-xs leading-relaxed text-stone-500 sm:px-6 lg:px-8">
             Operational microtools that work alongside your existing financial software. Nothing
