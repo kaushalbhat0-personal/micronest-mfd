@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareClientText,
+  compareInvestedNewestFirst,
   computeSignals,
   DEFAULT_RECONNECT_INTERVAL_DAYS,
   investmentRecency,
   isNewRelationship,
   NEW_INVESTMENT_DAYS,
   radarPriorityClass,
+  rankableInvestedDate,
   reasonsFor,
   RECONNECT_INTERVAL_OPTIONS,
   RECENT_INVESTOR_DAYS,
@@ -288,5 +291,131 @@ describe("sortRadarRecords", () => {
     const sorted = sortRadarRecords(records, TODAY);
     expect(sorted.map((r) => r.rowNumber)).toEqual([1, 2]);
     expect(records.map((r) => r.rowNumber)).toEqual([2, 1]);
+  });
+});
+
+describe("canonical date + identity ordering", () => {
+  it("orders new relationships by newest investment, missing last", () => {
+    const records = [
+      record({ rowNumber: 1, id: "old", name: "Old", signals: ["new-client"] }),
+      record({
+        rowNumber: 2,
+        id: "dated-old",
+        name: "Dated Old",
+        lastInvested: "2026-09-01",
+        signals: ["new-client"],
+      }),
+      record({
+        rowNumber: 3,
+        id: "dated-new",
+        name: "Dated New",
+        lastInvested: "2026-10-25",
+        signals: ["new-client"],
+      }),
+    ];
+    expect(sortRadarRecords(records, TODAY).map((r) => r.id)).toEqual([
+      "dated-new",
+      "dated-old",
+      "old",
+    ]);
+  });
+
+  it("treats missing investment dates as oldest instead of file position", () => {
+    const dated = record({
+      rowNumber: 9,
+      id: "dated",
+      name: "Zed",
+      lastInvested: "2026-01-01",
+      signals: ["recent-investor", "new-client"],
+    });
+    const missing = record({
+      rowNumber: 1,
+      id: "missing",
+      name: "Amy",
+      signals: ["recent-investor", "new-client"],
+    });
+    // "Amy" < "Zed" and row 1 < row 9, yet the dated client leads.
+    expect(sortRadarRecords([missing, dated], TODAY).map((r) => r.id)).toEqual([
+      "dated",
+      "missing",
+    ]);
+  });
+
+  it("never floats future-dated investments to the top", () => {
+    const future = record({
+      rowNumber: 1,
+      id: "future",
+      name: "Future",
+      lastInvested: "2026-12-25",
+      signals: ["recent-investor"],
+    });
+    const past = record({
+      rowNumber: 2,
+      id: "past",
+      name: "Past",
+      lastInvested: "2026-10-26",
+      lastContacted: "2026-10-26",
+      signals: ["recent-investor"],
+    });
+    expect(rankableInvestedDate(future, TODAY)).toBeNull();
+    expect(sortRadarRecords([future, past], TODAY).map((r) => r.id)).toEqual(["past", "future"]);
+  });
+
+  it("breaks full ties by normalized name, then stable id", () => {
+    const rows = [
+      record({ rowNumber: 3, id: "id-c", name: "  ZARA ", signals: [] }),
+      record({ rowNumber: 1, id: "id-b", name: "amina", signals: [] }),
+      record({ rowNumber: 2, id: "id-a", name: "Amina", signals: [] }),
+    ];
+    // Same class, no dates: case/whitespace-insensitive name, then id.
+    expect(sortRadarRecords(rows, TODAY).map((r) => r.id)).toEqual(["id-a", "id-b", "id-c"]);
+    expect(compareInvestedNewestFirst(rows[0], rows[1], TODAY)).toBe(0);
+    expect(compareClientText(rows[2], rows[1])).toBeLessThan(0);
+  });
+
+  it("produces identical order for shuffled, reshuffled, and reversed input", () => {
+    const signalsPool: ClientRecord["signals"][] = [
+      ["recent-investor", "new-client"],
+      ["new-client"],
+      ["reconnect-due"],
+      ["recent-investor"],
+      [],
+      ["recent-investor", "reconnect-due"],
+    ];
+    const investedPool: Array<string | null> = [
+      "2026-10-26",
+      "2026-10-20",
+      "2026-09-15",
+      null,
+      "2026-12-01",
+      "2026-05-01",
+    ];
+    const contactedPool: Array<string | null> = [null, "2026-10-26", "2026-07-01", "2026-10-20"];
+    const names = ["Asha", "Bala", "asha", "Chetan", "Asha", "Divya", "Eshan", "Farah"];
+    const records: ClientRecord[] = Array.from({ length: 50 }, (_, i) =>
+      record({
+        rowNumber: i + 1,
+        id: `seed-${String(i).padStart(2, "0")}`,
+        name: `${names[i % names.length]} ${i % 7 === 0 ? "K" : "J"}`,
+        lastInvested: investedPool[i % investedPool.length],
+        lastContacted: contactedPool[(i * 3 + 1) % contactedPool.length],
+        signals: signalsPool[i % signalsPool.length],
+      }),
+    );
+    const orderOf = (input: ClientRecord[]): string[] =>
+      sortRadarRecords(input, TODAY).map((r) => r.id);
+    const baseline = orderOf(records);
+    // Deterministic permutation (rotate + interleave): no randomness.
+    const rotated = [...records.slice(17), ...records.slice(0, 17)];
+    const interleaved = records.filter((_, i) => i % 2 === 0).concat(
+      records.filter((_, i) => i % 2 === 1),
+    );
+    expect(orderOf(rotated)).toEqual(baseline);
+    expect(orderOf(interleaved)).toEqual(baseline);
+    expect(orderOf([...records].reverse())).toEqual(baseline);
+    // And the baseline itself is fully deterministic: priority classes
+    // never decrease along the queue.
+    const classes = sortRadarRecords(records, TODAY).map((r) => radarPriorityClass(r.signals));
+    expect([...classes].sort((a, b) => a - b)).toEqual(classes);
   });
 });

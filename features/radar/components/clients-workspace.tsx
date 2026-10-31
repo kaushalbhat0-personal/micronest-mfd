@@ -127,8 +127,8 @@ export function ClientsWorkspace({
   const upcoming = React.useMemo(() => upcomingFollowups(items), [items]);
 
   const visible = React.useMemo(
-    () => filterBookItems(items, filter, query),
-    [items, filter, query],
+    () => filterBookItems(items, filter, query, todayYMD),
+    [items, filter, query, todayYMD],
   );
 
   function countFor(id: BookFilter): number {

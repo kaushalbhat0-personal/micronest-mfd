@@ -24,13 +24,17 @@ export const BOOK_FILTERS: Array<{ id: BookFilter; label: string }> = [
 /**
  * Applies the attention slice first (domain order preserved — never
  * re-sorted here), then the name search. Used by the Client Book list.
+ * The day is forwarded so date-ordered slices (New, Follow-ups) agree
+ * exactly with the Today queue; without it they fall back to the same
+ * deterministic identity order.
  */
 export function filterBookItems(
   items: TodayItem[],
   filter: BookFilter,
   query: string,
+  todayYMD?: string,
 ): TodayItem[] {
-  const subset = filter === "all" ? items : filterTodayItems(items, filter);
+  const subset = filter === "all" ? items : filterTodayItems(items, filter, todayYMD);
   const records = filterClientsByName(
     subset.map((item) => item.record),
     query,

@@ -166,10 +166,56 @@ function daysSinceContact(rec: ClientRecord, todayYMD: string): number | null {
 }
 
 /**
- * Full ordering: actionable+recent (invested desc) → new (file order) →
- * reconnect (never-contacted first, then longest silence) →
- * recent-only context (invested desc) → no signal (file order).
- * Stable final tiebreak on rowNumber.
+ * Locale-independent client identity tie-break: normalized name, then
+ * stable id. Never localeCompare (ordering varies across environments).
+ * Pure lexicographic code-unit comparison — deterministic everywhere.
+ */
+export function compareClientText(a: ClientRecord, b: ClientRecord): number {
+  const aName = a.name.trim().toLowerCase();
+  const bName = b.name.trim().toLowerCase();
+  if (aName !== bName) return aName < bName ? -1 : 1;
+  if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+  return 0;
+}
+
+/**
+ * Ranking-safe investment date. Dated on-or-before today ranks newest
+ * first; missing dates — and future-dated values, which the lifecycle
+ * already refuses to classify as new/recent (data error, never a fresh
+ * investment) — behave as oldest so they can never float to the top of
+ * a date-based ordering. Ordering only; never a signal.
+ */
+export function rankableInvestedDate(record: ClientRecord, todayYMD: string): string | null {
+  if (record.lastInvested === null || record.lastInvested > todayYMD) return null;
+  return record.lastInvested;
+}
+
+/**
+ * Newest investment first; missing (or future-dated) last. Returns 0 on
+ * ties so callers can chain the identity tie-break. YYYY-MM-DD strings
+ * compare chronologically without parsing.
+ */
+export function compareInvestedNewestFirst(
+  a: ClientRecord,
+  b: ClientRecord,
+  todayYMD: string,
+): number {
+  const aDate = rankableInvestedDate(a, todayYMD);
+  const bDate = rankableInvestedDate(b, todayYMD);
+  if (aDate === bDate) return 0;
+  if (aDate === null) return 1;
+  if (bDate === null) return -1;
+  return aDate < bDate ? 1 : -1;
+}
+
+/**
+ * Full ordering: actionable+recent (invested desc, missing oldest) →
+ * new (invested desc, missing oldest) → reconnect (never-contacted
+ * first, then longest silence) → recent-only context (invested desc,
+ * missing oldest) → no signal. Final tie-break is normalized name then
+ * stable id — deterministic across renders, reloads, and input orders.
+ * rowNumber survives only as the display/index field, never as an
+ * ordering reason.
  */
 export function sortRadarRecords(records: ClientRecord[], todayYMD: string): ClientRecord[] {
   const priorityOf = (rec: ClientRecord): number => radarPriorityClass(rec.signals);
@@ -178,20 +224,20 @@ export function sortRadarRecords(records: ClientRecord[], todayYMD: string): Cli
     if (priorityDiff !== 0) return priorityDiff;
     const priority = priorityOf(a);
 
-    if ((priority === 1 || priority === 4) && a.lastInvested && b.lastInvested) {
-      if (a.lastInvested !== b.lastInvested) return a.lastInvested < b.lastInvested ? 1 : -1;
-      return a.rowNumber - b.rowNumber;
+    if (priority === 1 || priority === 4 || priority === 2) {
+      const dateDiff = compareInvestedNewestFirst(a, b, todayYMD);
+      if (dateDiff !== 0) return dateDiff;
+      return compareClientText(a, b);
     }
-    if (priority === 2) return a.rowNumber - b.rowNumber;
     if (priority === 3) {
       const aDays = daysSinceContact(a, todayYMD);
       const bDays = daysSinceContact(b, todayYMD);
-      if (aDays === null && bDays === null) return a.rowNumber - b.rowNumber;
+      if (aDays === null && bDays === null) return compareClientText(a, b);
       if (aDays === null) return -1;
       if (bDays === null) return 1;
       if (aDays !== bDays) return bDays - aDays;
-      return a.rowNumber - b.rowNumber;
+      return compareClientText(a, b);
     }
-    return a.rowNumber - b.rowNumber;
+    return compareClientText(a, b);
   });
 }

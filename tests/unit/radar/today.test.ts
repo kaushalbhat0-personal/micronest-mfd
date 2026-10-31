@@ -13,6 +13,7 @@ import {
   wasContactedToday,
 } from "@/features/radar/today";
 import { markContacted } from "@/features/radar/model";
+import { filterBookItems } from "@/features/radar/book";
 import { toClientRecord } from "@/features/radar/repository";
 import type { ClientRecord } from "@/features/radar/types";
 import type { StoredFollowup } from "@/features/followups/types";
@@ -304,6 +305,188 @@ describe("recent + talked-today filters", () => {
       new Set(filterTodayItems(items, f, TODAY).map((i) => i.record.id));
     const overlap = [...ids("new")].filter((id) => ids("reconnect").has(id));
     expect(overlap).toEqual([]);
+  });
+});
+
+describe("canonical queue + filter ordering", () => {
+  function mixed() {
+    const recs = [
+      record({
+        id: "over",
+        name: "Overdue Uma",
+        signals: ["recent-investor"],
+        lastInvested: "2026-10-26",
+        lastContacted: "2026-10-26",
+      }),
+      record({
+        id: "due",
+        name: "Due Dan",
+        signals: ["reconnect-due"],
+        lastContacted: "2026-06-01",
+      }),
+      record({
+        id: "newer",
+        name: "New Nina",
+        lastInvested: "2026-10-26",
+        signals: ["recent-investor", "new-client"],
+      }),
+      record({
+        id: "newold",
+        name: "New Ned",
+        signals: ["new-client"],
+      }),
+      record({
+        id: "rec",
+        name: "Reconnect Rita",
+        signals: ["reconnect-due"],
+        lastContacted: "2026-08-01",
+      }),
+      record({
+        id: "ctx",
+        name: "Context Chet",
+        signals: ["recent-investor"],
+        lastInvested: "2026-10-20",
+        lastContacted: "2026-10-20",
+      }),
+      record({ id: "quiet", name: "Quiet Quinn", signals: [], lastContacted: TODAY }),
+    ];
+    const fus = [
+      followup({ id: "f-over", clientId: "over", dueDate: "2026-10-20", reason: "Late" }),
+      followup({ id: "f-due", clientId: "due", dueDate: TODAY, reason: "Call" }),
+    ];
+    return buildTodayItems(recs, fus, TODAY);
+  }
+
+  it("ranks overdue above due-today above new above reconnect above context above quiet", () => {
+    const ids = mixed().map((i) => i.record.id);
+    expect(ids).toEqual(["over", "due", "newer", "newold", "rec", "ctx", "quiet"]);
+  });
+
+  it("keeps a new relationship with an overdue follow-up follow-up-first", () => {
+    const items = buildTodayItems(
+      [record({ id: "n", name: "New", signals: ["new-client"] })],
+      [followup({ id: "f", clientId: "n", dueDate: "2026-10-20", reason: "Late" })],
+      TODAY,
+    );
+    expect(items[0].why?.kind).toBe("followup-overdue");
+    expect(filterTodayItems(items, "attention", TODAY).map((i) => i.record.id)).toEqual(["n"]);
+  });
+
+  it("orders due-today clients by next upcoming pressure, then identity", () => {
+    const recs = [
+      record({ id: "b", name: "Beta", signals: [] }),
+      record({ id: "a", name: "Alpha", signals: [] }),
+      record({ id: "c", name: "Celine", signals: [] }),
+    ];
+    const fus = [
+      followup({ id: "f-b", clientId: "b", dueDate: TODAY, reason: "Today" }),
+      followup({ id: "f-b2", clientId: "b", dueDate: "2026-11-20", reason: "Later" }),
+      followup({ id: "f-a", clientId: "a", dueDate: TODAY, reason: "Today" }),
+      followup({ id: "f-a2", clientId: "a", dueDate: "2026-10-28", reason: "Sooner" }),
+      followup({ id: "f-c", clientId: "c", dueDate: TODAY, reason: "Today" }),
+    ];
+    const ids = buildTodayItems(recs, fus, TODAY).map((i) => i.record.id);
+    // Sooner upcoming first; no upcoming sorts last.
+    expect(ids).toEqual(["a", "b", "c"]);
+  });
+
+  it("orders the follow-ups filter overdue, then today, then earliest upcoming", () => {
+    const recs = [
+      record({ id: "up-late", name: "Zed Late", signals: [] }),
+      record({ id: "up-early", name: "Amy Early", signals: [] }),
+      record({ id: "due", name: "Due Dan", signals: [] }),
+      record({ id: "over", name: "Over Uma", signals: [] }),
+    ];
+    const fus = [
+      followup({ id: "f1", clientId: "up-late", dueDate: "2026-11-10", reason: "Later" }),
+      followup({ id: "f2", clientId: "up-early", dueDate: "2026-10-28", reason: "Sooner" }),
+      followup({ id: "f3", clientId: "due", dueDate: TODAY, reason: "Today" }),
+      followup({ id: "f4", clientId: "over", dueDate: "2026-10-20", reason: "Late" }),
+    ];
+    const items = buildTodayItems(recs, fus, TODAY);
+    expect(filterTodayItems(items, "followups", TODAY).map((i) => i.record.id)).toEqual([
+      "over",
+      "due",
+      "up-early",
+      "up-late",
+    ]);
+  });
+
+  it("orders the new filter newest-investment-first with missing last", () => {
+    const recs = [
+      record({ id: "nodate", name: "Amy", signals: ["new-client"] }),
+      record({
+        id: "older",
+        name: "Zed",
+        lastInvested: "2026-10-01",
+        signals: ["recent-investor", "new-client"],
+      }),
+      record({
+        id: "newest",
+        name: "Mia",
+        lastInvested: "2026-10-26",
+        signals: ["recent-investor", "new-client"],
+      }),
+      record({
+        id: "future",
+        name: "Zara",
+        lastInvested: "2026-12-01",
+        signals: ["new-client"],
+      }),
+    ];
+    const items = buildTodayItems(recs, [], TODAY);
+    expect(filterTodayItems(items, "new", TODAY).map((i) => i.record.id)).toEqual([
+      "newest",
+      "older",
+      "nodate",
+      "future",
+    ]);
+  });
+
+  it("keeps talked-today in canonical order without date sorting", () => {
+    const recs = [
+      record({ id: "resolved", name: "Amy Resolved", signals: [], lastContacted: TODAY }),
+      record({
+        id: "open-fu",
+        name: "Zed Open",
+        signals: ["reconnect-due"],
+        lastContacted: "2026-06-01",
+      }),
+    ];
+    // Simulate the contact: silence refreshed today, follow-up still open.
+    const contacted = markContacted(recs[1], TODAY);
+    const items = buildTodayItems(
+      [recs[0], contacted],
+      [followup({ id: "f", clientId: "open-fu", dueDate: "2026-10-20", reason: "Late" })],
+      TODAY,
+    );
+    const queueIds = items.map((i) => i.record.id);
+    expect(queueIds).toEqual(["open-fu", "resolved"]);
+    expect(filterTodayItems(items, "contacted", TODAY).map((i) => i.record.id)).toEqual(queueIds);
+  });
+
+  it("lists upcoming follow-ups earliest-first with identity tie-breaks", () => {
+    const recs = [
+      record({ id: "b", name: "Zed" }),
+      record({ id: "a", name: "Amy" }),
+      record({ id: "c", name: "Amy" }),
+    ];
+    const fus = [
+      followup({ id: "f-b", clientId: "b", dueDate: "2026-10-28", reason: "B" }),
+      followup({ id: "f-a", clientId: "a", dueDate: "2026-10-28", reason: "A" }),
+      followup({ id: "f-c", clientId: "c", dueDate: "2026-10-28", reason: "C" }),
+    ];
+    const items = buildTodayItems(recs, fus, TODAY);
+    expect(upcomingFollowups(items, 10).map((u) => u.clientId)).toEqual(["a", "c", "b"]);
+  });
+
+  it("keeps Today and Clients identical on every shared slice", () => {
+    const items = mixed();
+    for (const f of ["attention", "followups", "new"] as const) {
+      expect(filterBookItems(items, f, "", TODAY).map((i) => i.record.id)).toEqual(
+        filterTodayItems(items, f, TODAY).map((i) => i.record.id),
+      );
+    }
   });
 });
 

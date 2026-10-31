@@ -1,7 +1,13 @@
 import { formatDisplayDate } from "@/lib/dates";
 import { getFollowUpStatus } from "../followups/dates";
 import type { StoredFollowup } from "../followups/types";
-import { hasActionableSignal, NEW_INVESTMENT_DAYS, sortRadarRecords } from "./signals";
+import {
+  compareClientText,
+  compareInvestedNewestFirst,
+  hasActionableSignal,
+  NEW_INVESTMENT_DAYS,
+  sortRadarRecords,
+} from "./signals";
 import type { ClientRecord } from "./types";
 
 export type TodayFilter =
@@ -244,10 +250,61 @@ export function buildTodayItems(
           ...b.followups.filter((f) => f.status === "overdue").map((f) => f.daysOverdue),
         );
         if (aDays !== bDays) return bDays - aDays;
+        // Same lateness: earliest follow-up due date, then identity.
+        const aFirst = earliestFollowupDue(a);
+        const bFirst = earliestFollowupDue(b);
+        if (aFirst !== bFirst) return aFirst < bFirst ? -1 : 1;
+        return compareClientText(a.record, b.record);
       }
-      // Stable: keep domain order within the group.
+      if (groupOf(a) === 1 && groupOf(b) === 1) {
+        // Same-day dues carry no time; the next upcoming pressure breaks
+        // the tie deterministically (missing behaves as oldest), then
+        // identity. Follow-up data only — lifecycle untouched.
+        const aNext = earliestUpcomingDue(a);
+        const bNext = earliestUpcomingDue(b);
+        if (aNext !== bNext) {
+          if (aNext === null) return 1;
+          if (bNext === null) return -1;
+          return aNext < bNext ? -1 : 1;
+        }
+        return compareClientText(a.record, b.record);
+      }
+      // Stable: keep domain order within the group (already total: name/id terminal).
       return 0;
     });
+}
+
+/** Earliest due date across all open follow-ups (YYYY-MM-DD compares chronologically). */
+function earliestFollowupDue(item: TodayItem): string {
+  return item.followups.reduce(
+    (min, f) => (f.dueDate < min ? f.dueDate : min),
+    item.followups[0]?.dueDate ?? "",
+  );
+}
+
+/** Earliest upcoming follow-up due date, or null when there is none. */
+function earliestUpcomingDue(item: TodayItem): string | null {
+  let min: string | null = null;
+  for (const f of item.followups) {
+    if (f.status !== "upcoming") continue;
+    if (min === null || f.dueDate < min) min = f.dueDate;
+  }
+  return min;
+}
+
+/** Most overdue first; ties break by earliest due date, then identity. */
+function compareOverdueFirst(a: TodayItem, b: TodayItem): number {
+  const aDays = Math.max(
+    ...a.followups.filter((f) => f.status === "overdue").map((f) => f.daysOverdue),
+  );
+  const bDays = Math.max(
+    ...b.followups.filter((f) => f.status === "overdue").map((f) => f.daysOverdue),
+  );
+  if (aDays !== bDays) return bDays - aDays;
+  if (earliestFollowupDue(a) !== earliestFollowupDue(b)) {
+    return earliestFollowupDue(a) < earliestFollowupDue(b) ? -1 : 1;
+  }
+  return compareClientText(a.record, b.record);
 }
 
 export function filterTodayItems(
@@ -264,13 +321,43 @@ export function filterTodayItems(
       // before; this change only demotes the informational signal.
       return items.filter((i) => hasActionableSignal(i.record.signals) || i.followups.length > 0);
     case "followups":
-      return items.filter((i) => i.followups.length > 0);
+      // Follow-up urgency first: overdue (most overdue), then due-today,
+      // then upcoming (earliest due date). Lifecycle never overrides an
+      // open follow-up. Sorted copy — the canonical queue is untouched.
+      return items
+        .filter((i) => i.followups.length > 0)
+        .sort((a, b) => {
+          const rankOf = (item: TodayItem): number =>
+            item.hasOverdue ? 0 : item.hasDueToday ? 1 : 2;
+          const rankDiff = rankOf(a) - rankOf(b);
+          if (rankDiff !== 0) return rankDiff;
+          if (a.hasOverdue && b.hasOverdue) return compareOverdueFirst(a, b);
+          const aNext = earliestUpcomingDue(a);
+          const bNext = earliestUpcomingDue(b);
+          if (aNext !== bNext) {
+            if (aNext === null) return 1;
+            if (bNext === null) return -1;
+            return aNext < bNext ? -1 : 1;
+          }
+          const aFirst = earliestFollowupDue(a);
+          const bFirst = earliestFollowupDue(b);
+          if (aFirst !== bFirst) return aFirst < bFirst ? -1 : 1;
+          return compareClientText(a.record, b.record);
+        });
     case "reconnect":
       return items.filter((i) => i.record.signals.includes("reconnect-due"));
     case "new":
       // Derived lifecycle: the New slice is the new-relationship signal,
       // recomputed from dates at projection time — never the stored flag.
-      return items.filter((i) => i.record.signals.includes("new-client"));
+      // Newest investment first (missing behaves as oldest), then
+      // identity. Sorted copy — the canonical queue is untouched.
+      return items
+        .filter((i) => i.record.signals.includes("new-client"))
+        .sort((a, b) => {
+          const dateDiff = compareInvestedNewestFirst(a.record, b.record, todayYMD ?? "");
+          if (dateDiff !== 0) return dateDiff;
+          return compareClientText(a.record, b.record);
+        });
     case "recent":
       // Context only: every client carrying recent-investor, whether or
       // not an actionable reason also exists. Never feeds attention.
@@ -320,7 +407,14 @@ export function upcomingFollowups(items: TodayItem[], limit = 3): UpcomingItem[]
       });
     }
   }
-  upcoming.sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0));
+  upcoming.sort((a, b) => {
+    if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+    const aName = a.clientName.trim().toLowerCase();
+    const bName = b.clientName.trim().toLowerCase();
+    if (aName !== bName) return aName < bName ? -1 : 1;
+    if (a.clientId !== b.clientId) return a.clientId < b.clientId ? -1 : 1;
+    return 0;
+  });
   return upcoming.slice(0, limit);
 }
 
