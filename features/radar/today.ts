@@ -4,7 +4,8 @@ import type { StoredFollowup } from "../followups/types";
 import { hasActionableSignal, NEW_INVESTMENT_DAYS, sortRadarRecords } from "./signals";
 import type { ClientRecord } from "./types";
 
-export type TodayFilter = "all" | "attention" | "followups" | "reconnect" | "new";
+export type TodayFilter =
+  "all" | "attention" | "followups" | "reconnect" | "new" | "recent" | "contacted";
 
 /** Legacy `?filter=` values from the retired routes. Unknown → attention. */
 export function parseTodayFilter(value: unknown): TodayFilter {
@@ -13,7 +14,9 @@ export function parseTodayFilter(value: unknown): TodayFilter {
     value === "attention" ||
     value === "followups" ||
     value === "reconnect" ||
-    value === "new"
+    value === "new" ||
+    value === "recent" ||
+    value === "contacted"
   ) {
     return value;
   }
@@ -60,6 +63,10 @@ export interface TodayCounts {
   reconnect: number;
   followups: number;
   fresh: number;
+  /** Clients carrying the recent-investor context signal (any status). */
+  recent: number;
+  /** Clients whose persisted Last Contacted equals the given day. */
+  contacted: number;
 }
 
 export interface UpcomingItem {
@@ -243,7 +250,11 @@ export function buildTodayItems(
     });
 }
 
-export function filterTodayItems(items: TodayItem[], filter: TodayFilter): TodayItem[] {
+export function filterTodayItems(
+  items: TodayItem[],
+  filter: TodayFilter,
+  todayYMD?: string,
+): TodayItem[] {
   switch (filter) {
     case "all":
       return items;
@@ -260,12 +271,27 @@ export function filterTodayItems(items: TodayItem[], filter: TodayFilter): Today
       // Derived lifecycle: the New slice is the new-relationship signal,
       // recomputed from dates at projection time — never the stored flag.
       return items.filter((i) => i.record.signals.includes("new-client"));
+    case "recent":
+      // Context only: every client carrying recent-investor, whether or
+      // not an actionable reason also exists. Never feeds attention.
+      return items.filter((i) => i.record.signals.includes("recent-investor"));
+    case "contacted":
+      // Session progress over the canonical Last Contacted field — the
+      // same source as wasContactedToday/contactedToday. No second model:
+      // the day is supplied by the caller so counts and slices agree.
+      return todayYMD === undefined
+        ? items.filter((i) => i.record.lastContacted !== null)
+        : items.filter((i) => wasContactedToday(i.record, todayYMD));
   }
 }
 
-export function countToday(items: TodayItem[]): TodayCounts {
+export function countToday(items: TodayItem[], todayYMD?: string): TodayCounts {
   const hasSignal = (i: TodayItem): boolean =>
     hasActionableSignal(i.record.signals) || i.followups.length > 0;
+  const contacted =
+    todayYMD === undefined
+      ? items.filter((i) => i.record.lastContacted !== null).length
+      : items.filter((i) => wasContactedToday(i.record, todayYMD)).length;
   return {
     total: items.length,
     attention: items.filter(hasSignal).length,
@@ -274,6 +300,8 @@ export function countToday(items: TodayItem[]): TodayCounts {
     reconnect: items.filter((i) => i.record.signals.includes("reconnect-due")).length,
     followups: items.filter((i) => i.followups.length > 0).length,
     fresh: items.filter((i) => i.record.signals.includes("new-client")).length,
+    recent: items.filter((i) => i.record.signals.includes("recent-investor")).length,
+    contacted,
   };
 }
 

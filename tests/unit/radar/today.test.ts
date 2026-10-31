@@ -12,6 +12,8 @@ import {
   upcomingFollowups,
   wasContactedToday,
 } from "@/features/radar/today";
+import { markContacted } from "@/features/radar/model";
+import { toClientRecord } from "@/features/radar/repository";
 import type { ClientRecord } from "@/features/radar/types";
 import type { StoredFollowup } from "@/features/followups/types";
 
@@ -49,14 +51,21 @@ function followup(overrides: Partial<StoredFollowup> = {}): StoredFollowup {
 }
 
 describe("parseTodayFilter", () => {
-  it("accepts the five supported filters", () => {
-    for (const f of ["all", "attention", "followups", "reconnect", "new"] as const) {
+  it("accepts the seven supported filters", () => {
+    for (const f of [
+      "all",
+      "attention",
+      "followups",
+      "reconnect",
+      "new",
+      "recent",
+      "contacted",
+    ] as const) {
       expect(parseTodayFilter(f)).toBe(f);
     }
   });
 
   it("falls back to attention for legacy and unknown values", () => {
-    expect(parseTodayFilter("recent")).toBe("attention");
     expect(parseTodayFilter(undefined)).toBe("attention");
     expect(parseTodayFilter("bulk-export")).toBe("attention");
   });
@@ -189,7 +198,7 @@ describe("filterTodayItems + countToday", () => {
 
   it("counts the strip and filters consistently", () => {
     const items = sample();
-    const counts = countToday(items);
+    const counts = countToday(items, TODAY);
     expect(counts).toMatchObject({
       total: 3,
       attention: 2,
@@ -198,12 +207,103 @@ describe("filterTodayItems + countToday", () => {
       reconnect: 1,
       followups: 1,
       fresh: 1,
+      recent: 0,
+      contacted: 0,
     });
-    expect(filterTodayItems(items, "attention").map((i) => i.record.id)).toEqual(["o", "n"]);
-    expect(filterTodayItems(items, "followups").map((i) => i.record.id)).toEqual(["o"]);
-    expect(filterTodayItems(items, "reconnect").map((i) => i.record.id)).toEqual(["o"]);
-    expect(filterTodayItems(items, "new").map((i) => i.record.id)).toEqual(["n"]);
-    expect(filterTodayItems(items, "all")).toHaveLength(3);
+    expect(filterTodayItems(items, "attention", TODAY).map((i) => i.record.id)).toEqual(["o", "n"]);
+    expect(filterTodayItems(items, "followups", TODAY).map((i) => i.record.id)).toEqual(["o"]);
+    expect(filterTodayItems(items, "reconnect", TODAY).map((i) => i.record.id)).toEqual(["o"]);
+    expect(filterTodayItems(items, "new", TODAY).map((i) => i.record.id)).toEqual(["n"]);
+    expect(filterTodayItems(items, "recent", TODAY)).toHaveLength(0);
+    expect(filterTodayItems(items, "contacted", TODAY)).toHaveLength(0);
+    expect(filterTodayItems(items, "all", TODAY)).toHaveLength(3);
+  });
+});
+
+describe("recent + talked-today filters", () => {
+  function sample() {
+    return buildTodayItems(
+      [
+        record({
+          id: "r",
+          name: "Recent",
+          signals: ["recent-investor"],
+          lastInvested: "2026-10-12",
+          lastContacted: "2026-10-20",
+        }),
+        record({
+          id: "t",
+          name: "Talked",
+          signals: ["reconnect-due"],
+          lastContacted: "2026-07-21",
+        }),
+        record({ id: "q", name: "Quiet", signals: [], lastContacted: TODAY }),
+      ],
+      [],
+      TODAY,
+    );
+  }
+
+  it("counts recent context and today's contacts without touching attention", () => {
+    const counts = countToday(sample(), TODAY);
+    expect(counts).toMatchObject({ total: 3, attention: 1, recent: 1, contacted: 1 });
+    // Recent-only context stays non-actionable.
+    expect(counts.attention).toBe(1);
+  });
+
+  it("filters the recent-investor slice", () => {
+    const items = sample();
+    expect(filterTodayItems(items, "recent", TODAY).map((i) => i.record.id)).toEqual(["r"]);
+  });
+
+  it("filters today's contacted clients", () => {
+    const items = sample();
+    expect(filterTodayItems(items, "contacted", TODAY).map((i) => i.record.id)).toEqual(["q"]);
+  });
+
+  it("moves a contacted client into talked-today without changing its lifecycle", () => {
+    const before = buildTodayItems(
+      [record({ id: "c", name: "C", signals: ["reconnect-due"], lastContacted: "2026-07-21" })],
+      [],
+      TODAY,
+    );
+    expect(filterTodayItems(before, "contacted", TODAY)).toHaveLength(0);
+    // markContacted recomputes signals from the same domain engine, exactly
+    // as the workspace does after persisting Last Contacted.
+    const after = buildTodayItems([markContacted(before[0].record, TODAY)], [], TODAY);
+    expect(after[0].record.lastContacted).toBe(TODAY);
+    expect(filterTodayItems(after, "contacted", TODAY).map((i) => i.record.id)).toEqual(["c"]);
+    // Silence refreshed today: no longer reconnect-due, still attention-free.
+    expect(after[0].record.signals).not.toContain("reconnect-due");
+    expect(countToday(after, TODAY).attention).toBe(0);
+  });
+
+  it("survives reload: persisted last_contacted re-projects into talked-today", () => {
+    // A reload rebuilds records from stored rows via toClientRecord; the
+    // persisted date alone must place the client in the filter.
+    const stored = {
+      id: "c",
+      name: "C",
+      phone: "9876543210",
+      investmentType: "SIP" as const,
+      sipAmountPaise: null,
+      lumpsumAmountPaise: null,
+      amountPaise: null,
+      lastInvested: null as string | null,
+      lastContacted: TODAY as string | null,
+      note: "",
+    };
+    const items = buildTodayItems([toClientRecord(stored, 0, TODAY)], [], TODAY);
+    expect(filterTodayItems(items, "contacted", TODAY).map((i) => i.record.id)).toEqual(["c"]);
+    expect(countToday(items, TODAY).contacted).toBe(1);
+  });
+
+  it("new/reconnect stay mutually exclusive under every filter", () => {
+    const items = sample();
+    const ids = (f: "new" | "reconnect") =>
+      new Set(filterTodayItems(items, f, TODAY).map((i) => i.record.id));
+    const overlap = [...ids("new")].filter((id) => ids("reconnect").has(id));
+    expect(overlap).toEqual([]);
   });
 });
 

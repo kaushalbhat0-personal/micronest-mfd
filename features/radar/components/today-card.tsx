@@ -204,12 +204,12 @@ export function TodayCard({
   const markContactedNode = contacted ? (
     <span className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-emerald-900">
       <CheckIcon />
-      Spoke today
+      Talked today
       {canUndo && (
         <button
           type="button"
           onClick={() => onUndo(record.id)}
-          aria-label={`Mark ${record.name} as not spoken to`}
+          aria-label={`Mark ${record.name} as not talked to`}
           className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-sm font-medium text-emerald-900 underline decoration-emerald-300 underline-offset-4 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
         >
           Undo

@@ -34,7 +34,6 @@ import {
 } from "../repository";
 import {
   buildTodayItems,
-  contactedToday,
   countToday,
   displayDay,
   filterTodayItems,
@@ -47,8 +46,10 @@ import { TodayCard } from "./today-card";
 const FILTERS: Array<{ id: TodayFilter; label: string }> = [
   { id: "attention", label: "Needs attention" },
   { id: "followups", label: "Follow up today" },
-  { id: "reconnect", label: "Reconnect" },
   { id: "new", label: "New" },
+  { id: "reconnect", label: "Reconnect" },
+  { id: "recent", label: "Recent" },
+  { id: "contacted", label: "Talked today" },
   { id: "all", label: "All" },
 ];
 
@@ -113,10 +114,12 @@ export function TodayWorkspace({
     () => buildTodayItems(records, followups, todayYMD),
     [records, followups, todayYMD],
   );
-  const counts = React.useMemo(() => countToday(items), [items]);
-  const visible = React.useMemo(() => filterTodayItems(items, filter), [items, filter]);
+  const counts = React.useMemo(() => countToday(items, todayYMD), [items, todayYMD]);
+  const visible = React.useMemo(
+    () => filterTodayItems(items, filter, todayYMD),
+    [items, filter, todayYMD],
+  );
   const upcoming = React.useMemo(() => upcomingFollowups(items, 3), [items]);
-  const completed = React.useMemo(() => contactedToday(records, todayYMD), [records, todayYMD]);
   const greeting = React.useMemo(() => greetingFor(), []);
   const dayLabel = React.useMemo(() => displayDay(todayYMD), [todayYMD]);
 
@@ -130,6 +133,10 @@ export function TodayWorkspace({
         return counts.reconnect;
       case "new":
         return counts.fresh;
+      case "recent":
+        return counts.recent;
+      case "contacted":
+        return counts.contacted;
       case "all":
         return undefined;
     }
@@ -342,7 +349,7 @@ export function TodayWorkspace({
       <div
         role="group"
         aria-label="Filter today"
-        className="scroll-x -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+        className="scroll-x -mx-4 flex w-full max-w-full flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
       >
         {FILTERS.map((f) => (
           <Chip
@@ -378,7 +385,17 @@ export function TodayWorkspace({
               hint={
                 filter === "attention"
                   ? "No clients need attention right now."
-                  : "Nothing in this view right now."
+                  : filter === "followups"
+                    ? "No open follow-ups right now."
+                    : filter === "new"
+                      ? "No new clients right now."
+                      : filter === "reconnect"
+                        ? "No reconnects due right now."
+                        : filter === "recent"
+                          ? "No recent investors right now."
+                          : filter === "contacted"
+                            ? "You haven't talked to anyone yet today."
+                            : "Nothing in this view right now."
               }
             />
           ) : (
@@ -447,42 +464,6 @@ export function TodayWorkspace({
                   </button>
                 </div>
               </Card>
-            </section>
-          )}
-
-          {completed.length > 0 && (
-            <section aria-labelledby="completed-heading">
-              <details className="rounded-xl border border-stone-200 bg-white shadow-sm">
-                <summary
-                  id="completed-heading"
-                  className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 [&::-webkit-details-marker]:hidden"
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      aria-hidden="true"
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-900"
-                    >
-                      <CheckIcon className="h-3.5 w-3.5" />
-                    </span>
-                    Spoke today
-                    <span className="tnum font-normal text-stone-500">{completed.length}</span>
-                  </span>
-                  <span aria-hidden="true" className="text-xs text-stone-500">
-                    ▾
-                  </span>
-                </summary>
-                <ul className="flex flex-col gap-1 border-t border-stone-200 px-4 py-2">
-                  {completed.map((record) => (
-                    <li
-                      key={record.id}
-                      className="flex min-h-[44px] items-center gap-2 text-sm text-stone-600"
-                    >
-                      <CheckIcon />
-                      <span className="truncate">{record.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
             </section>
           )}
         </div>

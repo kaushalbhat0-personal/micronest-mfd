@@ -88,6 +88,17 @@ test.describe("Today workspace", () => {
           investment_type: "Other",
           is_new_client: true,
         },
+        {
+          // Recent-investor context contacted today: never actionable, but
+          // visible under Recent and Talked today from the first load.
+          user_id: userId,
+          name: "Today Recent Caller",
+          mobile: "9833333333",
+          investment_type: "SIP",
+          last_invested: ymd(-10),
+          last_contacted: ymd(0),
+          is_new_client: false,
+        },
       ])
       .select("id,name");
     expect(error).toBeNull();
@@ -161,6 +172,32 @@ test.describe("Today workspace", () => {
     await filters.getByRole("button", { name: /needs attention/i }).click();
     await expect(page.getByRole("article")).toHaveCount(2);
 
+    // Recent context is filterable without ever counting as attention.
+    await filters.getByRole("button", { name: /recent/i }).click();
+    await expect(page.getByRole("article", { name: /today recent caller/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today overdue owner/i })).toHaveCount(0);
+
+    // Talked today lists the client contacted today from the first load.
+    await filters.getByRole("button", { name: /talked today/i }).click();
+    await expect(page.getByRole("article", { name: /today recent caller/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today newcomer/i })).toHaveCount(0);
+
+    // Every filter stays reachable: the row scrolls instead of wrapping.
+    for (const name of [
+      /needs attention/i,
+      /follow up today/i,
+      /^new/i,
+      /reconnect/i,
+      /recent/i,
+      /talked today/i,
+      /^all/i,
+    ]) {
+      const chip = filters.getByRole("button", { name });
+      await chip.scrollIntoViewIfNeeded();
+      await expect(chip).toBeVisible();
+    }
+    await filters.getByRole("button", { name: /needs attention/i }).click();
+
     // Mark contacted → toast → undo restores the queue.
     await page
       .getByRole("article", { name: /today overdue owner/i })
@@ -171,12 +208,25 @@ test.describe("Today workspace", () => {
     await status.getByRole("button", { name: /undo/i }).click();
     await expect(page.getByRole("article", { name: /today overdue owner/i })).toBeVisible();
 
-    // Mark contacted again to verify the completed-today disclosure.
+    // Mark contacted again to verify the Talked today filter.
     await page
       .getByRole("article", { name: /today overdue owner/i })
       .getByRole("button", { name: /i spoke to them/i })
       .click();
-    await expect(page.getByText(/spoke today/i)).toBeVisible();
+    await expect(page.getByText(/talked today/i).first()).toBeVisible();
+    await filters.getByRole("button", { name: /talked today/i }).click();
+    await expect(page.getByRole("article", { name: /today overdue owner/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today recent caller/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today newcomer/i })).toHaveCount(0);
+
+    // Reload preserves the persisted contact: both clients stay in Talked today.
+    await page.reload();
+    await page
+      .getByRole("group", { name: /filter today/i })
+      .getByRole("button", { name: /talked today/i })
+      .click();
+    await expect(page.getByRole("article", { name: /today overdue owner/i })).toBeVisible();
+    await expect(page.getByRole("article", { name: /today recent caller/i })).toBeVisible();
 
     // Upcoming lists the future follow-up with its reason.
     await expect(page.getByText(/future sip check/i)).toBeVisible();
@@ -196,7 +246,7 @@ test.describe("Today workspace", () => {
 
     // After contact the card states the fact instead of repeating the action.
     // Two copies render (mobile + desktop arrangements); assert the visible one.
-    await expect(card.locator('span:text("Spoke today"):visible')).toBeVisible();
+    await expect(card.locator('span:text("Talked today"):visible')).toBeVisible();
     await expect(card.getByRole("button", { name: /^i spoke to them$/i })).toHaveCount(0);
 
     // Dismiss the toast: the in-card Undo still restores the queue.
