@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseCsvSheet } from "@/features/radar/import/workbook";
-import { buildPreview } from "@/features/radar/import/pipeline";
+import { buildPreview, importableRows } from "@/features/radar/import/pipeline";
 import { autoMapColumns } from "@/features/radar/import/aliases";
-import type { ImportSheet } from "@/features/radar/import/import-types";
+import type { BookRecord, ImportSheet } from "@/features/radar/import/import-types";
 
 const TODAY = "2026-10-26";
 
@@ -23,13 +23,26 @@ describe("buildPreview", () => {
         "Client Name",
         "Mobile",
         "Investment Type",
-        "Amount",
+        "SIP Amount",
+        "Lumpsum Amount",
         "Last Invested",
         "Last Contacted",
         "New Client",
         "Note",
       ],
-      [["Rajesh Sharma", "9876543210", "SIP", "5000", "25/10/2026", "", "yes", "Met at branch"]],
+      [
+        [
+          "Rajesh Sharma",
+          "9876543210",
+          "SIP",
+          "5000",
+          "",
+          "25/10/2026",
+          "",
+          "yes",
+          "Met at branch",
+        ],
+      ],
     );
     const preview = buildPreview({
       sheet,
@@ -42,9 +55,34 @@ describe("buildPreview", () => {
     expect(preview.rows[0].input).toMatchObject({
       name: "Rajesh Sharma",
       investmentType: "SIP",
-      amountPaise: 500000,
+      sipAmountPaise: 500000,
+      lumpsumAmountPaise: null,
     });
-    expect(preview.summary).toMatchObject({ ready: 1, attention: 0, invalid: 0, skipped: 0 });
+    expect(preview.summary).toMatchObject({
+      ready: 1,
+      attention: 0,
+      updated: 0,
+      invalid: 0,
+      skipped: 0,
+    });
+  });
+
+  it("accepts a Both row with two independent amounts", () => {
+    const sheet = sheetFrom(
+      ["Client Name", "Mobile", "Investment Type", "SIP Amount", "Lumpsum Amount"],
+      [["Meera", "9876543211", "Both", "10000", "200000"]],
+    );
+    const preview = buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [],
+      todayYMD: TODAY,
+    });
+    expect(preview.rows[0].status).toBe("ready");
+    expect(preview.rows[0].input).toMatchObject({
+      sipAmountPaise: 1000000,
+      lumpsumAmountPaise: 20000000,
+    });
   });
 
   it("imports legacy seven-column files with a blank amount", () => {
@@ -67,7 +105,7 @@ describe("buildPreview", () => {
       todayYMD: TODAY,
     });
     expect(preview.rows[0].status).toBe("ready");
-    expect(preview.rows[0].input).toMatchObject({ name: "Legacy Lal", amountPaise: null });
+    expect(preview.rows[0].input).toMatchObject({ name: "Legacy Lal", sipAmountPaise: null });
   });
 
   it("rejects malformed amounts and maps amount aliases", () => {
@@ -87,7 +125,7 @@ describe("buildPreview", () => {
     expect(preview.rows[0].status).toBe("invalid");
     expect(preview.rows[0].reasons.join(" ")).toContain("Amount");
     expect(preview.rows[1].status).toBe("ready");
-    expect(preview.rows[1].input).toMatchObject({ amountPaise: 1200000 });
+    expect(preview.rows[1].input).toMatchObject({ lumpsumAmountPaise: 1200000 });
   });
 
   it("maps aliases and flags warnings as needing attention", () => {
@@ -191,9 +229,9 @@ describe("buildPreview", () => {
     expect(preview.rows.map((r) => r.name)).toEqual(["Sharma, Rajesh", "Asha"]);
   });
 
-  it("classifies duplicates with scope, basis, and no persistence input", () => {
+  it("classifies file repeats with scope and basis, book rows update when book data is present", () => {
     const sheet = sheetFrom(
-      ["Client Name", "Mobile", "Amount"],
+      ["Client Name", "Mobile", "SIP Amount"],
       [
         ["Rahul Sharma", "9876543210", "5000"],
         ["Rahul Sharma", "9876543210", "9000"],
@@ -206,10 +244,11 @@ describe("buildPreview", () => {
       existing: [{ mobileKey: "919811111111", nameKey: "book client" }],
       todayYMD: TODAY,
     });
+    // Without book records the legacy skip behavior holds, so session-only
+    // previews never invent updates they cannot persist.
     expect(preview.rows.map((r) => r.status)).toEqual(["ready", "skipped", "skipped"]);
-    // First occurrence keeps its amount; repeats carry no input so an
-    // imported amount can never overwrite book data.
-    expect(preview.rows[0].input).toMatchObject({ amountPaise: 500000 });
+    // First occurrence keeps its amount; repeats carry no input.
+    expect(preview.rows[0].input).toMatchObject({ sipAmountPaise: 500000 });
     expect(preview.rows[1].duplicate).toMatchObject({
       scope: "file",
       matchedBy: "mobile",
@@ -266,5 +305,135 @@ describe("buildPreview", () => {
       todayYMD: TODAY,
     });
     expect(preview.rows.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
+});
+
+describe("buildPreview upserts", () => {
+  const BOOK: BookRecord[] = [
+    {
+      id: "stored-1",
+      name: "Book Client",
+      phone: "9811111111",
+      investmentType: "SIP",
+      sipAmountPaise: 500000,
+      lumpsumAmountPaise: null,
+      lastInvested: "2026-09-01",
+      lastContacted: "2026-09-10",
+      isNewClient: false,
+      note: "Keeps this note",
+    },
+    {
+      id: "stored-2",
+      name: "Nameless Match",
+      phone: "",
+      investmentType: "Other",
+      sipAmountPaise: null,
+      lumpsumAmountPaise: null,
+      lastInvested: null,
+      lastContacted: null,
+      isNewClient: false,
+      note: "",
+    },
+  ];
+
+  function previewFor(header: string[], lines: string[][]) {
+    const sheet = sheetFrom(header, lines);
+    return buildPreview({
+      sheet,
+      mapping: autoMapColumns(sheet.header),
+      existing: [
+        { mobileKey: "919811111111", nameKey: "book client" },
+        { mobileKey: null, nameKey: "nameless match" },
+      ],
+      book: BOOK,
+      todayYMD: TODAY,
+    });
+  }
+
+  it("updates the existing record by mobile instead of skipping or duplicating", () => {
+    const preview = previewFor(
+      ["Client Name", "Mobile", "SIP Amount"],
+      [["Book Client", "9811111111", "9000"]],
+    );
+    expect(preview.rows[0].status).toBe("update");
+    expect(preview.rows[0].match).toMatchObject({
+      existingId: "stored-1",
+      matchedBy: "mobile",
+    });
+    // Supplied fields win; blank cells inherit the stored record.
+    expect(preview.rows[0].input).toMatchObject({
+      name: "Book Client",
+      phone: "9811111111",
+      investmentType: "SIP",
+      sipAmountPaise: 900000,
+      lastInvested: "2026-09-01",
+      lastContacted: "2026-09-10",
+      isNewClient: false,
+      note: "Keeps this note",
+    });
+    expect(preview.summary).toMatchObject({ updated: 1, ready: 0, skipped: 0 });
+  });
+
+  it("updates by exact normalized name when the upload has no mobile", () => {
+    const preview = previewFor(
+      ["Client Name", "Lumpsum Amount"],
+      [["Nameless Match", "200000"]],
+    );
+    expect(preview.rows[0].status).toBe("update");
+    expect(preview.rows[0].match).toMatchObject({
+      existingId: "stored-2",
+      matchedBy: "name",
+    });
+    expect(preview.rows[0].input).toMatchObject({
+      lumpsumAmountPaise: 20000000,
+      sipAmountPaise: null,
+    });
+  });
+
+  it("never wipes stored data with blank upload cells", () => {
+    const preview = previewFor(["Client Name", "Mobile"], [["Book Client", "9811111111"]]);
+    expect(preview.rows[0].status).toBe("update");
+    expect(preview.rows[0].input).toMatchObject({
+      name: "Book Client",
+      sipAmountPaise: 500000,
+      lastInvested: "2026-09-01",
+      lastContacted: "2026-09-10",
+      note: "Keeps this note",
+    });
+  });
+
+  it("marks invalid update rows invalid instead of writing them", () => {
+    const preview = previewFor(
+      ["Client Name", "Mobile", "SIP Amount"],
+      [["Book Client", "9811111111", "not money"]],
+    );
+    expect(preview.rows[0].status).toBe("invalid");
+    expect(preview.rows[0].input).toBeUndefined();
+  });
+
+  it("treats the first file occurrence as the update and skips repeats", () => {
+    const preview = previewFor(
+      ["Client Name", "Mobile", "Note"],
+      [
+        ["Book Client", "9811111111", "first wins"],
+        ["Book Client", "9811111111", "second loses"],
+      ],
+    );
+    expect(preview.rows.map((r) => r.status)).toEqual(["update", "skipped"]);
+    expect(preview.rows[0].input).toMatchObject({ note: "first wins" });
+    expect(preview.rows[1].duplicate).toMatchObject({ scope: "file" });
+    expect(preview.rows[1].input).toBeUndefined();
+  });
+
+  it("counts updates separately from inserts in importable rows", () => {
+    const preview = previewFor(
+      ["Client Name", "Mobile"],
+      [
+        ["Brand New", "9800000001"],
+        ["Book Client", "9811111111"],
+      ],
+    );
+    expect(preview.rows.map((r) => r.status)).toEqual(["ready", "update"]);
+    expect(importableRows(preview.rows)).toHaveLength(2);
   });
 });

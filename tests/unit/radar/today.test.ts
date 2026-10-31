@@ -25,7 +25,8 @@ function record(overrides: Partial<ClientRecord> = {}): ClientRecord {
     phone: "9876543210",
     phoneValid: true,
     investmentType: "SIP",
-    amountPaise: null,
+    sipAmountPaise: null,
+    lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,
@@ -145,6 +146,32 @@ describe("buildTodayItems", () => {
   it("leaves why null for signal-free clients in the All view", () => {
     const items = buildTodayItems([record({ id: "q", signals: [] })], [], TODAY);
     expect(items[0].why).toBeNull();
+  });
+
+  it("keeps a contacted client in attention while an overdue follow-up is open", () => {
+    const items = buildTodayItems(
+      [record({ id: "c", name: "Contacted", signals: [], lastContacted: TODAY })],
+      [followup({ id: "f", clientId: "c", dueDate: "2026-10-20", reason: "Late papers" })],
+      TODAY,
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0].why?.kind).toBe("followup-overdue");
+    expect(countToday(items).attention).toBe(1);
+    expect(filterTodayItems(items, "attention")).toHaveLength(1);
+  });
+
+  it("drops a contacted client from attention once no reason remains", () => {
+    const contacted = record({ id: "c", name: "Contacted", signals: [], lastContacted: TODAY });
+    const due = record({
+      id: "d",
+      name: "Due",
+      signals: ["reconnect-due"],
+      lastContacted: "2026-07-21",
+    });
+    const items = buildTodayItems([contacted, due], [], TODAY);
+    expect(countToday(items).attention).toBe(1);
+    expect(filterTodayItems(items, "attention").map((i) => i.record.id)).toEqual(["d"]);
+    expect(filterTodayItems(items, "all").map((i) => i.record.id)).toEqual(["d", "c"]);
   });
 });
 

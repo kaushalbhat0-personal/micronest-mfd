@@ -20,24 +20,42 @@ const TABLE = "radar_clients";
 
 /** Columns the UI is allowed to read or write. Ownership stays in RLS. */
 const CLIENT_COLUMNS =
-  "id,name,mobile,investment_type,amount_paise,last_invested,last_contacted,is_new_client,note";
+  "id,name,mobile,investment_type,sip_amount_paise,lumpsum_amount_paise,amount_paise,last_invested,last_contacted,is_new_client,note";
 
 /**
- * Normalized client input for create/update — the same eight relationship
- * fields the validator owns. Dates are YYYY-MM-DD or null; amount is
- * integer paise or null. No id, no user_id, no timestamps, no signals:
- * callers never supply those.
+ * Normalized client input for create/update — the nine relationship fields
+ * the validator owns. Dates are YYYY-MM-DD or null; amounts are integer
+ * paise or null. No id, no user_id, no timestamps, no signals: callers
+ * never supply those.
  */
 export interface ClientInput {
   name: string;
   phone: string;
   investmentType: InvestmentType;
-  /** Optional relationship-context amount in integer paise; null when absent. */
-  amountPaise: number | null;
+  /** Optional monthly SIP figure in integer paise; null when absent. */
+  sipAmountPaise: number | null;
+  /** Optional recorded lumpsum figure in integer paise; null when absent. */
+  lumpsumAmountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
   isNewClient: boolean;
   note: string;
+}
+
+/**
+ * Derives the legacy single amount_paise mirror from the two buckets so
+ * older readers keep a meaningful value. SIP/Both read as the monthly SIP
+ * figure (Both is never duplicated); Lumpsum/Insurance/Other read the
+ * recorded figure. The database CHECK on the legacy column is unchanged.
+ */
+export function legacyAmountMirror(
+  investmentType: InvestmentType,
+  sipAmountPaise: number | null,
+  lumpsumAmountPaise: number | null,
+): number | null {
+  if (investmentType === "SIP" || investmentType === "Both") return sipAmountPaise;
+  if (investmentType === "Lumpsum") return lumpsumAmountPaise;
+  return lumpsumAmountPaise ?? sipAmountPaise;
 }
 
 function toDbRow(input: ClientInput): Record<string, unknown> {
@@ -45,7 +63,13 @@ function toDbRow(input: ClientInput): Record<string, unknown> {
     name: input.name,
     mobile: input.phone,
     investment_type: input.investmentType,
-    amount_paise: input.amountPaise,
+    sip_amount_paise: input.sipAmountPaise,
+    lumpsum_amount_paise: input.lumpsumAmountPaise,
+    amount_paise: legacyAmountMirror(
+      input.investmentType,
+      input.sipAmountPaise,
+      input.lumpsumAmountPaise,
+    ),
     last_invested: input.lastInvested,
     last_contacted: input.lastContacted,
     is_new_client: input.isNewClient,
@@ -59,6 +83,15 @@ export interface StoredRadarClient {
   name: string;
   phone: string;
   investmentType: InvestmentType;
+  /** Monthly SIP figure in integer paise; null when absent. */
+  sipAmountPaise: number | null;
+  /** Recorded lumpsum figure in integer paise; null when absent. */
+  lumpsumAmountPaise: number | null;
+  /**
+   * Legacy single-amount mirror, maintained on every write from the two
+   * buckets (never written directly by the UI). Read-only for display
+   * fallbacks; new code reads the buckets above.
+   */
   amountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
@@ -88,6 +121,8 @@ interface DbRow {
   name: unknown;
   mobile: unknown;
   investment_type: unknown;
+  sip_amount_paise: unknown;
+  lumpsum_amount_paise: unknown;
   amount_paise: unknown;
   last_invested: unknown;
   last_contacted: unknown;
@@ -128,6 +163,8 @@ export function toStoredClient(row: DbRow): StoredRadarClient {
     name: asText(row.name),
     phone: asText(row.mobile),
     investmentType: toInvestmentType(row.investment_type),
+    sipAmountPaise: asAmountPaise(row.sip_amount_paise),
+    lumpsumAmountPaise: asAmountPaise(row.lumpsum_amount_paise),
     amountPaise: asAmountPaise(row.amount_paise),
     lastInvested: asDate(row.last_invested),
     lastContacted: asDate(row.last_contacted),
@@ -155,7 +192,8 @@ export function toClientRecord(
     phone: stored.phone,
     phoneValid,
     investmentType: stored.investmentType,
-    amountPaise: stored.amountPaise,
+    sipAmountPaise: stored.sipAmountPaise,
+    lumpsumAmountPaise: stored.lumpsumAmountPaise,
     lastInvested: stored.lastInvested,
     lastContacted: stored.lastContacted,
     isNewClient: stored.isNewClient,
@@ -259,7 +297,7 @@ export async function createClient(
 }
 
 /**
- * Replaces the eight relationship fields of one owned record, addressed by
+ * Replaces the nine relationship fields of one owned record, addressed by
  * id only. RLS rejects rows the caller doesn't own (zero updated rows,
  * surfaced as an error — never silently accepted).
  */

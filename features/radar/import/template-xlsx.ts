@@ -16,12 +16,15 @@ export interface GuideRow {
 }
 
 /**
- * Canonical filling guide (RCCF-MFD-55). Shared by the downloadable XLSX
+ * Canonical filling guide. Shared by the downloadable XLSX
  * "How to Fill" sheet and the in-app expandable guide, so the two can
- * never disagree. Amount semantics: SIP/Both read as monthly SIP amounts
- * (use Note for any lumpsum detail on Both); Lumpsum as the recorded
- * lumpsum amount; Insurance/Other as an optional associated amount.
- * Relationship context only — never portfolio value, AUM, or returns.
+ * never disagree. Amount semantics: SIP Amount is the monthly SIP figure,
+ * Lumpsum Amount the recorded lumpsum figure; Both clients may fill both
+ * independently. Older files with a single Amount column still import:
+ * it reads as the monthly figure for SIP, the recorded figure for Lumpsum
+ * and Other, and the monthly figure for Both (add a Lumpsum Amount column
+ * for the second figure — it is never duplicated). Relationship context
+ * only — never portfolio value, AUM, or returns.
  */
 export const IMPORT_GUIDE_ROWS: GuideRow[] = [
   {
@@ -40,13 +43,19 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
     column: "Investment Type",
     required: "No",
     what: "One of SIP, Lumpsum, Both, Insurance, or Other. Blank means Other.",
-    example: "SIP",
+    example: "Both",
   },
   {
-    column: "Amount",
+    column: "SIP Amount",
     required: "No",
-    what: "Amount in ₹ (e.g. 5000 or 5000.50). For SIP, the monthly SIP amount; for Lumpsum, the recorded lumpsum amount; for Both, the monthly SIP amount (use Note for lumpsum detail). Blank is fine.",
-    example: "5000",
+    what: "Monthly SIP amount in ₹ (e.g. 10000). Fill for SIP and Both clients. Blank is fine.",
+    example: "10000",
+  },
+  {
+    column: "Lumpsum Amount",
+    required: "No",
+    what: "Recorded lumpsum amount in ₹ (e.g. 200000). Fill for Lumpsum and Both clients. Blank is fine.",
+    example: "200000",
   },
   {
     column: "Last Invested",
@@ -77,7 +86,9 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
 const GUIDE_NOTES: string[] = [
   "Dates: DD/MM/YYYY is recommended (e.g. 25/10/2026). DD-MM-YYYY and YYYY-MM-DD uploads also work; ambiguous numeric dates read as DD/MM/YYYY.",
   "Investment Type accepts SIP, Lumpsum, Both, Insurance, or Other — anything else imports as Other with a warning.",
-  "Amount is optional relationship context, not portfolio value, AUM, holdings, returns, or profit. Your financial software remains the system of record.",
+  "SIP Amount and Lumpsum Amount are optional relationship context, not portfolio value, AUM, holdings, returns, or profit. Your financial software remains the system of record.",
+  "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients keep their record and only the filled-in fields change. Blank cells never erase existing details.",
+  "Older files with a single Amount column still work: it reads as the monthly figure for SIP, the recorded figure for Lumpsum, and the monthly figure for Both (never doubled — add a Lumpsum Amount column for the second figure).",
   "Only the Clients sheet is imported. If your file has several sheets, pick Clients when uploading.",
 ];
 

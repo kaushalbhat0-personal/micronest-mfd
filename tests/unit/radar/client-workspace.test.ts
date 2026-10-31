@@ -13,7 +13,8 @@ const VALID: ClientFieldInput = {
   name: "Aarav Mehta",
   phone: "9876543210",
   investmentType: "SIP",
-  amount: "",
+  sipAmount: "",
+  lumpsumAmount: "",
   lastInvested: "12/10/2026",
   lastContacted: "",
   isNewClient: false,
@@ -28,7 +29,8 @@ function record(name: string): ClientRecord {
     phone: "",
     phoneValid: false,
     investmentType: "Other",
-    amountPaise: null,
+    sipAmountPaise: null,
+    lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,
@@ -59,7 +61,8 @@ describe("validateClientFields (shared by CSV and form)", () => {
         name: "Nina",
         phone: "",
         investmentType: "",
-        amount: "",
+        sipAmount: "",
+        lumpsumAmount: "",
         lastInvested: "",
         lastContacted: "",
         isNewClient: false,
@@ -129,7 +132,12 @@ describe("validateClientFields (shared by CSV and form)", () => {
 describe("fieldForClientError", () => {
   it("maps validator messages onto form fields", () => {
     expect(fieldForClientError("Please enter the client's name.")).toBe("name");
-    expect(fieldForClientError("Amount must be a number like 5000 or 5000.50.")).toBe("amount");
+    expect(fieldForClientError("SIP Amount must be a number like 5000 or 5000.50.")).toBe(
+      "sipAmount",
+    );
+    expect(fieldForClientError("Lumpsum Amount must be a number like 5000 or 5000.50.")).toBe(
+      "lumpsumAmount",
+    );
     expect(
       fieldForClientError(
         "Please check the Last invested date — \"x\" is not a valid DD/MM/YYYY date.",

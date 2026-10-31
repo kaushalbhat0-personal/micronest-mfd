@@ -52,4 +52,14 @@ describe("autoMapColumns", () => {
   it("auto-maps the exact downloaded template with no manual step needed", () => {
     expect(autoMapColumns([...RADAR_HEADERS])).toEqual([...RADAR_HEADERS]);
   });
+
+  it("maps the split amount columns and keeps the legacy Amount column", () => {
+    expect(autoMapColumns(["SIP Amount", "Lumpsum Amount", "Amount"])).toEqual([
+      "SIP Amount",
+      "Lumpsum Amount",
+      "Amount",
+    ]);
+    // First source column wins; repeats stay unmapped instead of merging.
+    expect(autoMapColumns(["Lumpsum Amount", "Lump Sum Amount"])).toEqual(["Lumpsum Amount", null]);
+  });
 });

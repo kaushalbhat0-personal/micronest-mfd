@@ -182,7 +182,8 @@ suite("radar client crud", () => {
       name: "Crud Alpha",
       phone: "9876543210",
       investmentType: "Both",
-      amountPaise: 1200000,
+      sipAmountPaise: 1200000,
+      lumpsumAmountPaise: 20000000,
       lastInvested: TODAY,
       lastContacted: null,
       isNewClient: true,
@@ -194,6 +195,9 @@ suite("radar client crud", () => {
     expect(found).toMatchObject({
       name: "Crud Alpha",
       investmentType: "Both",
+      sipAmountPaise: 1200000,
+      lumpsumAmountPaise: 20000000,
+      // Both never duplicates into the legacy mirror.
       amountPaise: 1200000,
       isNewClient: true,
     });
@@ -202,13 +206,15 @@ suite("radar client crud", () => {
       name: "Crud Alpha Renamed",
       phone: "",
       investmentType: "SIP",
-      amountPaise: null,
+      sipAmountPaise: null,
+      lumpsumAmountPaise: null,
       lastInvested: null,
       lastContacted: TODAY,
       isNewClient: false,
       note: "",
     });
     expect(updated).toMatchObject({ name: "Crud Alpha Renamed", phone: "", note: "" });
+    expect(updated.sipAmountPaise).toBeNull();
     expect(updated.amountPaise).toBeNull();
 
     await deleteStoredClient(clientA, created.id);
@@ -220,7 +226,8 @@ suite("radar client crud", () => {
       name: "Crud Foreign",
       phone: "",
       investmentType: "Other",
-      amountPaise: null,
+      sipAmountPaise: null,
+      lumpsumAmountPaise: null,
       lastInvested: null,
       lastContacted: null,
       isNewClient: false,
@@ -232,7 +239,8 @@ suite("radar client crud", () => {
         name: "Hijacked",
         phone: "",
         investmentType: "Other",
-        amountPaise: null,
+        sipAmountPaise: null,
+        lumpsumAmountPaise: null,
         lastInvested: null,
         lastContacted: null,
         isNewClient: false,

@@ -18,6 +18,15 @@ export interface SignalInput {
 /**
  * Computes radar signals from two dates and one explicit flag.
  * Deterministic: same inputs + same today + same interval = same signals.
+ *
+ * Attention semantics (the product rule "once I have spoken to this
+ * client, stop telling me to speak to them for that same reason"):
+ * - "new-client" fires only while the client was never contacted
+ *   (isNewClient AND lastContacted === null). Speaking to a new client
+ *   resolves that reason; the stored is_new_client flag itself is left
+ *   untouched as explicit metadata.
+ * - "reconnect-due" is purely date-driven, so a contacted client becomes
+ *   due again naturally once the interval passes.
  */
 export function computeSignals(
   input: SignalInput,
@@ -39,7 +48,7 @@ export function computeSignals(
   ) {
     signals.push("reconnect-due");
   }
-  if (input.isNewClient) {
+  if (input.isNewClient && input.lastContacted === null) {
     signals.push("new-client");
   }
   return signals;

@@ -24,7 +24,12 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { ClientFollowups } from "@/features/followups/components/client-followups";
 import type { StoredFollowup } from "@/features/followups/types";
 import { buildRadarHandoff, markContacted } from "../model";
-import { amountPaiseToInput, formatAmountContext } from "../template";
+import {
+  amountPaiseToInput,
+  formatInvestmentAmounts,
+  formatLumpsumAmount,
+  formatSipAmount,
+} from "../template";
 import {
   deleteClient,
   RadarStoreError,
@@ -66,12 +71,20 @@ function storeErrorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
-function toFormInitial(stored: StoredRadarClient): ClientFormInitial {
+function toFormInitial(
+  stored: Pick<
+    StoredRadarClient,
+    "name" | "phone" | "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastInvested" | "lastContacted" | "isNewClient" | "note"
+  >,
+): ClientFormInitial {
   return {
     name: stored.name,
     phone: stored.phone,
     investmentType: stored.investmentType,
-    amount: stored.amountPaise === null ? "" : amountPaiseToInput(stored.amountPaise),
+    sipAmount:
+      stored.sipAmountPaise === null ? "" : amountPaiseToInput(stored.sipAmountPaise),
+    lumpsumAmount:
+      stored.lumpsumAmountPaise === null ? "" : amountPaiseToInput(stored.lumpsumAmountPaise),
     lastInvested: stored.lastInvested ?? "",
     lastContacted: stored.lastContacted ?? "",
     isNewClient: stored.isNewClient,
@@ -116,10 +129,17 @@ const WHY_SEVERITY_STYLE: Record<WhySeverity, { accent: string; box: string; tex
 };
 
 function identityMeta(
-  record: Pick<StoredRadarClient, "investmentType" | "amountPaise" | "lastContacted">,
+  record: Pick<
+    StoredRadarClient,
+    "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastContacted"
+  >,
 ): string {
-  const amount = formatAmountContext(record.investmentType, record.amountPaise);
-  const base = amount ? `${record.investmentType} · ${amount}` : record.investmentType;
+  const amounts = formatInvestmentAmounts(
+    record.investmentType,
+    record.sipAmountPaise,
+    record.lumpsumAmountPaise,
+  );
+  const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
   if (record.lastContacted) {
     return `${base} · Last spoke ${formatDisplayDate(record.lastContacted)}`;
   }
@@ -336,14 +356,24 @@ export function ClientDetail({
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">What they have</dt>
-                  <dd className="font-medium text-stone-900">
-                    {record.investmentType}
-                    {(() => {
-                      const amount = formatAmountContext(record.investmentType, record.amountPaise);
-                      return amount ? ` · ${amount}` : "";
-                    })()}
-                  </dd>
+                  <dd className="font-medium text-stone-900">{record.investmentType}</dd>
                 </div>
+                {formatSipAmount(record.sipAmountPaise) && (
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="text-stone-500">SIP</dt>
+                    <dd className="tnum font-medium text-stone-900">
+                      {formatSipAmount(record.sipAmountPaise)}
+                    </dd>
+                  </div>
+                )}
+                {formatLumpsumAmount(record.lumpsumAmountPaise) && (
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="text-stone-500">Lumpsum</dt>
+                    <dd className="tnum font-medium text-stone-900">
+                      {formatLumpsumAmount(record.lumpsumAmountPaise)}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Last invested</dt>
                   <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>

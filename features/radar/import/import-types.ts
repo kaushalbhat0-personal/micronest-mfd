@@ -1,4 +1,5 @@
 import type { ClientInput } from "@/features/radar/repository";
+import type { InvestmentType } from "@/features/radar/types";
 import type { RadarHeader } from "@/features/radar/template";
 import type { DuplicateMatchKind, DuplicateScope } from "./duplicates";
 
@@ -24,7 +25,7 @@ export interface ImportSheet {
 /** Source column → canonical MicroNest field, or null for "Don't import". */
 export type ColumnMapping = Array<RadarHeader | null>;
 
-export type RowStatus = "ready" | "attention" | "invalid" | "skipped";
+export type RowStatus = "ready" | "attention" | "update" | "invalid" | "skipped";
 
 export interface PreviewRow {
   key: string;
@@ -35,12 +36,21 @@ export interface PreviewRow {
   status: RowStatus;
   /** Human reasons, never echoing sensitive values. */
   reasons: string[];
-  /** Validated persistence input for ready/attention rows; absent otherwise. */
+  /** Validated persistence input for ready/attention/update rows; absent otherwise. */
   input?: ClientInput;
   /**
-   * Present on duplicate rows (status "skipped"): where the match came from
-   * and on what basis. Importable rows never carry it; duplicates never
-   * carry input — so an imported amount can never overwrite book data.
+   * Present on update rows (book match): which existing record to update
+   * and on what basis. Importable rows never carry `duplicate`; skipped
+   * file repeats never carry `input` — so an import can never create a
+   * second record for the same client.
+   */
+  match?: {
+    existingId: string;
+    matchedBy: DuplicateMatchKind;
+  };
+  /**
+   * Present on skipped file-repeat rows: where the match came from.
+   * Update rows never carry it.
    */
   duplicate?: {
     scope: DuplicateScope;
@@ -52,12 +62,28 @@ export interface PreviewRow {
   fields: Record<string, string>;
 }
 
+/** Minimal stored-record shape the upsert prefill needs. Both the
+ * persistence records and the domain records satisfy it structurally. */
+export interface BookRecord {
+  id: string;
+  name: string;
+  phone: string;
+  investmentType: InvestmentType;
+  sipAmountPaise: number | null;
+  lumpsumAmountPaise: number | null;
+  lastInvested: string | null;
+  lastContacted: string | null;
+  isNewClient: boolean;
+  note: string;
+}
+
 export interface ImportSummary {
   fileName: string;
   sheetName: string | null;
   totalRows: number;
   ready: number;
   attention: number;
+  updated: number;
   invalid: number;
   skipped: number;
 }

@@ -19,7 +19,8 @@ function record(overrides: Partial<ClientRecord> & { rowNumber: number }): Clien
     phone: "",
     phoneValid: false,
     investmentType: "SIP",
-    amountPaise: null,
+    sipAmountPaise: null,
+    lumpsumAmountPaise: null,
     lastInvested: null,
     lastContacted: null,
     isNewClient: false,
@@ -92,9 +93,9 @@ describe("computeSignals / reconnect-due", () => {
 });
 
 describe("computeSignals / new-client and coexistence", () => {
-  it("flags explicit new clients only", () => {
+  it("flags never-contacted new clients only", () => {
     const flagged = computeSignals(
-      { lastInvested: null, lastContacted: TODAY, isNewClient: true },
+      { lastInvested: null, lastContacted: null, isNewClient: true },
       TODAY,
       90,
     );
@@ -107,6 +108,43 @@ describe("computeSignals / new-client and coexistence", () => {
     expect(unflagged).not.toContain("new-client");
   });
 
+  it("resolves the new-client reason once the client has been spoken to", () => {
+    const before = computeSignals(
+      { lastInvested: null, lastContacted: null, isNewClient: true },
+      TODAY,
+      90,
+    );
+    expect(before).toContain("new-client");
+    const after = computeSignals(
+      { lastInvested: null, lastContacted: TODAY, isNewClient: true },
+      TODAY,
+      90,
+    );
+    expect(after).not.toContain("new-client");
+    expect(after).not.toContain("reconnect-due");
+  });
+
+  it("resolves the reconnect reason on contact but lets it return later", () => {
+    const due = computeSignals(
+      { lastInvested: null, lastContacted: "2026-07-21", isNewClient: false },
+      TODAY,
+      90,
+    );
+    expect(due).toContain("reconnect-due");
+    const contacted = computeSignals(
+      { lastInvested: null, lastContacted: TODAY, isNewClient: false },
+      TODAY,
+      90,
+    );
+    expect(contacted).not.toContain("reconnect-due");
+    const stale = computeSignals(
+      { lastInvested: null, lastContacted: "2026-07-21", isNewClient: false },
+      "2026-10-26",
+      30,
+    );
+    expect(stale).toContain("reconnect-due");
+  });
+
   it("coexists: recent investor plus reconnect due plus new client", () => {
     const signals = computeSignals(
       { lastInvested: "2026-10-26", lastContacted: null, isNewClient: true },
@@ -114,6 +152,13 @@ describe("computeSignals / new-client and coexistence", () => {
       90,
     );
     expect(signals).toEqual(["recent-investor", "reconnect-due", "new-client"]);
+  });
+
+  it("keeps the stored new-client flag untouched — only the signal resolves", () => {
+    // The flag is explicit metadata; computeSignals never clears it.
+    const input = { lastInvested: null, lastContacted: TODAY, isNewClient: true };
+    computeSignals(input, TODAY, 90);
+    expect(input.isNewClient).toBe(true);
   });
 });
 

@@ -4,19 +4,31 @@ import type { InvestmentType } from "./types";
  * The application-owned radar CSV contract. The validator, the future
  * template file, and the UI example all reference these constants —
  * never hardcode header names anywhere else.
+ *
+ * The canonical template carries separate SIP Amount and Lumpsum Amount
+ * columns so a Both client can hold two independent figures. The legacy
+ * single "Amount" column is NOT in the template but stays recognized for
+ * older files (see LEGACY_AMOUNT_HEADER).
  */
 export const RADAR_HEADERS = [
   "Client Name",
   "Mobile",
   "Investment Type",
-  "Amount",
+  "SIP Amount",
+  "Lumpsum Amount",
   "Last Invested",
   "Last Contacted",
   "New Client",
   "Note",
 ] as const;
 
-export type RadarHeader = (typeof RADAR_HEADERS)[number];
+export type RadarHeader = (typeof RADAR_HEADERS)[number] | typeof LEGACY_AMOUNT_HEADER;
+
+/** Legacy single-amount column from older templates/files. Still accepted. */
+export const LEGACY_AMOUNT_HEADER = "Amount" as const;
+
+/** Every header the validator, mapper, and preview understand. */
+export const MAPPABLE_HEADERS: RadarHeader[] = [...RADAR_HEADERS, LEGACY_AMOUNT_HEADER];
 
 export const RADAR_REQUIRED_HEADERS: RadarHeader[] = ["Client Name"];
 
@@ -68,14 +80,13 @@ export function parseNewClientFlag(raw: string): { value: boolean; warning: stri
 }
 
 /**
- * Optional relationship-context amount, stored as integer paise (never
- * floating-point). Semantics by investment type:
- * - SIP → monthly SIP amount
- * - Lumpsum → latest/recorded lumpsum investment amount
- * - Both → monthly SIP amount (use Note for any lumpsum detail)
- * - Insurance / Other → optional associated amount, if useful
- * This is relationship context only — never portfolio value, AUM,
- * holdings, returns, or profit. The product has no ledger concepts.
+ * Optional relationship-context amounts, stored as integer paise (never
+ * floating-point). Two independent buckets:
+ * - SIP Amount → the monthly SIP figure (SIP and Both clients)
+ * - Lumpsum Amount → the recorded lumpsum figure (Lumpsum, Both,
+ *   Insurance, and Other clients)
+ * Relationship context only — never portfolio value, AUM, holdings,
+ * returns, or profit. The product has no ledger concepts.
  */
 
 /** Largest accepted amount: ₹100 crore, in paise. */
@@ -141,29 +152,61 @@ export function amountPaiseToInput(paise: number): string {
   return `${rupees}.${String(remainder).padStart(2, "0")}`;
 }
 
-/** Form label for the optional amount field, adapted to investment type. */
-export function amountLabelForType(type: InvestmentType): string {
-  if (type === "SIP" || type === "Both") return "Monthly SIP amount (optional)";
-  if (type === "Lumpsum") return "Lumpsum amount (optional)";
-  return "Amount (optional)";
+/** Form label for the optional SIP amount field. */
+export function sipAmountLabel(): string {
+  return "Monthly SIP amount (optional)";
 }
 
-/** Form hint explaining what the amount means for the chosen type. */
-export function amountHintForType(type: InvestmentType): string {
-  if (type === "SIP") return "Monthly SIP amount in ₹. Leave blank if unknown.";
-  if (type === "Both") return "Monthly SIP amount in ₹. Use Note for any lumpsum detail.";
-  if (type === "Lumpsum") return "Latest lumpsum investment amount in ₹. Leave blank if unknown.";
-  return "Associated amount in ₹, if useful. Leave blank if unknown.";
+/** Form label for the optional lumpsum amount field. */
+export function lumpsumAmountLabel(): string {
+  return "Lumpsum amount (optional)";
+}
+
+/** Form hint for the optional SIP amount field. */
+export function sipAmountHint(): string {
+  return "Monthly SIP amount in ₹. Leave blank if unknown.";
+}
+
+/** Form hint for the optional lumpsum amount field. */
+export function lumpsumAmountHint(): string {
+  return "Latest lumpsum investment amount in ₹. Leave blank if unknown.";
+}
+
+/** Monthly SIP figure with the /month suffix, or null when absent. */
+export function formatSipAmount(paise: number | null): string | null {
+  if (paise === null) return null;
+  return `${formatAmountPaise(paise)}/month`;
+}
+
+/** Recorded lumpsum figure, or null when absent. */
+export function formatLumpsumAmount(paise: number | null): string | null {
+  if (paise === null) return null;
+  return formatAmountPaise(paise);
 }
 
 /**
- * Compact relationship-context rendering of an amount, or null when absent.
- * SIP/Both read as monthly ("/month"); Lumpsum/Insurance/Other as a plain
- * recorded amount. Never portfolio value or returns.
+ * Compact relationship-context rendering of both amounts, or null when
+ * neither is present. SIP reads its monthly figure; Lumpsum its recorded
+ * figure; Both reads each independently; Insurance/Other read whichever
+ * figure exists. Never portfolio value or returns.
  */
-export function formatAmountContext(type: InvestmentType, paise: number | null): string | null {
-  if (paise === null) return null;
-  const formatted = formatAmountPaise(paise);
-  if (type === "SIP" || type === "Both") return `${formatted}/month`;
-  return formatted;
+export function formatInvestmentAmounts(
+  type: InvestmentType,
+  sipPaise: number | null,
+  lumpsumPaise: number | null,
+): string | null {
+  const sip = formatSipAmount(sipPaise);
+  const lumpsum = formatLumpsumAmount(lumpsumPaise);
+  if (type === "Both") {
+    const parts = [
+      sip ? `SIP ${sip}` : null,
+      lumpsum ? `Lumpsum ${lumpsum}` : null,
+    ].filter((part): part is string => part !== null);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }
+  // Single-type clients show their own bucket first, falling back to
+  // whichever figure exists so cross-filled legacy data never hides.
+  if (type === "SIP") return sip ?? lumpsum;
+  if (type === "Lumpsum") return lumpsum ?? sip;
+  return lumpsum ?? sip;
 }

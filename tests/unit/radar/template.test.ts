@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
-  amountHintForType,
-  amountLabelForType,
   amountPaiseToInput,
-  formatAmountContext,
   formatAmountPaise,
+  formatInvestmentAmounts,
+  formatLumpsumAmount,
+  formatSipAmount,
+  LEGACY_AMOUNT_HEADER,
+  lumpsumAmountHint,
+  lumpsumAmountLabel,
+  MAPPABLE_HEADERS,
   NEW_CLIENT_TRUTHY,
   normalizeInvestmentType,
   parseAmountInput,
   parseNewClientFlag,
   RADAR_HEADERS,
+  sipAmountHint,
+  sipAmountLabel,
 } from "@/features/radar/template";
 
 describe("normalizeInvestmentType", () => {
@@ -59,17 +65,24 @@ describe("parseNewClientFlag", () => {
 });
 
 describe("RADAR_HEADERS", () => {
-  it("declares the eight-column contract with Amount after Investment Type", () => {
+  it("declares the nine-column contract with separate SIP and Lumpsum amounts", () => {
     expect(RADAR_HEADERS).toEqual([
       "Client Name",
       "Mobile",
       "Investment Type",
-      "Amount",
+      "SIP Amount",
+      "Lumpsum Amount",
       "Last Invested",
       "Last Contacted",
       "New Client",
       "Note",
     ]);
+  });
+
+  it("keeps the legacy single Amount column mappable but out of the template", () => {
+    expect(LEGACY_AMOUNT_HEADER).toBe("Amount");
+    expect(RADAR_HEADERS).not.toContain("Amount");
+    expect(MAPPABLE_HEADERS).toEqual([...RADAR_HEADERS, "Amount"]);
   });
 });
 
@@ -112,12 +125,27 @@ describe("amount presentation", () => {
     }
   });
 
-  it("scopes Both to the monthly SIP amount and suffixes monthly types", () => {
-    expect(formatAmountContext("SIP", 500000)).toBe("₹5,000/month");
-    expect(formatAmountContext("Both", 500000)).toBe("₹5,000/month");
-    expect(formatAmountContext("Lumpsum", 20000000)).toBe("₹2,00,000");
-    expect(formatAmountContext("Other", null)).toBeNull();
-    expect(amountLabelForType("Both")).toContain("Monthly SIP");
-    expect(amountHintForType("Both")).toContain("lumpsum detail");
+  it("renders separate SIP and Lumpsum figures with en-IN grouping", () => {
+    expect(formatSipAmount(1000000)).toBe("₹10,000/month");
+    expect(formatSipAmount(null)).toBeNull();
+    expect(formatLumpsumAmount(20000000)).toBe("₹2,00,000");
+    expect(formatLumpsumAmount(null)).toBeNull();
+  });
+
+  it("scopes inline amounts by type and never hides an existing figure", () => {
+    expect(formatInvestmentAmounts("SIP", 500000, null)).toBe("₹5,000/month");
+    expect(formatInvestmentAmounts("Both", 1000000, 20000000)).toBe(
+      "SIP ₹10,000/month · Lumpsum ₹2,00,000",
+    );
+    expect(formatInvestmentAmounts("Both", 1000000, null)).toBe("SIP ₹10,000/month");
+    expect(formatInvestmentAmounts("Lumpsum", null, 20000000)).toBe("₹2,00,000");
+    // Cross-filled legacy data stays visible instead of vanishing.
+    expect(formatInvestmentAmounts("Lumpsum", 20000000, null)).toBe("₹2,00,000/month");
+    expect(formatInvestmentAmounts("SIP", 20000000, null)).toBe("₹2,00,000/month");
+    expect(formatInvestmentAmounts("Other", null, null)).toBeNull();
+    expect(sipAmountLabel()).toContain("Monthly SIP");
+    expect(lumpsumAmountLabel()).toContain("Lumpsum");
+    expect(sipAmountHint()).toContain("₹");
+    expect(lumpsumAmountHint()).toContain("₹");
   });
 });

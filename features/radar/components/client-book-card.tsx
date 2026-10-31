@@ -17,13 +17,17 @@ import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { dueWords } from "../today";
 import { radarWhatsAppText } from "../view";
 import { bookPillForItem } from "../book";
-import { formatAmountContext } from "../template";
+import { formatInvestmentAmounts } from "../template";
 import type { TodayItem } from "../today";
 
 function investmentLine(item: TodayItem): string {
   const { record } = item;
-  const amount = formatAmountContext(record.investmentType, record.amountPaise);
-  const base = amount ? `${record.investmentType} · ${amount}` : record.investmentType;
+  const amounts = formatInvestmentAmounts(
+    record.investmentType,
+    record.sipAmountPaise,
+    record.lumpsumAmountPaise,
+  );
+  const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
   if (record.lastInvested) {
     return `${base} · Invested ${formatDisplayDate(record.lastInvested)}`;
   }

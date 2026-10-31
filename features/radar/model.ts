@@ -60,7 +60,8 @@ export function buildRadarReport(
       phone: result.row.phone,
       phoneValid: result.row.phoneValid,
       investmentType: result.row.investmentType,
-      amountPaise: result.row.amountPaise,
+      sipAmountPaise: result.row.sipAmountPaise,
+      lumpsumAmountPaise: result.row.lumpsumAmountPaise,
       lastInvested: result.row.lastInvested,
       lastContacted: result.row.lastContacted,
       isNewClient: result.row.isNewClient,
@@ -160,7 +161,9 @@ function escapeCsvField(value: string): string {
 /**
  * Serializes records back to the owned template format for the CSV
  * round-trip (Download updated CSV). Invariant: re-importing the output
- * yields the same normalized values — not byte-identical input.
+ * yields the same normalized values — not byte-identical input. New
+ * template columns (SIP/Lumpsum Amount) are written; the legacy single
+ * Amount column is never emitted.
  */
 export function serializeRadarCsv(records: ClientRecord[]): string {
   const header = [...RADAR_HEADERS].join(",");
@@ -169,7 +172,8 @@ export function serializeRadarCsv(records: ClientRecord[]): string {
       r.name,
       r.phone,
       r.investmentType,
-      r.amountPaise === null ? "" : amountPaiseToInput(r.amountPaise),
+      r.sipAmountPaise === null ? "" : amountPaiseToInput(r.sipAmountPaise),
+      r.lumpsumAmountPaise === null ? "" : amountPaiseToInput(r.lumpsumAmountPaise),
       r.lastInvested ? formatDisplayDate(r.lastInvested) : "",
       r.lastContacted ? formatDisplayDate(r.lastContacted) : "",
       r.isNewClient ? "Y" : "",

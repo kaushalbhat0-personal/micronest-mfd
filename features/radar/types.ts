@@ -18,11 +18,16 @@ export interface ClientRecord {
   phoneValid: boolean;
   investmentType: InvestmentType;
   /**
-   * Optional relationship-context amount in integer paise (null when unknown).
-   * SIP/Both read as monthly; Lumpsum as the recorded amount. Never a
-   * valuation, holding, return, or account balance.
+   * Optional monthly SIP figure in integer paise (null when unknown).
+   * SIP/Both read this bucket. Never a valuation, holding, return, or
+   * account balance.
    */
-  amountPaise: number | null;
+  sipAmountPaise: number | null;
+  /**
+   * Optional recorded lumpsum figure in integer paise (null when unknown).
+   * Lumpsum/Both/Insurance/Other read this bucket.
+   */
+  lumpsumAmountPaise: number | null;
   /** Most recent investment date, YYYY-MM-DD or null when unknown. */
   lastInvested: string | null;
   /** Most recent meaningful contact date, YYYY-MM-DD or null when never recorded. */

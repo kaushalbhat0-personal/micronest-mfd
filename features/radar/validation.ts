@@ -2,7 +2,12 @@ import { normalizePhone } from "@/lib/whatsapp";
 import { detectSensitiveInput } from "@/lib/sensitive";
 import { normalizeFollowUpDate } from "@/lib/dates";
 import { normalizeHeader } from "@/lib/csv";
-import { RADAR_HEADERS, RADAR_REQUIRED_HEADERS, type RadarHeader } from "./template";
+import {
+  LEGACY_AMOUNT_HEADER,
+  MAPPABLE_HEADERS,
+  RADAR_REQUIRED_HEADERS,
+  type RadarHeader,
+} from "./template";
 import { normalizeInvestmentType, parseAmountInput, parseNewClientFlag } from "./template";
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -20,9 +25,10 @@ export interface RadarHeaderValidation {
 }
 
 /**
- * Matches CSV headers against the owned radar contract.
- * Order-independent. Extra columns are ignored (and reported).
- * No aliases, no fuzzy matching — the user downloads our template.
+ * Matches import headers against the owned radar contract (template columns
+ * plus the legacy single Amount column). Order-independent. Extra columns
+ * are ignored (and reported). No aliases, no fuzzy matching — the user
+ * downloads our template.
  */
 export function validateRadarHeaders(header: string[]): RadarHeaderValidation {
   if (header.length === 0) {
@@ -32,7 +38,7 @@ export function validateRadarHeaders(header: string[]): RadarHeaderValidation {
   const map = {} as RadarHeaderMap;
   const used = new Set<number>();
 
-  for (const canonical of RADAR_HEADERS) {
+  for (const canonical of MAPPABLE_HEADERS) {
     const matches: number[] = [];
     normalized.forEach((h, i) => {
       if (h === canonical.toLowerCase()) matches.push(i);
@@ -53,7 +59,7 @@ export function validateRadarHeaders(header: string[]): RadarHeaderValidation {
       return {
         map: null,
         ignored: [],
-        error: `Missing required column "${required}". Download the template and keep all eight headers.`,
+        error: `Missing required column "${required}". Download the template and keep the Client Name column.`,
       };
     }
   }
@@ -69,8 +75,10 @@ export interface ValidatedClient {
   phoneWarning: boolean;
   investmentType: import("./types").InvestmentType;
   investmentWarning: string | null;
-  /** Optional relationship-context amount in integer paise; null when blank. */
-  amountPaise: number | null;
+  /** Optional monthly SIP figure in integer paise; null when blank. */
+  sipAmountPaise: number | null;
+  /** Optional recorded lumpsum figure in integer paise; null when blank. */
+  lumpsumAmountPaise: number | null;
   lastInvested: string | null;
   lastContacted: string | null;
   isNewClient: boolean;
@@ -87,7 +95,7 @@ export interface RadarRowValidation {
 /**
  * Raw client field values before validation. Dates are display strings
  * (DD/MM/YYYY) or empty; the New Client flag is already an explicit boolean.
- * Amount is the raw typed/pasted rupee text (or spreadsheet cell text) —
+ * Amounts are the raw typed/pasted rupee text (or spreadsheet cell text) —
  * blank means absent. Both the CSV pipeline and the Add/Edit form build
  * this shape, so the rules below run exactly once.
  */
@@ -95,7 +103,8 @@ export interface ClientFieldInput {
   name: string;
   phone: string;
   investmentType: string;
-  amount: string;
+  sipAmount: string;
+  lumpsumAmount: string;
   lastInvested: string;
   lastContacted: string;
   isNewClient: boolean;
@@ -113,7 +122,8 @@ export type ClientFieldName =
   | "name"
   | "phone"
   | "investmentType"
-  | "amount"
+  | "sipAmount"
+  | "lumpsumAmount"
   | "lastInvested"
   | "lastContacted"
   | "isNewClient"
@@ -122,14 +132,15 @@ export type ClientFieldName =
 export function fieldForClientError(error: string | null): ClientFieldName | null {
   if (!error) return null;
   if (error.startsWith("Client name") || error.includes("client's name")) return "name";
-  if (error.startsWith("Amount")) return "amount";
+  if (error.startsWith("SIP Amount")) return "sipAmount";
+  if (error.startsWith("Lumpsum Amount")) return "lumpsumAmount";
   if (error.includes("Last invested") || error.startsWith("Last Invested")) return "lastInvested";
   if (error.includes("Last spoke") || error.startsWith("Last Contacted")) return "lastContacted";
   if (error.startsWith("Note")) return "note";
   return null;
 }
 
-/** Single source of truth for the eight relationship fields. */
+/** Single source of truth for the relationship fields. */
 export function validateClientFields(
   input: ClientFieldInput,
   todayYMD: string,
@@ -149,8 +160,12 @@ export function validateClientFields(
   const investment = normalizeInvestmentType(input.investmentType);
   const isNewClient = input.isNewClient;
 
-  const amount = parseAmountInput(input.amount);
-  if (amount.error) return { row: null, error: amount.error, warnings: [] };
+  const sip = parseAmountInput(input.sipAmount);
+  if (sip.error)
+    return { row: null, error: withAmountLabel("SIP Amount", sip.error), warnings: [] };
+  const lumpsum = parseAmountInput(input.lumpsumAmount);
+  if (lumpsum.error)
+    return { row: null, error: withAmountLabel("Lumpsum Amount", lumpsum.error), warnings: [] };
 
   const lastInvested = parseOptionalDate(input.lastInvested, "Last invested", todayYMD);
   if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
@@ -196,7 +211,8 @@ export function validateClientFields(
       phoneWarning: warnings.some((w) => w.startsWith("Phone number")),
       investmentType: investment.value,
       investmentWarning: investment.warning,
-      amountPaise: amount.paise,
+      sipAmountPaise: sip.paise,
+      lumpsumAmountPaise: lumpsum.paise,
       lastInvested: lastInvested.date,
       lastContacted: lastContacted.date,
       isNewClient,
@@ -206,6 +222,44 @@ export function validateClientFields(
     error: null,
     warnings,
   };
+}
+
+/** Prefixes the shared amount messages ("Amount must be…") with the field. */
+function withAmountLabel(label: string, message: string): string {
+  return message.replace(/^Amount/, label);
+}
+
+/**
+ * Directs a legacy single-Amount cell into the matching new bucket.
+ * SIP/Lumpsum map exactly; Both reads as the monthly SIP figure (never
+ * duplicated into Lumpsum); Insurance/Other keep it as the recorded
+ * amount. Returns the bucket texts plus any limitation warning.
+ */
+function directLegacyAmount(
+  legacyRaw: string,
+  sipRaw: string,
+  lumpsumRaw: string,
+  investmentType: import("./types").InvestmentType,
+): { sipText: string; lumpsumText: string; warning: string | null } {
+  const legacy = legacyRaw.trim();
+  if (legacy.length === 0 || sipRaw.trim().length > 0 || lumpsumRaw.trim().length > 0) {
+    // Explicit new-column values always win; a legacy cell never overrides
+    // them and is never merged on top.
+    return { sipText: sipRaw, lumpsumText: lumpsumRaw, warning: null };
+  }
+  if (investmentType === "SIP" || investmentType === "Both") {
+    return {
+      sipText: legacy,
+      lumpsumText: "",
+      warning:
+        investmentType === "Both"
+          ? "Older Amount column read as the monthly SIP amount — add a Lumpsum Amount column for the second figure."
+          : null,
+    };
+  }
+  // Lumpsum, Insurance, and Other keep the legacy cell as the recorded
+  // amount — the same plain figure the old template stored.
+  return { sipText: "", lumpsumText: legacy, warning: null };
 }
 
 /** Validates one data record. Phone/type/flag problems warn; the rest rejects the row. */
@@ -222,12 +276,19 @@ export function validateRadarRow(
 
   // CSV-only concern: the free-text flag column. The form owns a real checkbox.
   const flag = parseNewClientFlag(pick("New Client"));
+  const legacy = directLegacyAmount(
+    pick(LEGACY_AMOUNT_HEADER),
+    pick("SIP Amount"),
+    pick("Lumpsum Amount"),
+    normalizeInvestmentType(pick("Investment Type")).value,
+  );
   const result = validateClientFields(
     {
       name: pick("Client Name"),
       phone: pick("Mobile"),
       investmentType: pick("Investment Type"),
-      amount: pick("Amount"),
+      sipAmount: legacy.sipText,
+      lumpsumAmount: legacy.lumpsumText,
       lastInvested: pick("Last Invested"),
       lastContacted: pick("Last Contacted"),
       isNewClient: flag.value,
@@ -239,6 +300,7 @@ export function validateRadarRow(
   if (!result.row) return result;
   const warnings = [...result.warnings];
   if (flag.warning) warnings.push(flag.warning);
+  if (legacy.warning) warnings.push(legacy.warning);
   return {
     row: { ...result.row, newClientWarning: flag.warning },
     error: null,

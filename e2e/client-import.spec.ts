@@ -89,7 +89,7 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Exact template headers: all eight map automatically, no manual step.
+      // Legacy eight-column file: every column maps automatically, no manual step.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
@@ -116,9 +116,9 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /review 5 rows/i })).toBeVisible();
       await page.getByRole("button", { name: /review 5 rows/i }).click();
       await expect(page.getByText("5 rows found")).toBeVisible();
-      // Dedicated duplicates summary — never hidden in a generic count.
+      // Dedicated file-repeat summary — never hidden in a generic count.
       await expect(page.getByText("2 already added")).toBeVisible();
-      await expect(page.getByText("2 already in your lists found").first()).toBeVisible();
+      await expect(page.getByText("2 rows repeated in this file").first()).toBeVisible();
       await expect(page.getByText(/duplicate of row 2/i).first()).toBeVisible();
       await expect(page.getByText(/matched by mobile number/i).first()).toBeVisible();
 
@@ -214,7 +214,7 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Exact template headers: all eight map automatically, no manual step.
+      // Legacy eight-column file: every column maps automatically, no manual step.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
@@ -227,7 +227,7 @@ test.describe("Client import", () => {
       await expectAxeClean(page);
 
       await page.getByRole("button", { name: /add 3 clients/i }).click();
-      await expect(page.getByText("Here's what was added")).toBeVisible();
+      await expect(page.getByText("Here's what changed")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
       await expect(page.getByRole("dialog", { name: /add clients from a file/i })).toHaveCount(0);
       await expect(page.getByRole("article", { name: /rajesh sharma/i })).toBeVisible();
@@ -281,19 +281,28 @@ test.describe("Client import", () => {
       await expect(page.getByRole("button", { name: /add 1 clients/i })).toBeEnabled();
     });
 
-    test("re-importing skips every existing client", async ({ page }) => {
+    test("re-importing updates every existing client without duplicating", async ({ page }) => {
       await openImport(page);
       await upload(page, "import-valid.csv");
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await page.getByRole("button", { name: /add 3 clients/i }).click();
-      await expect(page.getByText("Here's what was added")).toBeVisible();
+      await expect(page.getByText("Here's what changed")).toBeVisible();
+      await expect(page.getByText("Clients added")).toBeVisible();
       await page.getByRole("button", { name: /view clients/i }).click();
 
       await openImport(page);
       await upload(page, "import-valid.csv");
       await page.getByRole("button", { name: /review 3 rows/i }).click();
-      await expect(page.getByText(/already in your clients/i).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: /nothing to add/i })).toBeDisabled();
+      await expect(page.getByText("3 will update")).toBeVisible();
+      await expect(page.getByRole("button", { name: /save 3 clients/i })).toBeEnabled();
+      await page.getByRole("button", { name: /save 3 clients/i }).click();
+      await expect(page.getByText("Here's what changed")).toBeVisible();
+      await expect(page.getByText("Clients updated")).toBeVisible();
+      await page.getByRole("button", { name: /view clients/i }).click();
+      // Same three records, updated in place — never duplicated.
+      await expect(page.getByRole("article", { name: /rajesh sharma/i })).toHaveCount(1);
+      await expect(page.getByRole("article", { name: /priya mehta/i })).toHaveCount(1);
+      await expect(page.getByRole("article", { name: /amit shah/i })).toHaveCount(1);
     });
 
     test("manual add blocks an exact duplicate without overwriting", async ({ page }) => {

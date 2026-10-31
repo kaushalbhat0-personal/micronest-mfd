@@ -3,6 +3,7 @@ import {
   createClient,
   deleteClient,
   getClient,
+  legacyAmountMirror,
   listClients,
   RadarStoreError,
   toClientRecord,
@@ -17,6 +18,8 @@ const STORED: StoredRadarClient = {
   name: "Aarav Mehta",
   phone: "9876543210",
   investmentType: "SIP",
+  sipAmountPaise: null,
+  lumpsumAmountPaise: null,
   amountPaise: null,
   lastInvested: "2026-10-12",
   lastContacted: null,
@@ -46,6 +49,8 @@ describe("radar repository mapping", () => {
         name: "Aarav",
         mobile: "9876543210",
         investment_type: "Both",
+        sip_amount_paise: 500000,
+        lumpsum_amount_paise: null,
         amount_paise: 500000,
         last_invested: "2026-10-01",
         last_contacted: null,
@@ -60,6 +65,8 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       phone: "9876543210",
       investmentType: "Both",
+      sipAmountPaise: 500000,
+      lumpsumAmountPaise: null,
       amountPaise: 500000,
       lastInvested: "2026-10-01",
       lastContacted: null,
@@ -74,6 +81,8 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       mobile: null,
       investment_type: "Crypto",
+      sip_amount_paise: -5,
+      lumpsum_amount_paise: "oops",
       amount_paise: -5,
       last_invested: "12/10/2026",
       last_contacted: "not-a-date",
@@ -85,6 +94,8 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       phone: "",
       investmentType: "Other",
+      sipAmountPaise: null,
+      lumpsumAmountPaise: null,
       amountPaise: null,
       lastInvested: null,
       lastContacted: null,
@@ -99,14 +110,28 @@ describe("radar repository mapping", () => {
       name: "Aarav",
       mobile: "9876543210",
       investment_type: "SIP",
+      sip_amount_paise: "500000",
+      lumpsum_amount_paise: null,
       amount_paise: "500000",
       last_invested: null,
       last_contacted: null,
       is_new_client: false,
       note: "",
     });
+    expect(stored.sipAmountPaise).toBe(500000);
     expect(stored.amountPaise).toBe(500000);
-    expect(toClientRecord(stored, 0, "2026-10-25", 90).amountPaise).toBe(500000);
+    const projected = toClientRecord(stored, 0, "2026-10-25", 90);
+    expect(projected.sipAmountPaise).toBe(500000);
+    expect(projected.lumpsumAmountPaise).toBeNull();
+  });
+
+  it("derives the legacy mirror from the buckets by investment type", () => {
+    expect(legacyAmountMirror("SIP", 500000, 20000000)).toBe(500000);
+    expect(legacyAmountMirror("Lumpsum", 500000, 20000000)).toBe(20000000);
+    // Both never duplicates: the mirror keeps the monthly figure.
+    expect(legacyAmountMirror("Both", 1000000, 20000000)).toBe(1000000);
+    expect(legacyAmountMirror("Other", null, 700000)).toBe(700000);
+    expect(legacyAmountMirror("Other", null, null)).toBeNull();
   });
 
   it("projects a stored client into a domain record with computed signals", () => {
@@ -192,7 +217,8 @@ describe("radar repository crud", () => {
     name: "Aarav Mehta",
     phone: "9876543210",
     investmentType: "SIP",
-    amountPaise: 500000,
+    sipAmountPaise: 500000,
+    lumpsumAmountPaise: null,
     lastInvested: "2026-10-12",
     lastContacted: null,
     isNewClient: false,
@@ -229,11 +255,31 @@ describe("radar repository crud", () => {
       name: "Aarav Mehta",
       mobile: "9876543210",
       investment_type: "SIP",
+      sip_amount_paise: 500000,
+      lumpsum_amount_paise: null,
       amount_paise: 500000,
       last_invested: "2026-10-12",
       last_contacted: null,
       is_new_client: false,
       note: "Met at review camp",
+    });
+  });
+
+  it("writes Both amounts independently with a non-duplicated legacy mirror", async () => {
+    const table = stubTable({
+      data: [{ ...STORED, id: "both-id", mobile: "9876543210" }],
+    });
+    const both = {
+      ...INPUT,
+      investmentType: "Both",
+      lumpsumAmountPaise: 20000000,
+    } as const;
+    await createClient(table as never, both);
+    const sent = table.calls.insert.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent).toMatchObject({
+      sip_amount_paise: 500000,
+      lumpsum_amount_paise: 20000000,
+      amount_paise: 500000,
     });
   });
 
@@ -257,7 +303,7 @@ describe("radar repository crud", () => {
     });
   });
 
-  it("updates the eight fields and maps auth failures", async () => {
+  it("updates the nine fields and maps auth failures", async () => {
     const table = stubTable({
       data: [{ ...STORED, mobile: "9876543210", note: "Updated note" }],
     });

@@ -362,10 +362,18 @@ export function ClientsWorkspace({
           onClose={() => setImporting(false)}
           configured={configured}
           existing={records.map((r) => identityOf(r.name, r.phone))}
-          onImported={(stored) => {
+          book={records}
+          onImported={({ created, updated }) => {
             setRecords((prev) => {
               const next = [...prev.map((r) => ({ ...r }))];
-              for (const s of stored) {
+              const indexById = new Map(next.map((r, i) => [r.id, i]));
+              // Updates keep their record in place, re-projected so the
+              // new values and signals show immediately.
+              for (const s of updated) {
+                const idx = indexById.get(s.id);
+                if (idx !== undefined) next[idx] = toClientRecord(s, idx, todayYMD);
+              }
+              for (const s of created) {
                 next.push(toClientRecord(s, next.length, todayYMD));
               }
               return next;

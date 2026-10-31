@@ -14,12 +14,18 @@ import { nowMs } from "@/lib/dates";
 import { reportPerf } from "@/lib/perf/report";
 import {
   createClient as createStoredClient,
+  updateClient as updateStoredClient,
   type StoredRadarClient,
 } from "@/features/radar/repository";
 import { MAX_DATA_ROWS, validateRadarFileMeta } from "@/features/radar/validation";
-import { RADAR_HEADERS, type RadarHeader } from "@/features/radar/template";
+import {
+  LEGACY_AMOUNT_HEADER,
+  MAPPABLE_HEADERS,
+  type RadarHeader,
+} from "@/features/radar/template";
 import { autoMapColumns } from "./aliases";
 import type { DuplicateIdentity } from "./duplicates";
+import type { BookRecord } from "./import-types";
 import { buildPreview, importableRows } from "./pipeline";
 import {
   buildErrorCsv,
@@ -44,11 +50,13 @@ interface ImportDialogProps {
   onClose: () => void;
   configured: boolean;
   existing: DuplicateIdentity[];
-  onImported: (stored: StoredRadarClient[]) => void;
+  /** Full book records parallel to `existing` (same order) for upserts. */
+  book?: BookRecord[];
+  onImported: (result: { created: StoredRadarClient[]; updated: StoredRadarClient[] }) => void;
 }
 
 function statusTone(status: PreviewRow["status"]): "emerald" | "amber" | "stone" | "red" {
-  if (status === "ready") return "emerald";
+  if (status === "ready" || status === "update") return "emerald";
   if (status === "attention") return "amber";
   if (status === "invalid") return "red";
   return "stone";
@@ -57,12 +65,14 @@ function statusTone(status: PreviewRow["status"]): "emerald" | "amber" | "stone"
 function statusLabel(status: PreviewRow["status"]): string {
   if (status === "ready") return "Ready";
   if (status === "attention") return "Check now";
+  if (status === "update") return "Update";
   if (status === "invalid") return "Needs fixing";
   return "Not added";
 }
 
-/** Duplicate rows keep the "skipped" status but render as already added. */
+/** Update rows render as updates; file repeats render as already added. */
 function rowBadgeLabel(row: PreviewRow): string {
+  if (row.status === "update") return "Update";
   if (row.duplicate) return "Already added";
   return statusLabel(row.status);
 }
@@ -78,6 +88,7 @@ export function ImportDialog({
   onClose,
   configured,
   existing,
+  book,
   onImported,
 }: ImportDialogProps) {
   const [step, setStep] = React.useState<Step>("file");
@@ -91,6 +102,7 @@ export function ImportDialog({
   const [progress, setProgress] = React.useState({ done: 0, total: 0 });
   const [receipt, setReceipt] = React.useState<{
     added: number;
+    updated: number;
     failed: number;
     skipped: number;
     timestamp: string;
@@ -104,6 +116,7 @@ export function ImportDialog({
   const importable = importableRows(rows);
   const ready = rows.filter((r) => r.status === "ready").length;
   const attention = rows.filter((r) => r.status === "attention").length;
+  const updated = rows.filter((r) => r.status === "update").length;
   const invalid = rows.filter((r) => r.status === "invalid").length;
   const skipped = rows.filter((r) => r.status === "skipped").length;
   const duplicates = rows.filter((r) => r.duplicate).length;
@@ -225,7 +238,7 @@ export function ImportDialog({
 
   function handlePreview() {
     if (!sheet) return;
-    const preview = buildPreview({ sheet, mapping, existing });
+    const preview = buildPreview({ sheet, mapping, existing, book });
     setRows(preview.rows);
     setStep("preview");
   }
@@ -255,6 +268,7 @@ export function ImportDialog({
     const writeStarted = nowMs();
     const supabase: SupabaseClient = createClient();
     const created: StoredRadarClient[] = [];
+    const updatedRows: StoredRadarClient[] = [];
     let failed = 0;
     for (const target of targets) {
       if (!target.input) {
@@ -262,12 +276,17 @@ export function ImportDialog({
         continue;
       }
       try {
-        const stored = await createStoredClient(supabase, target.input);
-        created.push(stored);
+        if (target.status === "update" && target.match) {
+          const stored = await updateStoredClient(supabase, target.match.existingId, target.input);
+          updatedRows.push(stored);
+        } else {
+          const stored = await createStoredClient(supabase, target.input);
+          created.push(stored);
+        }
       } catch {
         failed += 1;
       }
-      setProgress({ done: created.length + failed, total: targets.length });
+      setProgress({ done: created.length + updatedRows.length + failed, total: targets.length });
     }
     const writeMs = nowMs() - writeStarted;
     reportPerf({
@@ -278,13 +297,15 @@ export function ImportDialog({
       invalid,
       duplicate: duplicates,
       added: created.length,
+      updated: updatedRows.length,
       failed,
       writeMs,
       durationMs: nowMs() - started,
     });
-    onImported(created);
+    onImported({ created, updated: updatedRows });
     setReceipt({
       added: created.length,
+      updated: updatedRows.length,
       failed,
       skipped: skipped + invalid,
       timestamp: new Date().toLocaleString(),
@@ -324,7 +345,7 @@ export function ImportDialog({
             </h2>
             <p className="text-sm text-stone-600">
               {step === "receipt"
-                ? "Here's what was added."
+                ? "Here's what changed."
                 : step === "file"
                   ? "Download the template, fill in your clients, then upload it here."
                   : "Bring your existing client list from Excel or CSV."}
@@ -411,19 +432,22 @@ export function ImportDialog({
                   </p>
                   <p>
                     <strong className="font-semibold text-stone-900">Optional:</strong> Mobile,
-                    Investment Type, Amount, Last Invested, Last Contacted, New Client, Note
+                    Investment Type, SIP Amount, Lumpsum Amount, Last Invested, Last Contacted,
+                    New Client, Note
                   </p>
                   <p className="text-xs">
-                    Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other ·
-                    Amount: ₹ number, e.g. 5000 (monthly SIP for SIP) · Notes up to 200 characters ·
-                    Blank optional fields are fine.
+                    Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other
+                    · Amounts: ₹ numbers — monthly SIP for SIP Amount, recorded lumpsum for
+                    Lumpsum Amount (Both clients can fill both) · Notes up to 200 characters ·
+                    Blank optional fields are fine. Re-uploading updates matching clients instead
+                    of adding duplicates.
                   </p>
                 </div>
                 <details className="rounded-lg border border-stone-200 bg-white">
                   <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900">
                     <span>How to fill your template</span>
                     <span aria-hidden="true" className="text-xs text-stone-500">
-                      8 fields · Client Name is required
+                      9 fields · Client Name is required
                     </span>
                   </summary>
                   <dl className="flex flex-col gap-2 border-t border-stone-200 px-3 py-3">
@@ -574,13 +598,13 @@ export function ImportDialog({
                       className="min-h-[44px] w-full rounded-lg border border-stone-300 bg-white px-2 text-sm text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                     >
                       <option value="">Don&apos;t import</option>
-                      {RADAR_HEADERS.map((canonical) => (
+                      {MAPPABLE_HEADERS.map((canonical) => (
                         <option
                           key={canonical}
                           value={canonical}
                           disabled={usedCanonicals.has(canonical) && mapping[column] !== canonical}
                         >
-                          {canonical}
+                          {canonical === LEGACY_AMOUNT_HEADER ? "Amount (older files)" : canonical}
                         </option>
                       ))}
                     </select>
@@ -612,6 +636,7 @@ export function ImportDialog({
             total={rows.length}
             ready={ready}
             attention={attention}
+            updated={updated}
             invalid={invalid}
             duplicates={duplicates}
             otherSkipped={otherSkipped}
@@ -630,7 +655,7 @@ export function ImportDialog({
         {step === "importing" && (
           <div className="flex flex-col items-start gap-3 py-6" role="status">
             <p className="text-sm font-medium text-stone-900">
-              Adding {progress.done} of {progress.total}…
+              Saving {progress.done} of {progress.total}…
             </p>
             <div
               className="h-2 w-full overflow-hidden rounded-full bg-stone-200"
@@ -658,6 +683,12 @@ export function ImportDialog({
                   <dt>Clients added</dt>
                   <dd className="font-semibold">{receipt.added}</dd>
                 </div>
+                {receipt.updated > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt>Clients updated</dt>
+                    <dd className="font-semibold">{receipt.updated}</dd>
+                  </div>
+                )}
                 {receipt.failed > 0 && (
                   <div className="flex justify-between gap-2">
                     <dt>Couldn&apos;t be saved</dt>
@@ -666,7 +697,7 @@ export function ImportDialog({
                 )}
                 {duplicates > 0 && (
                   <div className="flex justify-between gap-2">
-                    <dt>Already in your list</dt>
+                    <dt>Repeated in this file</dt>
                     <dd className="font-semibold">{duplicates}</dd>
                   </div>
                 )}
@@ -679,7 +710,7 @@ export function ImportDialog({
                 {fileName} · {receipt.timestamp}
               </p>
               <p className="mt-1 text-xs text-emerald-900/80">
-                Nothing already in your clients was overwritten.
+                Matching clients were updated with the new information — nothing was duplicated.
               </p>
             </Card>
             {(invalid > 0 || skipped > 0) && (
@@ -727,6 +758,7 @@ function PreviewStep({
   total,
   ready,
   attention,
+  updated,
   invalid,
   duplicates,
   otherSkipped,
@@ -744,6 +776,7 @@ function PreviewStep({
   total: number;
   ready: number;
   attention: number;
+  updated: number;
   invalid: number;
   duplicates: number;
   otherSkipped: number;
@@ -760,7 +793,7 @@ function PreviewStep({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-sm font-semibold text-stone-900">Ready to add</p>
+        <p className="text-sm font-semibold text-stone-900">Ready to save</p>
         <p
           className="tnum mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-stone-600"
           role="status"
@@ -771,6 +804,11 @@ function PreviewStep({
           <span>
             <strong className="font-semibold text-emerald-900">{ready}</strong> ready to add
           </span>
+          {updated > 0 && (
+            <span>
+              <strong className="font-semibold text-emerald-900">{updated}</strong> will update
+            </span>
+          )}
           {attention > 0 && (
             <span>
               <strong className="font-semibold text-amber-800">{attention}</strong> need fixing
@@ -800,14 +838,25 @@ function PreviewStep({
         <p className="mt-1 truncate text-xs text-stone-500" title={fileName}>
           {fileName}
         </p>
+        {updated > 0 && (
+          <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-sm font-semibold text-emerald-900">
+              {updated} already in your list{updated === 1 ? "" : "s"} — will update
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-emerald-900/80">
+              These rows match clients you already have. Only the filled-in fields change, and
+              blank cells keep the existing details. Nothing will be duplicated.
+            </p>
+          </div>
+        )}
         {duplicates > 0 && (
           <div className="mt-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
             <p className="text-sm font-semibold text-stone-900">
-              {duplicates} already in your list{duplicates === 1 ? "" : "s"} found
+              {duplicates} {duplicates === 1 ? "row" : "rows"} repeated in this file
             </p>
             <p className="mt-0.5 text-xs leading-relaxed text-stone-600">
-              These rows are already in your clients or appear more than once in this file. They
-              won&apos;t be added, and nothing already in your clients will be overwritten.
+              These rows appear more than once in this file. The first occurrence is kept and
+              repeats won&apos;t be added again.
             </p>
             <Button variant="secondary" onClick={onRemoveDuplicates} className="mt-2">
               Remove these rows
@@ -878,7 +927,11 @@ function PreviewStep({
           onClick={onImport}
           disabled={importableCount === 0 || !configured}
         >
-          {importableCount === 0 ? "Nothing to add" : `Add ${importableCount} clients`}
+          {importableCount === 0
+            ? "Nothing to add"
+            : updated > 0
+              ? `Save ${importableCount} clients`
+              : `Add ${importableCount} clients`}
         </Button>
       </div>
     </div>

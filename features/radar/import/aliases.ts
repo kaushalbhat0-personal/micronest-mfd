@@ -24,14 +24,20 @@ const ALIASES: Record<string, RadarHeader> = {
   "investment type": "Investment Type",
   investment: "Investment Type",
   type: "Investment Type",
-  // Amount (relationship context — never portfolio value or returns)
+  // Amount buckets (relationship context — never portfolio value or returns)
+  sip: "SIP Amount",
+  "sip amount": "SIP Amount",
+  "monthly sip": "SIP Amount",
+  "monthly sip amount": "SIP Amount",
+  lumpsum: "Lumpsum Amount",
+  "lumpsum amount": "Lumpsum Amount",
+  "lump sum": "Lumpsum Amount",
+  "lump sum amount": "Lumpsum Amount",
+  // Legacy single Amount column from older templates/files
   amount: "Amount",
   "investment amount": "Amount",
   investmentamount: "Amount",
   "amount invested": "Amount",
-  "sip amount": "Amount",
-  "lumpsum amount": "Amount",
-  "lump sum amount": "Amount",
   // Last invested
   "last invested": "Last Invested",
   "last investment": "Last Invested",

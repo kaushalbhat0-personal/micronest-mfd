@@ -15,6 +15,8 @@ export interface ImportSessionBeacon {
   invalid: number;
   duplicate: number;
   added: number;
+  /** Book records updated in place by an upsert import. Additive count only. */
+  updated?: number;
   failed: number;
   writeMs: number;
   durationMs: number;
@@ -39,6 +41,7 @@ const IMPORT_KEYS = new Set([
   "invalid",
   "duplicate",
   "added",
+  "updated",
   "failed",
   "writeMs",
   "durationMs",
@@ -73,8 +76,18 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
   if (!isRecord(input)) return null;
   if (input.op === "import.session") {
     if (!hasOnlyKeys(input, IMPORT_KEYS)) return null;
-    const { attempted, ready, skipped, invalid, duplicate, added, failed, writeMs, durationMs } =
-      input;
+    const {
+      attempted,
+      ready,
+      skipped,
+      invalid,
+      duplicate,
+      added,
+      updated,
+      failed,
+      writeMs,
+      durationMs,
+    } = input;
     if (
       !isCount(attempted, 100000) ||
       !isCount(ready, 100000) ||
@@ -82,6 +95,7 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
       !isCount(invalid, 100000) ||
       !isCount(duplicate, 100000) ||
       !isCount(added, 100000) ||
+      (updated !== undefined && !isCount(updated, 100000)) ||
       !isCount(failed, 100000) ||
       !isDurationMs(writeMs) ||
       !isDurationMs(durationMs)
@@ -96,6 +110,7 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
       invalid,
       duplicate,
       added,
+      ...(updated === undefined ? {} : { updated }),
       failed,
       writeMs,
       durationMs,
