@@ -107,9 +107,9 @@ function BookPreview() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <ClientAvatar name="Rajesh Sharma" />
+              <ClientAvatar name="Alex Morgan" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-stone-900">Rajesh Sharma</span>
+                <span className="truncate text-sm font-semibold text-stone-900">Alex Morgan</span>
                 <span className="truncate text-xs text-stone-600">
                   SIP · Last spoke 62 days ago
                 </span>
@@ -123,9 +123,9 @@ function BookPreview() {
               </span>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <ClientAvatar name="Priya Mehta" />
+              <ClientAvatar name="Sofia Ramos" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-stone-900">Priya Mehta</span>
+                <span className="truncate text-sm font-semibold text-stone-900">Sofia Ramos</span>
                 <span className="truncate text-xs text-stone-600">
                   Lumpsum · Last spoke 12 days ago
                 </span>
@@ -133,9 +133,9 @@ function BookPreview() {
               <SignalBadge tone="emerald">Recent</SignalBadge>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <ClientAvatar name="Amit Shah" />
+              <ClientAvatar name="Jordan Lee" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-stone-900">Amit Shah</span>
+                <span className="truncate text-sm font-semibold text-stone-900">Jordan Lee</span>
                 <span className="truncate text-xs text-stone-600">
                   Insurance · New client this month
                 </span>
@@ -188,9 +188,9 @@ function TodayPreview() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <ClientAvatar name="Rajesh Sharma" />
+              <ClientAvatar name="Alex Morgan" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-stone-900">Rajesh Sharma</span>
+                <span className="truncate text-sm font-semibold text-stone-900">Alex Morgan</span>
                 <span className="truncate text-xs text-stone-600">
                   SIP · Reconnect — 62 days silent
                 </span>
@@ -198,9 +198,9 @@ function TodayPreview() {
               <SignalBadge tone="amber">Reconnect</SignalBadge>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <ClientAvatar name="Priya Mehta" />
+              <ClientAvatar name="Sofia Ramos" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-stone-900">Priya Mehta</span>
+                <span className="truncate text-sm font-semibold text-stone-900">Sofia Ramos</span>
                 <span className="truncate text-xs text-stone-600">Follow-up due today</span>
               </span>
               <SignalBadge tone="amber">Due today</SignalBadge>
@@ -570,7 +570,7 @@ export default function Home() {
             </li>
             <li className="flex items-center gap-2">
               <CheckIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
-              No PAN, Aadhaar, bank, OTP or password details needed
+              No ID numbers, bank, OTP or password details needed
             </li>
           </ul>
         </div>
@@ -602,7 +602,7 @@ export default function Home() {
         <ul className="mt-2 list-disc pl-5">
           <li>Your client data is private to your signed-in account.</li>
           <li>Messages needs no login — everything stays on your device.</li>
-          <li>No PAN, Aadhaar, bank, OTP or password details needed — ever.</li>
+          <li>No ID numbers, bank, OTP or password details needed — ever.</li>
           <li>Messages use ready-made templates, not AI generation.</li>
         </ul>
       </section>

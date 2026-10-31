@@ -29,7 +29,7 @@ const EN_PRO: TemplateOptions = {
 
 describe("template registry", () => {
   it("covers every purpose in display order with required fields", () => {
-    expect(TEMPLATE_ORDER).toHaveLength(4);
+    expect(TEMPLATE_ORDER).toHaveLength(6);
     for (const id of TEMPLATE_ORDER) {
       expect(TEMPLATES[id].id).toBe(id);
       expect(TEMPLATES[id].label.length).toBeGreaterThan(0);

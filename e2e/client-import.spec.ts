@@ -76,11 +76,18 @@ test.describe("Client import", () => {
     test("entry, template, mapping, preview, and validation", async ({ page }) => {
       await openImport(page, /try a file upload/i);
 
-      // Template downloads the canonical blank contract.
+      // Generic-first: the default template is the plain relationship list.
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: /download csv template/i }).click();
       const template = await download;
-      expect(template.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
+      expect(template.suggestedFilename()).toBe("micronest-general-client-template.csv");
+
+      // The MFD template keeps the full investment contract.
+      await page.getByRole("radio", { name: /mfd clients/i }).click();
+      const mfdDownload = page.waitForEvent("download");
+      await page.getByRole("button", { name: /download csv template/i }).click();
+      const mfdTemplate = await mfdDownload;
+      expect(mfdTemplate.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
 
       await upload(page, "import-valid.csv");
       // Single sheet jumps straight to column mapping.

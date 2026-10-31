@@ -1,5 +1,5 @@
 import { reportValidation } from "./perf/report";
-import type { ValidationBeacon } from "./perf/schema";
+import type { TemplateType, ValidationBeacon } from "./perf/schema";
 
 /**
  * Product validation events (MFD-72 Phase 1). Answers: are people signing
@@ -84,8 +84,12 @@ export function trackWorkspaceActiveOnce(): void {
 }
 
 /** A client template file (CSV or XLSX) was downloaded. */
-export function trackTemplateDownload(): void {
-  reportValidation({ op: "validation.event", event: "template_download" });
+export function trackTemplateDownload(templateType?: TemplateType): void {
+  // Closed allow-list at the call boundary too: anything else (including a
+  // filename or path) degrades to the untyped event rather than shipping.
+  const typed =
+    templateType === "generic" || templateType === "mfd" ? { templateType } : {};
+  reportValidation({ op: "validation.event", event: "template_download", ...typed });
 }
 
 /** An import completed with the given number of created + updated rows. */

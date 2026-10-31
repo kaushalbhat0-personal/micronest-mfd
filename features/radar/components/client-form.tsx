@@ -154,7 +154,7 @@ export function ClientForm({
         <Field id="client-name" label="Client name" error={errors.name}>
           <TextInput
             id="client-name"
-            placeholder="e.g. Rajesh Sharma"
+            placeholder="e.g. Alex Morgan"
             value={values.name}
             onChange={set("name")}
             error={errors.name}
@@ -180,7 +180,11 @@ export function ClientForm({
           />
         </Field>
 
-        <Field id="client-investment" label="What they have" hint={typeWarning ?? undefined}>
+        <Field
+          id="client-investment"
+          label="Category"
+          hint={typeWarning ?? "For investments: SIP, Lumpsum, Both, Insurance, or Other."}
+        >
           <Select
             id="client-investment"
             value={values.investmentType}
@@ -229,7 +233,12 @@ export function ClientForm({
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field id="client-invested" label="Last invested (optional)" error={errors.lastInvested}>
+          <Field
+            id="client-invested"
+            label="Last activity (optional)"
+            error={errors.lastInvested}
+            hint="For investments: the date of the most recent investment."
+          >
             <TextInput
               id="client-invested"
               type="date"

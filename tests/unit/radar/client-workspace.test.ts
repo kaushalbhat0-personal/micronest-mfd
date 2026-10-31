@@ -83,7 +83,7 @@ describe("validateClientFields (shared by CSV and form)", () => {
   it("rejects invalid and future dates", () => {
     expect(
       validateClientFields({ ...VALID, lastInvested: "31/02/2026" }, TODAY, "form").error,
-    ).toContain("Last invested");
+    ).toContain("Last activity");
     expect(
       validateClientFields({ ...VALID, lastContacted: "26/10/2026" }, TODAY, "form").error,
     ).toContain("in the future");
@@ -138,7 +138,7 @@ describe("fieldForClientError", () => {
     );
     expect(
       fieldForClientError(
-        "Please check the Last invested date — \"x\" is not a valid DD/MM/YYYY date.",
+        "Please check the Last activity date — \"x\" is not a valid DD/MM/YYYY date.",
       ),
     ).toBe("lastInvested");
     expect(

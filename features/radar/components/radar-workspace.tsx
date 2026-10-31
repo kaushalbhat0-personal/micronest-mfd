@@ -651,12 +651,12 @@ export function RadarWorkspace() {
         {persistenceOn ? (
           <>
             Contact updates save to your account and appear on all your devices. CSV imports stay in
-            this session. Do not include PAN, Aadhaar, bank, OTP or password details in your CSV.
+            this session. Do not include ID numbers, bank, OTP or password details in your CSV.
           </>
         ) : (
           <>
             Your changes stay in this session. Download the updated CSV when you&apos;re done.
-            Nothing is saved — reloading clears everything. Do not include PAN, Aadhaar, bank, OTP
+            Nothing is saved — reloading clears everything. Do not include ID numbers, bank, OTP
             or password details in your CSV.
           </>
         )}

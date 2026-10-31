@@ -148,7 +148,7 @@ export function MessageStudioForm({
                 <Field id="ms-clientName" label="Client name" error={errors.clientName}>
                   <TextInput
                     id="ms-clientName"
-                    placeholder="e.g. Sharma ji"
+                    placeholder="e.g. Alex"
                     value={fields.clientName}
                     onChange={(e) => set("clientName")(e.target.value)}
                     error={errors.clientName}
@@ -239,7 +239,7 @@ export function MessageStudioForm({
 
           <p className="text-xs leading-relaxed text-stone-600">
             Privacy: everything stays on this device. No login, no database, no tracking. Do not
-            enter PAN, Aadhaar, bank, OTP or password details. Wording guardrails are basic and do
+            enter ID numbers, bank, OTP or password details. Wording guardrails are basic and do
             not certify regulatory compliance — please verify final messages per your compliance
             requirements.
           </p>

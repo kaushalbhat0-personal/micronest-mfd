@@ -19,8 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/dates";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { investmentSummaryLine } from "../template";
 import { radarWhatsAppText } from "../view";
-import { formatInvestmentAmounts } from "../template";
 import { wasContactedToday, type TodayItem, type TodayWhy } from "../today";
 
 function whyStyle(kind: TodayWhy["kind"]): { text: string; dot: string } {
@@ -94,17 +94,7 @@ export function todaySignalBadge(kind: TodayWhy["kind"]): { label: string; tone:
 }
 
 function investmentLine(item: TodayItem): string {
-  const { record } = item;
-  const amounts = formatInvestmentAmounts(
-    record.investmentType,
-    record.sipAmountPaise,
-    record.lumpsumAmountPaise,
-  );
-  const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
-  if (record.lastInvested) {
-    return `${base} · Invested ${formatDisplayDate(record.lastInvested)}`;
-  }
-  return `${base} · Never invested`;
+  return investmentSummaryLine(item.record);
 }
 
 function contactLine(item: TodayItem): string {

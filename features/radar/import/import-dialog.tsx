@@ -31,14 +31,19 @@ import type { BookRecord } from "./import-types";
 import { buildPreview, importableRows } from "./pipeline";
 import {
   buildErrorCsv,
+  buildGeneralTemplateCsv,
   buildTemplateCsv,
+  GENERAL_TEMPLATE_FILENAME,
   TEMPLATE_FILENAME,
   downloadTextFile,
 } from "./template-csv";
 import {
+  buildGeneralTemplateXlsx,
   buildTemplateXlsx,
   CLIENTS_SHEET_NAME,
   downloadBinaryFile,
+  GENERAL_GUIDE_ROWS,
+  GENERAL_TEMPLATE_XLSX_FILENAME,
   IMPORT_GUIDE_ROWS,
   TEMPLATE_XLSX_FILENAME,
 } from "./template-xlsx";
@@ -110,6 +115,13 @@ export function ImportDialog({
     timestamp: string;
   } | null>(null);
   const [parsing, setParsing] = React.useState(false);
+  /**
+   * Template family for download (Phase 2). Generic-first: a plain
+   * relationship list (Client Name, Phone, Last Contacted, Note) that never
+   * mentions SIP/Lumpsum; the MFD template keeps the full 8-column
+   * investment contract. Upload accepts either — detection is by header.
+   */
+  const [templateKind, setTemplateKind] = React.useState<"generic" | "mfd">("generic");
 
   const panelRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -386,12 +398,58 @@ export function ImportDialog({
                   in Excel or Google Sheets.
                 </p>
                 <div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <div
+                    role="radiogroup"
+                    aria-label="Choose a template"
+                    className="flex flex-col gap-2 sm:flex-row"
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={templateKind === "generic"}
+                      onClick={() => setTemplateKind("generic")}
+                      className={`flex min-h-[44px] flex-1 flex-col items-start gap-0.5 rounded-xl border px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 ${
+                        templateKind === "generic"
+                          ? "border-emerald-900 bg-emerald-50"
+                          : "border-stone-200 bg-white hover:border-stone-300"
+                      }`}
+                    >
+                      <span className="text-sm font-semibold text-stone-900">General clients</span>
+                      <span className="text-xs text-stone-600">
+                        Name, phone, last contacted, note
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={templateKind === "mfd"}
+                      onClick={() => setTemplateKind("mfd")}
+                      className={`flex min-h-[44px] flex-1 flex-col items-start gap-0.5 rounded-xl border px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900 ${
+                        templateKind === "mfd"
+                          ? "border-emerald-900 bg-emerald-50"
+                          : "border-stone-200 bg-white hover:border-stone-300"
+                      }`}
+                    >
+                      <span className="text-sm font-semibold text-stone-900">MFD clients</span>
+                      <span className="text-xs text-stone-600">
+                        Adds SIP, Lumpsum, investment type
+                      </span>
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <Button
                       variant="primary"
                       onClick={() => {
-                        trackTemplateDownload();
-                        downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv");
+                        trackTemplateDownload(templateKind);
+                        downloadTextFile(
+                          templateKind === "generic"
+                            ? GENERAL_TEMPLATE_FILENAME
+                            : TEMPLATE_FILENAME,
+                          templateKind === "generic"
+                            ? buildGeneralTemplateCsv()
+                            : buildTemplateCsv(),
+                          "text/csv",
+                        );
                       }}
                     >
                       <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
@@ -401,10 +459,15 @@ export function ImportDialog({
                       variant="secondary"
                       onClick={() => {
                         void (async () => {
-                          const buffer = await buildTemplateXlsx();
-                          trackTemplateDownload();
+                          const buffer =
+                            templateKind === "generic"
+                              ? await buildGeneralTemplateXlsx()
+                              : await buildTemplateXlsx();
+                          trackTemplateDownload(templateKind);
                           downloadBinaryFile(
-                            TEMPLATE_XLSX_FILENAME,
+                            templateKind === "generic"
+                              ? GENERAL_TEMPLATE_XLSX_FILENAME
+                              : TEMPLATE_XLSX_FILENAME,
                             buffer,
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                           );
@@ -435,40 +498,57 @@ export function ImportDialog({
                     <strong className="font-semibold text-stone-900">Required:</strong> Client Name
                   </p>
                   <p>
-                    <strong className="font-semibold text-stone-900">Optional:</strong> Mobile,
-                    Investment Type, SIP Amount, Lumpsum Amount, Last Invested, Last Contacted,
-                    Note
+                    <strong className="font-semibold text-stone-900">Optional:</strong>{" "}
+                    {templateKind === "generic"
+                      ? "Phone, Last Contacted, Note"
+                      : "Mobile, Investment Type, SIP Amount, Lumpsum Amount, Last Invested, Last Contacted, Note"}
                   </p>
-                  <p className="text-xs">
-                    Dates: day/month/year (DD/MM/YYYY), e.g. 25/10/2026 — ambiguous
-                    numeric dates always read day-first · Investment Type: SIP, Lumpsum,
-                    Both, Insurance, or Other · Amounts: ₹ numbers — monthly SIP for SIP
-                    Amount, recorded lumpsum for Lumpsum Amount (Both clients can fill
-                    both) · Phone: include the country code, e.g. +91 9876543210 · Notes
-                    up to 200 characters · Blank optional fields are fine. Re-uploading
-                    updates matching clients instead of adding duplicates.
-                  </p>
+                  {templateKind === "generic" ? (
+                    <p className="text-xs">
+                      Dates: day/month/year (DD/MM/YYYY), e.g. 20/10/2026 —
+                      ambiguous numeric dates always read day-first · Phone:
+                      include the country code, e.g. +1 5551234567 · Notes up
+                      to 200 characters · Blank optional fields are fine.
+                      Re-uploading updates matching clients instead of adding
+                      duplicates. Need investment fields? Switch to the MFD
+                      clients template above.
+                    </p>
+                  ) : (
+                    <p className="text-xs">
+                      Dates: day/month/year (DD/MM/YYYY), e.g. 25/10/2026 — ambiguous
+                      numeric dates always read day-first · Investment Type: SIP, Lumpsum,
+                      Both, Insurance, or Other · Amounts: ₹ numbers — monthly SIP for SIP
+                      Amount, recorded lumpsum for Lumpsum Amount (Both clients can fill
+                      both) · Phone: include the country code, e.g. +91 9876543210 · Notes
+                      up to 200 characters · Blank optional fields are fine. Re-uploading
+                      updates matching clients instead of adding duplicates.
+                    </p>
+                  )}
                 </div>
                 <details className="rounded-lg border border-stone-200 bg-white">
                   <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900">
                     <span>How to fill your template</span>
                     <span aria-hidden="true" className="text-xs text-stone-500">
-                      8 fields · Client Name is required
+                      {templateKind === "generic"
+                        ? "4 fields · Client Name is required"
+                        : "8 fields · Client Name is required"}
                     </span>
                   </summary>
                   <dl className="flex flex-col gap-2 border-t border-stone-200 px-3 py-3">
-                    {IMPORT_GUIDE_ROWS.map((row) => (
-                      <div key={row.column} className="flex flex-col gap-0.5">
-                        <dt className="text-sm font-semibold text-stone-900">
-                          {row.column}{" "}
-                          <span className="font-normal text-stone-500">
-                            ({row.required === "Yes" ? "required" : "optional"})
-                          </span>
-                        </dt>
-                        <dd className="text-sm leading-relaxed text-stone-600">{row.what}</dd>
-                        <dd className="tnum text-xs text-stone-500">Example: {row.example}</dd>
-                      </div>
-                    ))}
+                    {(templateKind === "generic" ? GENERAL_GUIDE_ROWS : IMPORT_GUIDE_ROWS).map(
+                      (row) => (
+                        <div key={row.column} className="flex flex-col gap-0.5">
+                          <dt className="text-sm font-semibold text-stone-900">
+                            {row.column}{" "}
+                            <span className="font-normal text-stone-500">
+                              ({row.required === "Yes" ? "required" : "optional"})
+                            </span>
+                          </dt>
+                          <dd className="text-sm leading-relaxed text-stone-600">{row.what}</dd>
+                          <dd className="tnum text-xs text-stone-500">Example: {row.example}</dd>
+                        </div>
+                      ),
+                    )}
                   </dl>
                 </details>
               </li>

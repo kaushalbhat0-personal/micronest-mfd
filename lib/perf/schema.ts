@@ -56,7 +56,15 @@ export interface ValidationBeacon {
   clientCount?: number;
   /** Milestone threshold crossed, when the event is milestone-related. */
   milestone?: number;
+  /**
+   * Which template family was downloaded (Phase 2 generic/MFD split).
+   * Strict allow-list — never a filename, path, or any client content.
+   */
+  templateType?: TemplateType;
 }
+
+/** Template families the app can offer for download. Closed set. */
+export type TemplateType = "generic" | "mfd";
 
 export type PerfBeacon = ImportSessionBeacon | FollowupMutationBeacon | ValidationBeacon;
 
@@ -78,7 +86,7 @@ const FOLLOWUP_KEYS = new Set(["op", "kind", "ok", "writeMs", "requeryMs", "rows
 
 const FOLLOWUP_KINDS = new Set(["create", "complete", "reopen"]);
 
-const VALIDATION_KEYS = new Set(["op", "event", "clientCount", "milestone"]);
+const VALIDATION_KEYS = new Set(["op", "event", "clientCount", "milestone", "templateType"]);
 
 const VALIDATION_EVENTS = new Set([
   "signup",
@@ -93,6 +101,8 @@ const VALIDATION_EVENTS = new Set([
 ]);
 
 const VALIDATION_MILESTONES = new Set([1, 10, 50, 99, 100]);
+
+const VALIDATION_TEMPLATE_TYPES = new Set(["generic", "mfd"]);
 
 /** Upper bounds: counts fit real workloads, durations fit one session. */
 function isCount(value: unknown, max = 100000): value is number {
@@ -183,7 +193,7 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
   }
   if (input.op === "validation.event") {
     if (!hasOnlyKeys(input, VALIDATION_KEYS)) return null;
-    const { event, clientCount, milestone } = input;
+    const { event, clientCount, milestone, templateType } = input;
     if (typeof event !== "string" || !VALIDATION_EVENTS.has(event)) return null;
     if (clientCount !== undefined && !isCount(clientCount, 100000)) return null;
     if (
@@ -192,11 +202,18 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
     ) {
       return null;
     }
+    if (
+      templateType !== undefined &&
+      (typeof templateType !== "string" || !VALIDATION_TEMPLATE_TYPES.has(templateType))
+    ) {
+      return null;
+    }
     return {
       op: "validation.event",
       event: event as ValidationBeacon["event"],
       ...(clientCount === undefined ? {} : { clientCount }),
       ...(milestone === undefined ? {} : { milestone }),
+      ...(templateType === undefined ? {} : { templateType: templateType as TemplateType }),
     };
   }
   return null;

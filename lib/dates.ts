@@ -28,6 +28,45 @@ export function todayLocalYMD(today: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Calendar date (YYYY-MM-DD) for `now` in an explicit IANA timezone.
+ * Pass the user's resolved timezone (see resolveTimeZone) so the day
+ * boundary follows the user, not the server: the same instant can be a
+ * different calendar date in India vs the US, especially near midnight
+ * UTC. With no timezone (SSR/prerender) this is exactly todayLocalYMD.
+ * Display/projection only — lifecycle rules, sorting, and YYYY-MM-DD
+ * storage are untouched.
+ */
+export function todayInTimezone(timeZone?: string, now: Date = new Date()): string {
+  if (!timeZone) return todayLocalYMD(now);
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const get = (type: string): string | undefined =>
+      parts.find((part) => part.type === type)?.value;
+    const year = get("year");
+    const month = get("month");
+    const day = get("day");
+    if (
+      year !== undefined &&
+      month !== undefined &&
+      day !== undefined &&
+      /^\d{4}$/.test(year) &&
+      /^\d{2}$/.test(month) &&
+      /^\d{2}$/.test(day)
+    ) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch {
+    // Unknown timezone or runtime without Intl: fall back to device-local.
+  }
+  return todayLocalYMD(now);
+}
+
 /** Whole days from fromYMD to toYMD (negative when toYMD is earlier). */
 export function daysBetweenYMD(fromYMD: string, toYMD: string): number {
   const from = Date.UTC(

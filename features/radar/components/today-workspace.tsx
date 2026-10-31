@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/ui/stat-card";
-import { todayLocalYMD } from "@/lib/dates";
+import { todayInTimezone } from "@/lib/dates";
+import { resolveTimeZone } from "@/lib/locale";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { trackWorkspaceActiveOnce } from "@/lib/analytics";
@@ -83,9 +84,11 @@ export function TodayWorkspace({
   signedIn,
   userName,
 }: TodayWorkspaceProps) {
-  const [todayYMD, setTodayYMD] = React.useState(() => todayLocalYMD());
+  // Explicit day boundary (Phase 2): the user's resolved timezone defines
+  // "today", never the server's. Re-resolved at each interaction below.
+  const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
   const [records, setRecords] = React.useState(() =>
-    initialClients.map((stored, i) => toClientRecord(stored, i, todayLocalYMD())),
+    initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
   );
   const [followups] = React.useState<StoredFollowup[]>(initialFollowups);
   const [filter, setFilter] = React.useState<TodayFilter>(initialFilter);
@@ -149,7 +152,7 @@ export function TodayWorkspace({
   }
 
   async function handleContacted(id: string) {
-    const today = todayLocalYMD();
+    const today = todayInTimezone(resolveTimeZone());
     setTodayYMD(today);
     const target = records.find((r) => r.id === id);
     if (!target) return;
@@ -187,7 +190,7 @@ export function TodayWorkspace({
     try {
       const supabase: SupabaseClient = createClient();
       const updated = await updateLastContacted(supabase, id, prevLastContacted);
-      const today = todayLocalYMD();
+      const today = todayInTimezone(resolveTimeZone());
       setTodayYMD(today);
       setRecords((prev) =>
         prev.map((r) =>

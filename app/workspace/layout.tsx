@@ -14,7 +14,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       <Card>
         <p className="text-xs leading-relaxed text-stone-500">
           Your clients are private to your signed-in account and work alongside your existing
-          financial software. Do not enter PAN, Aadhaar, bank, OTP or password details.{" "}
+          financial software. Do not enter ID numbers, bank, OTP or password details.{" "}
           <Link
             href="/tools/message-studio"
             className="font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"

@@ -24,10 +24,10 @@ import {
 import { SignalBadge } from "@/components/ui/signal-badge";
 import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
-import { todayLocalYMD } from "@/lib/dates";
+import { todayInTimezone } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { resolveRegion } from "@/lib/locale";
+import { resolveRegion, resolveTimeZone } from "@/lib/locale";
 import { trackClientCountTransition, trackImportSuccess, trackTemplateDownload, trackWorkspaceActiveOnce } from "@/lib/analytics";
 import type { StoredFollowup } from "@/features/followups/types";
 import {
@@ -43,7 +43,7 @@ import { buildTodayItems, upcomingFollowups } from "../today";
 import { ClientForm } from "./client-form";
 import { ClientBookCard } from "./client-book-card";
 import { ImportTriggerIcon } from "../import/import-trigger-icon";
-import { downloadTextFile, buildTemplateCsv, TEMPLATE_FILENAME } from "../import/template-csv";
+import { downloadTextFile, buildGeneralTemplateCsv, GENERAL_TEMPLATE_FILENAME } from "../import/template-csv";
 import { identityOf, manualDuplicateCopy, matchExisting } from "../import/duplicates";
 
 // The import flow (dialog + preview pipeline + workbook parsing) only runs
@@ -99,9 +99,11 @@ export function ClientsWorkspace({
   configured,
   signedIn,
 }: ClientsWorkspaceProps) {
-  const [todayYMD] = React.useState(() => todayLocalYMD());
+  // Explicit day boundary (Phase 2): the user's resolved timezone defines
+  // "today", never the server's. Re-resolved at each interaction below.
+  const [todayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
   const [records, setRecords] = React.useState<ClientRecord[]>(() =>
-    initialClients.map((stored, i) => toClientRecord(stored, i, todayLocalYMD())),
+    initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
   );
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<BookFilter>("all");
@@ -515,8 +517,8 @@ export function ClientsWorkspace({
               <Button
                 variant="ghost"
                 onClick={() => {
-                  trackTemplateDownload();
-                  downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv");
+                  trackTemplateDownload("generic");
+                  downloadTextFile(GENERAL_TEMPLATE_FILENAME, buildGeneralTemplateCsv(), "text/csv");
                 }}
               >
                 <DownloadIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />

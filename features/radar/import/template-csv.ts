@@ -1,4 +1,4 @@
-import { RADAR_HEADERS } from "@/features/radar/template";
+import { GENERAL_TEMPLATE_HEADERS, RADAR_HEADERS } from "@/features/radar/template";
 import type { PreviewRow } from "./import-types";
 
 /** Blank canonical template — no example rows, so nothing imports by accident. */
@@ -8,6 +8,14 @@ export function buildTemplateCsv(): string {
 
 /** Download filename for the canonical blank template. */
 export const TEMPLATE_FILENAME = "micronest-mfd-client-template.csv";
+
+/** Blank generic template — no example rows, so nothing imports by accident. */
+export function buildGeneralTemplateCsv(): string {
+  return `${[...GENERAL_TEMPLATE_HEADERS].join(",")}\n`;
+}
+
+/** Download filename for the generic blank template. */
+export const GENERAL_TEMPLATE_FILENAME = "micronest-general-client-template.csv";
 
 function escapeCsvCell(value: string): string {
   if (/[",\n\r]/.test(value)) {

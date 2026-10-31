@@ -1,4 +1,5 @@
 import type { InvestmentType } from "./types";
+import { formatDisplayDate } from "@/lib/dates";
 import { formatMoneyMinor, type MoneyFormatOptions } from "@/lib/locale";
 
 /**
@@ -31,6 +32,16 @@ export const LEGACY_AMOUNT_HEADER = "Amount" as const;
 export const MAPPABLE_HEADERS: RadarHeader[] = [...RADAR_HEADERS, LEGACY_AMOUNT_HEADER];
 
 export const RADAR_REQUIRED_HEADERS: RadarHeader[] = ["Client Name"];
+
+/**
+ * Generic-first template headers (Phase 2): the smallest relationship
+ * record that imports cleanly — Client Name, Phone, Last Contacted, Note.
+ * "Phone" auto-maps to the canonical Mobile field via the alias map, so a
+ * generic file imports through the exact same pipeline, limits, dedup, and
+ * blank-safe update behavior as the MFD template. No schema change: these
+ * are presentation-only labels over the existing canonical fields.
+ */
+export const GENERAL_TEMPLATE_HEADERS = ["Client Name", "Phone", "Last Contacted", "Note"];
 
 export const INVESTMENT_TYPES: InvestmentType[] = ["SIP", "Lumpsum", "Both", "Insurance", "Other"];
 
@@ -212,4 +223,34 @@ export function formatInvestmentAmounts(
   if (type === "SIP") return sip ?? lumpsum;
   if (type === "Lumpsum") return lumpsum ?? sip;
   return lumpsum ?? sip;
+}
+
+export interface InvestmentSummaryInput {
+  investmentType: InvestmentType;
+  sipAmountPaise: number | null;
+  lumpsumAmountPaise: number | null;
+  lastInvested: string | null;
+}
+
+/**
+ * One-line card summary (Phase 2 generic vocabulary). Display only:
+ * a client with no investment data at all (type Other, no amounts, no
+ * date) reads neutrally as "No investment details" instead of wearing
+ * MFD wording; anything recorded keeps the existing MFD presentation.
+ * Stored data is untouched — this only changes what the cards show.
+ */
+export function investmentSummaryLine(record: InvestmentSummaryInput): string {
+  const amounts = formatInvestmentAmounts(
+    record.investmentType,
+    record.sipAmountPaise,
+    record.lumpsumAmountPaise,
+  );
+  if (!amounts && record.lastInvested === null && record.investmentType === "Other") {
+    return "No investment details";
+  }
+  const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
+  if (record.lastInvested) {
+    return `${base} · Invested ${formatDisplayDate(record.lastInvested)}`;
+  }
+  return `${base} · Never invested`;
 }

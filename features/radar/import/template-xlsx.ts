@@ -1,6 +1,9 @@
-import { RADAR_HEADERS } from "@/features/radar/template";
+import { GENERAL_TEMPLATE_HEADERS, RADAR_HEADERS } from "@/features/radar/template";
 
 export const TEMPLATE_XLSX_FILENAME = "micronest-mfd-client-template.xlsx";
+
+/** Download filename for the generic blank XLSX template. */
+export const GENERAL_TEMPLATE_XLSX_FILENAME = "micronest-general-client-template.xlsx";
 
 /** Sheet holding the import-ready header row. No prose, no sample rows. */
 export const CLIENTS_SHEET_NAME = "Clients";
@@ -85,6 +88,75 @@ const GUIDE_NOTES: string[] = [
   "Older files with a single Amount column still work: it reads as the monthly figure for SIP, the recorded figure for Lumpsum, and the monthly figure for Both (never doubled — add a Lumpsum Amount column for the second figure).",
   "Only the Clients sheet is imported. If your file has several sheets, pick Clients when uploading.",
 ];
+
+/**
+ * Generic-first filling guide (Phase 2): only the four generic columns.
+ * Neutral examples — no region-specific names, numbers, or product terms.
+ * The MFD guide above stays untouched for the MFD template.
+ */
+export const GENERAL_GUIDE_ROWS: GuideRow[] = [
+  {
+    column: "Client Name",
+    required: "Yes",
+    what: "Client's full name (max 60 characters).",
+    example: "Alex Morgan",
+  },
+  {
+    column: "Phone",
+    required: "No",
+    what: "Client's phone number with country code (e.g. +1 5551234567). Blank is fine.",
+    example: "+1 5551234567",
+  },
+  {
+    column: "Last Contacted",
+    required: "No",
+    what: "Date you last spoke with the client, as day/month/year (DD/MM/YYYY). Blank means never contacted.",
+    example: "20/10/2026",
+  },
+  {
+    column: "Note",
+    required: "No",
+    what: "Short note, max 200 characters. Blank is fine.",
+    example: "Prefers morning calls",
+  },
+];
+
+const GENERAL_GUIDE_NOTES: string[] = [
+  "Dates: day/month/year (DD/MM/YYYY), e.g. 20/10/2026. Ambiguous numeric dates always read day-first.",
+  "Phone: always include the country code so the number is never misread.",
+  "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients keep their record and only the filled-in fields change. Blank cells never erase existing details.",
+  "Only the Clients sheet is imported. If your file has several sheets, pick Clients when uploading.",
+  "Need investment fields (SIP, Lumpsum, Investment Type)? Use the MFD clients template instead.",
+];
+
+/**
+ * Builds the generic two-sheet template workbook in the browser, mirroring
+ * buildTemplateXlsx. Same on-demand xlsx load, same browser-only download.
+ */
+export async function buildGeneralTemplateXlsx(): Promise<ArrayBuffer> {
+  const { utils, write } = await import("xlsx");
+  const workbook = utils.book_new();
+
+  const clientsGrid: string[][] = [[...GENERAL_TEMPLATE_HEADERS]];
+  const clientsSheet = utils.aoa_to_sheet(clientsGrid);
+  clientsSheet["!cols"] = GENERAL_TEMPLATE_HEADERS.map((header) => ({
+    wch: Math.max(header.length + 4, 14),
+  }));
+  utils.book_append_sheet(workbook, clientsSheet, CLIENTS_SHEET_NAME);
+
+  const guideGrid: string[][] = [
+    ["Column", "Required?", "What to enter", "Example"],
+    ...GENERAL_GUIDE_ROWS.map((row) => [row.column, row.required, row.what, row.example]),
+    [],
+    ...GENERAL_GUIDE_NOTES.map((note) => [note, "", "", ""]),
+  ];
+  const guideSheet = utils.aoa_to_sheet(guideGrid);
+  guideSheet["!cols"] = [{ wch: 18 }, { wch: 12 }, { wch: 80 }, { wch: 20 }];
+  utils.book_append_sheet(workbook, guideSheet, GUIDE_SHEET_NAME);
+
+  const output = write(workbook, { type: "array", bookType: "xlsx" });
+  return output instanceof ArrayBuffer ? output : (new Uint8Array(output).buffer as ArrayBuffer);
+}
 
 /**
  * Builds the two-sheet template workbook in the browser. The Clients sheet

@@ -1,5 +1,10 @@
 export type MessagePurpose =
-  "document-request" | "sip-confirmation" | "review-invite" | "kyc-reminder";
+  | "check-in"
+  | "thank-you"
+  | "document-request"
+  | "sip-confirmation"
+  | "review-invite"
+  | "kyc-reminder";
 
 export type MessageLanguage = "en" | "hinglish";
 export type MessageTone = "professional" | "friendly";
@@ -174,11 +179,77 @@ function buildKycReminder(fields: MessageFields, opts: TemplateOptions): string 
 }
 
 /**
+ * Generic check-in (Phase 2): a short, warm nudge with no product content.
+ * Works for consultants, agents, coaches, advisors, and service businesses.
+ */
+function buildCheckIn(fields: MessageFields, opts: TemplateOptions): string {
+  const friendly = opts.tone === "friendly";
+  const head = greeting(fields.clientName, opts.language, friendly);
+  let body: string;
+  if (opts.language === "hinglish") {
+    body = friendly
+      ? "Bas ye check karne ke liye message kiya tha ki sab theek chal raha hai."
+      : "Ye message keval ye jaanne ke liye hai ki sab kuch theek chal raha hai.";
+    body += friendly
+      ? " Kuch bhi chahiye ho to please batayein."
+      : " Koi sahayata chahiye ho to kripya batayein.";
+  } else {
+    body = friendly
+      ? "Just checking in to see how things are going on your end."
+      : "I am writing to check that everything is going well on your end.";
+    body += friendly
+      ? " Let me know if there is anything I can help with."
+      : " Please let me know if I can be of any assistance.";
+  }
+  return `${head}\n\n${body}\n\n${closing(opts.language, friendly)}${footer(opts.arn, opts.includeDisclosure)}`;
+}
+
+/**
+ * Generic thank-you (Phase 2): a short note of appreciation with no
+ * product content. Fits any relationship business.
+ */
+function buildThankYou(fields: MessageFields, opts: TemplateOptions): string {
+  const friendly = opts.tone === "friendly";
+  const head = greeting(fields.clientName, opts.language, friendly);
+  let body: string;
+  if (opts.language === "hinglish") {
+    body = friendly
+      ? "Aapke bharose ke liye dil se dhanyavaad."
+      : "Aapke vishvaas ke liye hardik dhanyavaad.";
+    body += friendly
+      ? " Aage bhi hum aapki seva mein hazir rahenge."
+      : " Bhavishya mein bhi aapki seva ka avsar milega, iski aasha karte hain.";
+  } else {
+    body = friendly
+      ? "Thank you so much for your trust — it really means a lot."
+      : "Thank you for your trust and for choosing to work with me.";
+    body += friendly
+      ? " I look forward to continuing to support you."
+      : " I look forward to continuing to be of service.";
+  }
+  return `${head}\n\n${body}\n\n${closing(opts.language, friendly)}${footer(opts.arn, opts.includeDisclosure)}`;
+}
+
+/**
  * Single source of truth for every message purpose.
  * To add a purpose: add one entry here (+ validation needs no change,
  * it reads `requiredFields`), then expose it in the UI purpose list.
  */
 export const TEMPLATES: Record<MessagePurpose, TemplateDef> = {
+  "check-in": {
+    id: "check-in",
+    label: "Check-in",
+    shortDescription: "Say hello and ask how things are going.",
+    requiredFields: ["clientName"],
+    build: buildCheckIn,
+  },
+  "thank-you": {
+    id: "thank-you",
+    label: "Thank You",
+    shortDescription: "Thank a client for their trust.",
+    requiredFields: ["clientName"],
+    build: buildThankYou,
+  },
   "document-request": {
     id: "document-request",
     label: "Document Request",
@@ -209,8 +280,10 @@ export const TEMPLATES: Record<MessagePurpose, TemplateDef> = {
   },
 };
 
-/** Display order of purposes in the UI. */
+/** Display order of purposes in the UI. Generic-first; MFD purposes intact. */
 export const TEMPLATE_ORDER: MessagePurpose[] = [
+  "check-in",
+  "thank-you",
   "document-request",
   "sip-confirmation",
   "review-invite",

@@ -51,6 +51,25 @@ export function resolveRegion(): string {
 }
 
 /**
+ * Device IANA timezone ("Asia/Kolkata", "America/New_York", …) when the
+ * runtime can resolve one; undefined otherwise (SSR, prerender, or a
+ * runtime without Intl). Used only to define the calendar-day boundary
+ * for "today" — never for identity, storage, or access control. Storage
+ * stays YYYY-MM-DD.
+ */
+export function resolveTimeZone(): string | undefined {
+  try {
+    if (typeof Intl !== "undefined" && typeof Intl.DateTimeFormat === "function") {
+      const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (typeof timeZone === "string" && timeZone.length > 0) return timeZone;
+    }
+  } catch {
+    // Telemetry-grade best effort: fall through to undefined.
+  }
+  return undefined;
+}
+
+/**
  * Integer minor units → display string. Default is the exact legacy MFD
  * output (₹5,000 / ₹5,000.50 with en-IN grouping); other locales use
  * standard currency formatting. Display only — storage stays integer.

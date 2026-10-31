@@ -72,6 +72,20 @@ interface PurposeFieldsProps {
 /** The 2–4 inputs each purpose needs. One branch per template. */
 export function PurposeFields({ purpose, fields, set, errors }: PurposeFieldsProps) {
   switch (purpose) {
+    case "check-in":
+      return (
+        <p className="text-xs leading-relaxed text-stone-500">
+          Just the client&apos;s name — the message is a short hello. Add a personal line with
+          “Write a message” if you want more.
+        </p>
+      );
+    case "thank-you":
+      return (
+        <p className="text-xs leading-relaxed text-stone-500">
+          Just the client&apos;s name — the message is a short thank-you. Add a personal line
+          with “Write a message” if you want more.
+        </p>
+      );
     case "document-request":
       return (
         <>

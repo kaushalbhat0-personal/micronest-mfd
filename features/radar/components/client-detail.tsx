@@ -17,7 +17,8 @@ import {
   TrashIcon,
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
-import { formatDisplayDate, todayLocalYMD } from "@/lib/dates";
+import { formatDisplayDate, todayInTimezone } from "@/lib/dates";
+import { resolveTimeZone } from "@/lib/locale";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -165,8 +166,12 @@ export function ClientDetail({
   initialFollowups?: StoredFollowup[];
 }) {
   const router = useRouter();
-  const [todayYMD, setTodayYMD] = React.useState(() => todayLocalYMD());
-  const [record, setRecord] = React.useState(() => toClientRecord(stored, 0, todayLocalYMD()));
+  // Explicit day boundary (Phase 2): the user's resolved timezone defines
+  // "today", never the server's. Re-resolved at each interaction below.
+  const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
+  const [record, setRecord] = React.useState(() =>
+    toClientRecord(stored, 0, todayInTimezone(resolveTimeZone())),
+  );
   const [messaging, setMessaging] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
@@ -190,7 +195,7 @@ export function ClientDetail({
   }
 
   async function handleContacted() {
-    const today = todayLocalYMD();
+    const today = todayInTimezone(resolveTimeZone());
     setTodayYMD(today);
     setStoreError(null);
     setBusy(true);
@@ -216,7 +221,7 @@ export function ClientDetail({
     try {
       const supabase = supabaseOrThrow();
       const updated = await updateLastContacted(supabase, record.id, prevLastContacted);
-      const today = todayLocalYMD();
+      const today = todayInTimezone(resolveTimeZone());
       setTodayYMD(today);
       setRecord(toClientRecord(updated, 0, today));
       setLastContact(null);
@@ -233,7 +238,7 @@ export function ClientDetail({
     try {
       const supabase = supabaseOrThrow();
       const updated = await updateClient(supabase, record.id, input);
-      const today = todayLocalYMD();
+      const today = todayInTimezone(resolveTimeZone());
       setTodayYMD(today);
       setRecord(toClientRecord(updated, 0, today));
       setEditing(false);
@@ -354,7 +359,7 @@ export function ClientDetail({
                   <dd className="font-medium break-words text-stone-900">{record.phone || "—"}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">What they have</dt>
+                  <dt className="text-stone-500">Category</dt>
                   <dd className="font-medium text-stone-900">{record.investmentType}</dd>
                 </div>
                 {formatSipAmount(record.sipAmountPaise) && (
@@ -374,7 +379,7 @@ export function ClientDetail({
                   </div>
                 )}
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Last invested</dt>
+                  <dt className="text-stone-500">Last activity</dt>
                   <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">

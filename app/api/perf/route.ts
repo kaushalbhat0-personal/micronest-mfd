@@ -53,6 +53,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       event: beacon.event,
       ...(beacon.clientCount === undefined ? {} : { rows: beacon.clientCount }),
       ...(beacon.milestone === undefined ? {} : { milestone: beacon.milestone }),
+      ...(beacon.templateType === undefined ? {} : { templateType: beacon.templateType }),
     });
   }
   return NextResponse.json({ ok: true });
