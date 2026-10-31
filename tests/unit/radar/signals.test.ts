@@ -186,13 +186,16 @@ describe("reasonsFor", () => {
 });
 
 describe("radarPriorityClass", () => {
-  it("orders recent-plus-reconnect above recent above new above reconnect above none", () => {
+  it("orders actionable first, recent-only context below every actionable client", () => {
+    // MFD-66: recent-investor is context, not attention. Actionable
+    // (reconnect/new) always outranks recent-only; a recent investment
+    // only boosts an already-actionable client into class 1.
     expect(radarPriorityClass(["recent-investor", "reconnect-due"])).toBe(1);
-    expect(radarPriorityClass(["recent-investor"])).toBe(2);
-    expect(radarPriorityClass(["new-client"])).toBe(3);
-    expect(radarPriorityClass(["reconnect-due"])).toBe(4);
+    expect(radarPriorityClass(["recent-investor", "new-client"])).toBe(1);
+    expect(radarPriorityClass(["new-client"])).toBe(2);
+    expect(radarPriorityClass(["reconnect-due"])).toBe(3);
+    expect(radarPriorityClass(["recent-investor"])).toBe(4);
     expect(radarPriorityClass([])).toBe(5);
-    expect(radarPriorityClass(["recent-investor", "new-client"])).toBe(2);
   });
 });
 
@@ -239,8 +242,11 @@ describe("sortRadarRecords", () => {
         signals: ["recent-investor"],
       }),
     ];
+    // MFD-66: actionable first (recent-boosted, then new, then
+    // reconnect), then recent-only context, then no signal. Contacted
+    // recent-only clients (rows 8, 1) sort below every actionable client.
     expect(sortRadarRecords(records, TODAY).map((r) => r.rowNumber)).toEqual([
-      2, 5, 8, 1, 4, 3, 6, 7,
+      2, 5, 4, 3, 6, 8, 1, 7,
     ]);
   });
 

@@ -1,7 +1,7 @@
 import { formatDisplayDate } from "@/lib/dates";
 import { getFollowUpStatus } from "../followups/dates";
 import type { StoredFollowup } from "../followups/types";
-import { sortRadarRecords } from "./signals";
+import { hasActionableSignal, sortRadarRecords } from "./signals";
 import type { ClientRecord } from "./types";
 
 export type TodayFilter = "all" | "attention" | "followups" | "reconnect" | "new";
@@ -113,13 +113,10 @@ function whyFor(
   if (today) {
     return { kind: "followup-today", title: "Follow-up due today", detail: today.reason };
   }
-  if (record.signals.includes("recent-investor") && record.lastInvested) {
-    return {
-      kind: "recent",
-      title: "Recent investor",
-      detail: `Invested ${formatDisplayDate(record.lastInvested)}`,
-    };
-  }
+  // Actionable derived signals outrank informational context: a client who
+  // is both due and a recent investor leads with the reconnect reason.
+  // "recent" stays visible as context but never as the top why when an
+  // actionable reason exists.
   if (record.signals.includes("reconnect-due")) {
     const detail =
       record.lastContacted === null
@@ -129,6 +126,13 @@ function whyFor(
   }
   if (record.signals.includes("new-client")) {
     return { kind: "new", title: "New client", detail: "Say hello and set the rhythm" };
+  }
+  if (record.signals.includes("recent-investor") && record.lastInvested) {
+    return {
+      kind: "recent",
+      title: "Recent investor",
+      detail: `Invested ${formatDisplayDate(record.lastInvested)}`,
+    };
   }
   const upcoming = followups.find((f) => f.status === "upcoming");
   if (upcoming) {
@@ -240,7 +244,10 @@ export function filterTodayItems(items: TodayItem[], filter: TodayFilter): Today
     case "all":
       return items;
     case "attention":
-      return items.filter((i) => i.record.signals.length > 0 || i.followups.length > 0);
+      // MFD-66: actionable signals only — recent-investor context alone
+      // never qualifies. Open follow-ups (any status) still count, as
+      // before; this change only demotes the informational signal.
+      return items.filter((i) => hasActionableSignal(i.record.signals) || i.followups.length > 0);
     case "followups":
       return items.filter((i) => i.followups.length > 0);
     case "reconnect":
@@ -252,7 +259,7 @@ export function filterTodayItems(items: TodayItem[], filter: TodayFilter): Today
 
 export function countToday(items: TodayItem[]): TodayCounts {
   const hasSignal = (i: TodayItem): boolean =>
-    i.record.signals.length > 0 || i.followups.length > 0;
+    hasActionableSignal(i.record.signals) || i.followups.length > 0;
   return {
     total: items.length,
     attention: items.filter(hasSignal).length,

@@ -36,10 +36,10 @@ describe("radar view helpers", () => {
     record({ name: "Quiet", signals: [] }),
   ];
 
-  it("attention shows only clients with signals, preserving priority order", () => {
+  it("attention shows only actionable clients, preserving priority order", () => {
+    // MFD-66: recent-investor alone is context, never attention.
     expect(filterRadarRecords(records, "attention").map((r) => r.name)).toEqual([
       "Both",
-      "Recent",
       "Fresh",
       "Due",
     ]);
@@ -58,10 +58,10 @@ describe("radar view helpers", () => {
     expect(filterRadarRecords(records, "all")).toHaveLength(5);
   });
 
-  it("summarizes counts from signals", () => {
+  it("summarizes counts from signals with recent-only excluded from attention", () => {
     expect(summarizeRadar(records)).toEqual({
       total: 5,
-      attention: 4,
+      attention: 3,
       recentInvestors: 2,
       reconnectDue: 2,
       newClients: 1,

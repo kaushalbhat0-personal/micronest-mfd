@@ -27,6 +27,14 @@ export interface SignalInput {
  *   untouched as explicit metadata.
  * - "reconnect-due" is purely date-driven, so a contacted client becomes
  *   due again naturally once the interval passes.
+ *
+ * Product rule (MFD-66): "recent-investor" is CONTEXT, not attention.
+ * A client who only invested recently — with no new-client state, no
+ * reconnect due, and no open follow-up — must NOT count as needing
+ * attention. It may still render as a "Recent" badge/line, but it never
+ * inflates counts, filters, or priority on its own. Actionable attention
+ * is only "reconnect-due" and "new-client" (plus open follow-ups, which
+ * the today/book view-model owns).
  */
 export function computeSignals(
   input: SignalInput,
@@ -52,6 +60,19 @@ export function computeSignals(
     signals.push("new-client");
   }
   return signals;
+}
+
+/**
+ * The signals that count as ACTIONABLE attention. "recent-investor" is
+ * deliberately absent: it is informational context, never a reason to
+ * contact on its own. Single source of truth for every attention count,
+ * filter, and ordering decision (view.ts, today.ts, book.ts).
+ */
+export const ACTIONABLE_SIGNALS = ["reconnect-due", "new-client"] as const;
+
+/** True when the signal set carries at least one actionable reason. */
+export function hasActionableSignal(signals: Signal[]): boolean {
+  return signals.includes("reconnect-due") || signals.includes("new-client");
 }
 
 /**
@@ -81,13 +102,19 @@ export function reasonsFor(
   return reasons;
 }
 
-/** Priority class for ordering: 1 hottest → 5 no signal (All-clients view only). */
+/** Priority class for ordering: 1 hottest → 5 no signal (All-clients view only).
+ * Actionable reasons always outrank informational context: a recent-only
+ * investor (4) sorts below every actionable client, so contacting someone
+ * drops them below clients that still need attention instead of sticking
+ * near the top. A recent investment only boosts an already-actionable
+ * client into class 1. */
 export function radarPriorityClass(signals: Signal[]): 1 | 2 | 3 | 4 | 5 {
   const has = (s: Signal): boolean => signals.includes(s);
-  if (has("recent-investor") && has("reconnect-due")) return 1;
-  if (has("recent-investor")) return 2;
-  if (has("new-client")) return 3;
-  if (has("reconnect-due")) return 4;
+  const actionable = has("reconnect-due") || has("new-client");
+  if (has("recent-investor") && actionable) return 1;
+  if (has("new-client")) return 2;
+  if (has("reconnect-due")) return 3;
+  if (has("recent-investor")) return 4;
   return 5;
 }
 
@@ -97,9 +124,10 @@ function daysSinceContact(rec: ClientRecord, todayYMD: string): number | null {
 }
 
 /**
- * Full ordering: recent+reconnect (invested desc) → recent (invested desc) →
- * new (file order) → reconnect (never-contacted first, then longest silence) →
- * no signal (file order). Stable final tiebreak on rowNumber.
+ * Full ordering: actionable+recent (invested desc) → new (file order) →
+ * reconnect (never-contacted first, then longest silence) →
+ * recent-only context (invested desc) → no signal (file order).
+ * Stable final tiebreak on rowNumber.
  */
 export function sortRadarRecords(records: ClientRecord[], todayYMD: string): ClientRecord[] {
   const priorityOf = (rec: ClientRecord): number => radarPriorityClass(rec.signals);
@@ -108,12 +136,12 @@ export function sortRadarRecords(records: ClientRecord[], todayYMD: string): Cli
     if (priorityDiff !== 0) return priorityDiff;
     const priority = priorityOf(a);
 
-    if ((priority === 1 || priority === 2) && a.lastInvested && b.lastInvested) {
+    if ((priority === 1 || priority === 4) && a.lastInvested && b.lastInvested) {
       if (a.lastInvested !== b.lastInvested) return a.lastInvested < b.lastInvested ? 1 : -1;
       return a.rowNumber - b.rowNumber;
     }
-    if (priority === 3) return a.rowNumber - b.rowNumber;
-    if (priority === 4) {
+    if (priority === 2) return a.rowNumber - b.rowNumber;
+    if (priority === 3) {
       const aDays = daysSinceContact(a, todayYMD);
       const bDays = daysSinceContact(b, todayYMD);
       if (aDays === null && bDays === null) return a.rowNumber - b.rowNumber;

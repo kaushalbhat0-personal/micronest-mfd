@@ -1,4 +1,4 @@
-import { computeSignals, sortRadarRecords } from "./signals";
+import { computeSignals, hasActionableSignal, sortRadarRecords } from "./signals";
 import type { ClientRecord, Signal } from "./types";
 
 export type RadarFilter = "attention" | Signal | "all";
@@ -14,10 +14,12 @@ export const RADAR_FILTERS: Array<{ id: RadarFilter; label: string }> = [
 /**
  * UI-only subsetting. The domain owns signals and ordering — this only
  * picks which slice of the already-prioritized collection to show.
+ * The attention slice is ACTIONABLE only: recent-investor context alone
+ * never qualifies (MFD-66 single source of truth: hasActionableSignal).
  */
 export function filterRadarRecords(records: ClientRecord[], filter: RadarFilter): ClientRecord[] {
   if (filter === "all") return records;
-  if (filter === "attention") return records.filter((r) => r.signals.length > 0);
+  if (filter === "attention") return records.filter((r) => hasActionableSignal(r.signals));
   return records.filter((r) => r.signals.includes(filter));
 }
 
@@ -40,12 +42,14 @@ export interface RadarSummary {
   newClients: number;
 }
 
-/** Counts derived from domain signals. No separate signal calculation. */
+/** Counts derived from domain signals. Attention counts ACTIONABLE
+ * signals only — recent-investor context alone never qualifies. No
+ * separate signal calculation. */
 export function summarizeRadar(records: ClientRecord[]): RadarSummary {
   const has = (r: ClientRecord, s: Signal): boolean => r.signals.includes(s);
   return {
     total: records.length,
-    attention: records.filter((r) => r.signals.length > 0).length,
+    attention: records.filter((r) => hasActionableSignal(r.signals)).length,
     recentInvestors: records.filter((r) => has(r, "recent-investor")).length,
     reconnectDue: records.filter((r) => has(r, "reconnect-due")).length,
     newClients: records.filter((r) => has(r, "new-client")).length,
