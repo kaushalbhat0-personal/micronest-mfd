@@ -3,12 +3,12 @@ import { logPerf } from "@/lib/perf/log";
 import { parsePerfBeacon } from "@/lib/perf/schema";
 
 /**
- * Aggregate performance beacon ingestion (observability phase).
+ * Aggregate performance + validation beacon ingestion (observability phase).
  *
  * Accepts the strict beacon schema only (counts and durations, fixed
- * enums — no free-form strings, so no client data can arrive). Invalid
- * payloads are dropped with a 400 and never logged. Valid beacons emit
- * one stdout JSON line each; nothing is stored, cached, or shared.
+ * op/event enums — no free-form strings, so no client data can arrive).
+ * Invalid payloads are dropped with a 400 and never logged. Valid beacons
+ * emit one stdout JSON line each; nothing is stored, cached, or shared.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   let body: unknown;
@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       failed: beacon.failed,
       writeMs: beacon.writeMs,
     });
-  } else {
+  } else if (beacon.op === "followup.mutation") {
     logPerf({
       op: "followup.mutation",
       durationMs: beacon.writeMs + beacon.requeryMs,
@@ -44,6 +44,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       kind: beacon.kind,
       writeMs: beacon.writeMs,
       requeryMs: beacon.requeryMs,
+    });
+  } else {
+    logPerf({
+      op: "validation.event",
+      durationMs: 0,
+      ok: true,
+      event: beacon.event,
+      ...(beacon.clientCount === undefined ? {} : { rows: beacon.clientCount }),
+      ...(beacon.milestone === undefined ? {} : { milestone: beacon.milestone }),
     });
   }
   return NextResponse.json({ ok: true });

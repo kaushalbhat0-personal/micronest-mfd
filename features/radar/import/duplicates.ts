@@ -11,9 +11,9 @@ export function normalizeDuplicateName(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** 91-prefixed digits for a valid Indian mobile, else null. */
-export function duplicateMobileKey(phone: string): string | null {
-  const result = normalizePhone(phone);
+/** Normalized international digits for a valid phone, else null. */
+export function duplicateMobileKey(phone: string, defaultRegion = "IN"): string | null {
+  const result = normalizePhone(phone, defaultRegion);
   if (!result.ok || !result.digits) return null;
   return result.digits;
 }
@@ -23,8 +23,15 @@ export interface DuplicateIdentity {
   nameKey: string;
 }
 
-export function identityOf(name: string, phone: string): DuplicateIdentity {
-  return { mobileKey: duplicateMobileKey(phone.trim()), nameKey: normalizeDuplicateName(name) };
+export function identityOf(
+  name: string,
+  phone: string,
+  defaultRegion = "IN",
+): DuplicateIdentity {
+  return {
+    mobileKey: duplicateMobileKey(phone.trim(), defaultRegion),
+    nameKey: normalizeDuplicateName(name),
+  };
 }
 
 /** How a candidate matched an existing/file row. Mobile wins; name is fallback only. */

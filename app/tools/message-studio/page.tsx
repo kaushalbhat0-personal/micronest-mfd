@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageStudioLoader } from "@/features/message-studio/components/message-studio-loader";
 
 export const metadata: Metadata = {
-  title: "Messages — MicroNest MFD",
+  title: "Messages — MicroNest",
   description:
     "Create professional, ready-to-send client messages in seconds. No login, nothing stored — everything stays on your device.",
 };

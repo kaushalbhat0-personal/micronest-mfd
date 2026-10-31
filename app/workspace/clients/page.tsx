@@ -10,7 +10,7 @@ import { listClients, RadarStoreError, type StoredRadarClient } from "@/features
 import { ClientsWorkspace } from "@/features/radar/components/clients-workspace";
 
 export const metadata: Metadata = {
-  title: "Clients — MicroNest MFD",
+  title: "Clients — MicroNest",
   description: "Your client list. Search, add, and maintain client relationships.",
 };
 

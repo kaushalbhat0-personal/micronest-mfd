@@ -24,6 +24,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { trackWorkspaceActiveOnce } from "@/lib/analytics";
 import type { StoredFollowup } from "@/features/followups/types";
 import { markContacted } from "../model";
 import {
@@ -96,6 +97,11 @@ export function TodayWorkspace({
   const undoPrevRef = React.useRef(new Map<string, string | null>());
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Validation telemetry (MFD-72): once per tab session, not per render.
+  React.useEffect(() => {
+    trackWorkspaceActiveOnce();
+  }, []);
 
   const showToast = React.useCallback((data: Omit<ToastData, "id">) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);

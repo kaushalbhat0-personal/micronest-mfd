@@ -63,6 +63,12 @@ export interface PreviewInput {
    */
   book?: BookRecord[];
   todayYMD?: string;
+  /**
+   * Region for phone inference on user-supplied cells ("IN" preserves the
+   * +91 inference; other regions require a country code on bare 10-digit
+   * numbers). Book identities were normalized at entry and keep defaults.
+   */
+  defaultRegion?: string;
 }
 
 export interface PreviewOutput {
@@ -83,6 +89,7 @@ export interface PreviewOutput {
  */
 export function buildPreview(input: PreviewInput): PreviewOutput {
   const todayYMD = input.todayYMD ?? todayLocalYMD();
+  const defaultRegion = input.defaultRegion ?? "IN";
   const map = standardHeaderMap();
   const sourceIndex = new Map<RadarHeader, number>();
   input.mapping.forEach((canonical, column) => {
@@ -107,7 +114,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
   });
 
   const identities = candidates.map(({ display }) =>
-    identityOf(display["Client Name"], display["Mobile"]),
+    identityOf(display["Client Name"], display["Mobile"], defaultRegion),
   );
   // File-scope repeats only: book matches are handled separately below so
   // they can become updates instead of silent skips. The manual Add guard
@@ -147,7 +154,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
     const bookHit = bookHits[i];
     const stored = bookHit ? input.book?.[bookHit.index] : undefined;
     if (bookHit && stored) {
-      return validateUpdateRow(base, display, map, todayYMD, stored, bookHit.kind);
+      return validateUpdateRow(base, display, map, todayYMD, stored, bookHit.kind, defaultRegion);
     }
     if (bookHit && !stored) {
       const kind = bookHit.kind;
@@ -176,7 +183,7 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
         reasons: ["This row contains information that shouldn't be stored here."],
       };
     }
-    const result = validateRadarRow(fields, map, todayYMD);
+    const result = validateRadarRow(fields, map, todayYMD, defaultRegion);
     if (!result.row) {
       return {
         ...base,
@@ -294,6 +301,7 @@ function validateUpdateRow(
   todayYMD: string,
   stored: BookRecord,
   matchedBy: "mobile" | "name",
+  defaultRegion = "IN",
 ): PreviewRow {
   const filled = prefillUpdateDisplay(display, stored);
   const sensitive = detectSensitiveInput("Client name", filled["Client Name"]);
@@ -311,7 +319,7 @@ function validateUpdateRow(
   // canonical header, so the shared validator (including legacy Amount
   // directing) runs unchanged. The mapping already landed in `filled`.
   const fields = MAPPABLE_HEADERS.map((canonical) => filled[canonical] ?? "");
-  const result = validateRadarRow(fields, map, todayYMD);
+  const result = validateRadarRow(fields, map, todayYMD, defaultRegion);
   if (!result.row) {
     return {
       ...base,

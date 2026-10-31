@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { parseAndBuildWorkspace, buildStudioHandoff } from "../model";
+import { resolveRegion } from "@/lib/locale";
 import type { FollowUpRow, ImportReport } from "../types";
 import type { FollowUpFilter } from "./status-chips";
 import { EmptyState } from "./empty-state";
@@ -44,7 +45,7 @@ export function Workspace() {
     setFilter("attention");
     setDoneIds(new Set());
     setFileName(name);
-    setReport(parseAndBuildWorkspace(text));
+    setReport(parseAndBuildWorkspace(text, undefined, resolveRegion()));
   }
 
   const rows = React.useMemo(() => {

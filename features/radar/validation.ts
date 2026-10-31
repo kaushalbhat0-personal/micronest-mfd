@@ -141,6 +141,7 @@ export function validateClientFields(
   input: ClientFieldInput,
   todayYMD: string,
   context: ClientInputContext = "csv",
+  defaultRegion = "IN",
 ): RadarRowValidation {
   const name = input.name.trim();
   if (name.length === 0)
@@ -190,7 +191,7 @@ export function validateClientFields(
   let phoneValid = false;
   const warnings: string[] = [];
   if (phone.length > 0) {
-    if (normalizePhone(phone).ok) {
+    if (normalizePhone(phone, defaultRegion).ok) {
       phoneValid = true;
     } else {
       warnings.push("Phone number needs checking — Call and WhatsApp are unavailable for this row.");
@@ -260,6 +261,7 @@ export function validateRadarRow(
   fields: string[],
   map: RadarHeaderMap,
   todayYMD: string,
+  defaultRegion = "IN",
 ): RadarRowValidation {
   const pick = (key: RadarHeader): string => {
     const index = map[key];
@@ -289,6 +291,7 @@ export function validateRadarRow(
     },
     todayYMD,
     "csv",
+    defaultRegion,
   );
   if (!result.row) return result;
   const warnings = [...result.warnings];

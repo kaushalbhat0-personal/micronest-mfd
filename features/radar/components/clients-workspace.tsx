@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { todayLocalYMD } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { resolveRegion } from "@/lib/locale";
+import { trackClientCountTransition, trackImportSuccess, trackTemplateDownload, trackWorkspaceActiveOnce } from "@/lib/analytics";
 import type { StoredFollowup } from "@/features/followups/types";
 import {
   createClient as createStoredClient,
@@ -116,6 +118,11 @@ export function ClientsWorkspace({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const wasAdding = React.useRef(false);
 
+  // Validation telemetry (MFD-72): once per tab session, not per render.
+  React.useEffect(() => {
+    trackWorkspaceActiveOnce();
+  }, []);
+
   // Domain view-model: per-client follow-ups + why + priority, same
   // source as the Today queue. Newly added/imported rows re-project
   // through the same engine; follow-up edits live in the client view.
@@ -176,7 +183,7 @@ export function ClientsWorkspace({
     // first, exact name only when mobile is unavailable). Scoped to this
     // user's RLS-loaded records — never a cross-user lookup. A match
     // blocks creation; the existing record is never overwritten or deleted.
-    const candidate = identityOf(input.name, input.phone);
+    const candidate = identityOf(input.name, input.phone, resolveRegion());
     const owned = records.map((r) => identityOf(r.name, r.phone));
     const hit = matchExisting(candidate, owned);
     if (hit) {
@@ -195,6 +202,8 @@ export function ClientsWorkspace({
     try {
       const supabase: SupabaseClient = createClient();
       const stored = await createStoredClient(supabase, input);
+      // Milestone telemetry from the observed transition (not from render).
+      trackClientCountTransition(records.length, records.length + 1);
       setRecords((prev) => {
         const next = [
           ...prev.map((r) => ({ ...r })),
@@ -364,6 +373,11 @@ export function ClientsWorkspace({
           existing={records.map((r) => identityOf(r.name, r.phone))}
           book={records}
           onImported={({ created, updated }) => {
+            if (created.length > 0 || updated.length > 0) {
+              // Milestones count new clients only; updates keep the total.
+              trackClientCountTransition(records.length, records.length + created.length);
+              trackImportSuccess(created.length + updated.length);
+            }
             setRecords((prev) => {
               const next = [...prev.map((r) => ({ ...r }))];
               const indexById = new Map(next.map((r, i) => [r.id, i]));
@@ -500,7 +514,10 @@ export function ClientsWorkspace({
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")}
+                onClick={() => {
+                  trackTemplateDownload();
+                  downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv");
+                }}
               >
                 <DownloadIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
                 Download template

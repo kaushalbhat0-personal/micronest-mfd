@@ -275,7 +275,7 @@ export default function Home() {
         aria-labelledby="home-heading"
       >
         <div className="flex max-w-xl flex-col gap-4 lg:gap-5">
-          <p className="eyebrow">For mutual fund distributors</p>
+          <p className="eyebrow">A simple relationship workspace for people who manage clients</p>
           <h1
             id="home-heading"
             className="text-4xl font-semibold tracking-tight text-stone-900 sm:text-5xl lg:text-6xl lg:leading-[1.05]"

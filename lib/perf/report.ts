@@ -1,4 +1,4 @@
-import type { PerfBeacon } from "./schema";
+import type { PerfBeacon, ValidationBeacon } from "./schema";
 
 /**
  * Fire-and-forget client performance beacon (POST /api/perf).
@@ -15,4 +15,14 @@ export function reportPerf(beacon: PerfBeacon): void {
   } catch {
     // Telemetry is best-effort by design.
   }
+}
+
+/**
+ * Fire-and-forget validation event (same /api/perf transport, same
+ * best-effort contract). Account/product-level events only — see
+ * lib/analytics.ts for the guarded emitters and schema.ts for the
+ * allow-list. Never call with client content.
+ */
+export function reportValidation(beacon: ValidationBeacon): void {
+  reportPerf(beacon);
 }

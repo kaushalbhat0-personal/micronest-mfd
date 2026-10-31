@@ -43,9 +43,16 @@ export function daysBetweenYMD(fromYMD: string, toYMD: string): number {
   return Math.round((to - from) / 86_400_000);
 }
 
-/** Reformats YYYY-MM-DD back to the familiar DD/MM/YYYY for display/prefill. */
-export function formatDisplayDate(dateYMD: string): string {
-  return `${dateYMD.slice(8, 10)}/${dateYMD.slice(5, 7)}/${dateYMD.slice(0, 4)}`;
+import { DEFAULT_LOCALE, formatDateLocale } from "./locale";
+
+/**
+ * Reformats YYYY-MM-DD for display/prefill. Default is the familiar
+ * DD/MM/YYYY (India, byte-identical to before); pass an explicit locale
+ * for locale-aware presentation (e.g. en-US → MM/DD/YYYY). Display only —
+ * storage stays YYYY-MM-DD and CSV interchange stays DD/MM/YYYY.
+ */
+export function formatDisplayDate(dateYMD: string, locale: string = DEFAULT_LOCALE): string {
+  return formatDateLocale(dateYMD, locale);
 }
 
 /**

@@ -11,6 +11,7 @@ import { INVESTMENT_TYPES, lumpsumAmountHint, lumpsumAmountLabel } from "../temp
 import { sipAmountHint, sipAmountLabel } from "../template";
 import type { InvestmentType } from "../types";
 import { validateClientFields, fieldForClientError, type ClientFieldName } from "../validation";
+import { resolveRegion } from "@/lib/locale";
 
 export type ClientFormField = ClientFieldName;
 
@@ -50,6 +51,7 @@ function toDisplayDate(ymd: string): string {
 function toClientInput(
   values: ClientFormInitial,
   todayYMD: string,
+  defaultRegion = "IN",
 ): {
   input: ClientInput | null;
   errors: ClientFormErrors;
@@ -69,6 +71,7 @@ function toClientInput(
     },
     todayYMD,
     "form",
+    defaultRegion,
   );
   if (!result.row) {
     const field = fieldForClientError(result.error);
@@ -135,7 +138,7 @@ export function ClientForm({
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const today = todayLocalYMD();
-    const checked = toClientInput(values, today);
+    const checked = toClientInput(values, today, resolveRegion());
     setErrors(checked.errors);
     setWarnings(checked.warnings);
     setFormError(checked.formError);
@@ -164,11 +167,11 @@ export function ClientForm({
           id="client-mobile"
           label="Mobile number (optional)"
           error={errors.phone}
-          hint={phoneWarning ?? "10-digit mobile number, with or without +91."}
+          hint={phoneWarning ?? "Phone number, with country code when outside India."}
         >
           <TextInput
             id="client-mobile"
-            placeholder="e.g. 9876543210"
+            placeholder="e.g. +91 9876543210"
             value={values.phone}
             onChange={set("phone")}
             error={errors.phone}

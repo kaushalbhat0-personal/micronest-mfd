@@ -14,7 +14,7 @@ import { getClient, RadarStoreError, type StoredRadarClient } from "@/features/r
 import { ClientDetail } from "@/features/radar/components/client-detail";
 
 export const metadata: Metadata = {
-  title: "Client — MicroNest MFD",
+  title: "Client — MicroNest",
   description: "Focused client view: why this client matters and what to do next.",
 };
 

@@ -1,4 +1,5 @@
 import type { InvestmentType } from "./types";
+import { formatMoneyMinor, type MoneyFormatOptions } from "@/lib/locale";
 
 /**
  * The application-owned radar CSV contract. The validator, the future
@@ -132,13 +133,14 @@ export function parseAmountInput(raw: string): AmountParseResult {
   return { paise, error: null };
 }
 
-/** Integer paise → display string (₹5,000 or ₹5,000.50, en-IN grouping). */
-export function formatAmountPaise(paise: number): string {
-  const rupees = Math.floor(paise / 100);
-  const remainder = paise % 100;
-  const grouped = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(rupees);
-  if (remainder === 0) return `₹${grouped}`;
-  return `₹${grouped}.${String(remainder).padStart(2, "0")}`;
+/**
+ * Integer paise → display string. Default is the exact legacy MFD output
+ * (₹5,000 or ₹5,000.50, en-IN grouping); pass explicit locale/currency
+ * options for locale-aware presentation. Display only — storage stays
+ * integer paise.
+ */
+export function formatAmountPaise(paise: number, options?: MoneyFormatOptions): string {
+  return formatMoneyMinor(paise, options);
 }
 
 /**

@@ -31,7 +31,34 @@ export interface FollowupMutationBeacon {
   rows?: number;
 }
 
-export type PerfBeacon = ImportSessionBeacon | FollowupMutationBeacon;
+/**
+ * Product validation beacon (MFD-72 Phase 1). Account/product-level events
+ * only: which milestone happened and the resulting client count. No names,
+ * phones, notes, amounts, reasons, messages, user ids, or any other client
+ * content — the allow-list below rejects anything else, so validation data
+ * cannot smuggle PII by shape.
+ */
+export type ValidationEvent =
+  | "signup"
+  | "first_client"
+  | "client_count_10"
+  | "client_count_50"
+  | "client_count_99"
+  | "client_count_100"
+  | "workspace_active"
+  | "template_download"
+  | "import_success";
+
+export interface ValidationBeacon {
+  op: "validation.event";
+  event: ValidationEvent;
+  /** Resulting owned client count, when the event is count-related. */
+  clientCount?: number;
+  /** Milestone threshold crossed, when the event is milestone-related. */
+  milestone?: number;
+}
+
+export type PerfBeacon = ImportSessionBeacon | FollowupMutationBeacon | ValidationBeacon;
 
 const IMPORT_KEYS = new Set([
   "op",
@@ -50,6 +77,22 @@ const IMPORT_KEYS = new Set([
 const FOLLOWUP_KEYS = new Set(["op", "kind", "ok", "writeMs", "requeryMs", "rows"]);
 
 const FOLLOWUP_KINDS = new Set(["create", "complete", "reopen"]);
+
+const VALIDATION_KEYS = new Set(["op", "event", "clientCount", "milestone"]);
+
+const VALIDATION_EVENTS = new Set([
+  "signup",
+  "first_client",
+  "client_count_10",
+  "client_count_50",
+  "client_count_99",
+  "client_count_100",
+  "workspace_active",
+  "template_download",
+  "import_success",
+]);
+
+const VALIDATION_MILESTONES = new Set([1, 10, 50, 99, 100]);
 
 /** Upper bounds: counts fit real workloads, durations fit one session. */
 function isCount(value: unknown, max = 100000): value is number {
@@ -136,6 +179,24 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
       writeMs,
       requeryMs,
       ...(rows === undefined ? {} : { rows }),
+    };
+  }
+  if (input.op === "validation.event") {
+    if (!hasOnlyKeys(input, VALIDATION_KEYS)) return null;
+    const { event, clientCount, milestone } = input;
+    if (typeof event !== "string" || !VALIDATION_EVENTS.has(event)) return null;
+    if (clientCount !== undefined && !isCount(clientCount, 100000)) return null;
+    if (
+      milestone !== undefined &&
+      (typeof milestone !== "number" || !VALIDATION_MILESTONES.has(milestone))
+    ) {
+      return null;
+    }
+    return {
+      op: "validation.event",
+      event: event as ValidationBeacon["event"],
+      ...(clientCount === undefined ? {} : { clientCount }),
+      ...(milestone === undefined ? {} : { milestone }),
     };
   }
   return null;

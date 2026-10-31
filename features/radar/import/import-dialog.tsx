@@ -10,8 +10,10 @@ import { SignalBadge } from "@/components/ui/signal-badge";
 import { DownloadIcon } from "@/components/ui/icons";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { resolveRegion } from "@/lib/locale";
 import { nowMs } from "@/lib/dates";
 import { reportPerf } from "@/lib/perf/report";
+import { trackTemplateDownload } from "@/lib/analytics";
 import {
   createClient as createStoredClient,
   updateClient as updateStoredClient,
@@ -238,7 +240,7 @@ export function ImportDialog({
 
   function handlePreview() {
     if (!sheet) return;
-    const preview = buildPreview({ sheet, mapping, existing, book });
+    const preview = buildPreview({ sheet, mapping, existing, book, defaultRegion: resolveRegion() });
     setRows(preview.rows);
     setStep("preview");
   }
@@ -387,9 +389,10 @@ export function ImportDialog({
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <Button
                       variant="primary"
-                      onClick={() =>
-                        downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv")
-                      }
+                      onClick={() => {
+                        trackTemplateDownload();
+                        downloadTextFile(TEMPLATE_FILENAME, buildTemplateCsv(), "text/csv");
+                      }}
                     >
                       <DownloadIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                       Download CSV template
@@ -399,6 +402,7 @@ export function ImportDialog({
                       onClick={() => {
                         void (async () => {
                           const buffer = await buildTemplateXlsx();
+                          trackTemplateDownload();
                           downloadBinaryFile(
                             TEMPLATE_XLSX_FILENAME,
                             buffer,
@@ -436,11 +440,13 @@ export function ImportDialog({
                     Note
                   </p>
                   <p className="text-xs">
-                    Dates: DD/MM/YYYY · Investment Type: SIP, Lumpsum, Both, Insurance, or Other
-                    · Amounts: ₹ numbers — monthly SIP for SIP Amount, recorded lumpsum for
-                    Lumpsum Amount (Both clients can fill both) · Notes up to 200 characters ·
-                    Blank optional fields are fine. Re-uploading updates matching clients instead
-                    of adding duplicates.
+                    Dates: day/month/year (DD/MM/YYYY), e.g. 25/10/2026 — ambiguous
+                    numeric dates always read day-first · Investment Type: SIP, Lumpsum,
+                    Both, Insurance, or Other · Amounts: ₹ numbers — monthly SIP for SIP
+                    Amount, recorded lumpsum for Lumpsum Amount (Both clients can fill
+                    both) · Phone: include the country code, e.g. +91 9876543210 · Notes
+                    up to 200 characters · Blank optional fields are fine. Re-uploading
+                    updates matching clients instead of adding duplicates.
                   </p>
                 </div>
                 <details className="rounded-lg border border-stone-200 bg-white">

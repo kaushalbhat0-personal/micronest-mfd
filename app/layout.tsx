@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BrandMark } from "@/components/brand-mark";
@@ -9,9 +10,9 @@ import { NativeRouteGuard } from "@/lib/native/guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MicroNest MFD",
+  title: "MicroNest",
   description:
-    "One focused place that helps mutual fund distributors maintain client relationships every day. Works alongside your existing financial software.",
+    "MicroNest is a simple relationship workspace for people who manage clients — including mutual fund distributors.",
 };
 
 /**
@@ -56,10 +57,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </NativeRouteGuard>
         </NativeAppProvider>
         <footer className="border-t border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-4 text-xs leading-relaxed text-stone-500 sm:px-6 lg:px-8">
-            Operational microtools that work alongside your existing financial software. Nothing
-            here replaces your main record. Do not enter PAN, Aadhaar, bank, OTP or password
-            details in any tool.
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-xs leading-relaxed text-stone-500 sm:px-6 lg:px-8">
+            <p>
+              Operational microtools that work alongside your existing financial software. Nothing
+              here replaces your main record. Do not enter ID numbers, bank, OTP or password
+              details in any tool.
+            </p>
+            <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link
+                href="/privacy"
+                className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/terms"
+                className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/support"
+                className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Support
+              </Link>
+            </nav>
           </div>
         </footer>
         {/* Web Analytics + Speed Insights: async scripts managed by Vercel.

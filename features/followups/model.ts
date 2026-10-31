@@ -65,6 +65,7 @@ export function buildDirectMessage(row: Pick<FollowUpRow, "name" | "reason">): s
 export function buildWorkspace(
   parsed: ParsedCsv,
   todayYMD: string = todayLocalYMD(),
+  defaultRegion = "IN",
 ): ImportReport {
   const empty: ImportReport = {
     rows: [],
@@ -90,7 +91,7 @@ export function buildWorkspace(
   const invalid: ImportReport["invalid"] = [];
 
   for (const record of parsed.rows) {
-    const result = validateRow(record.fields, headerCheck.map);
+    const result = validateRow(record.fields, headerCheck.map, defaultRegion);
     if (!result.row) {
       invalid.push({ rowNumber: record.line, reason: result.error ?? "Invalid row." });
       continue;
@@ -142,9 +143,10 @@ export function buildWorkspace(
 export function parseAndBuildWorkspace(
   text: string,
   todayYMD: string = todayLocalYMD(),
+  defaultRegion = "IN",
 ): ImportReport {
   const parsed = parseCsv(text);
-  const base = buildWorkspace(parsed, todayYMD);
+  const base = buildWorkspace(parsed, todayYMD, defaultRegion);
   if (parsed.malformed.length === 0) return base;
   // Malformed lines are reported as invalid rows alongside validation errors.
   const malformed = parsed.malformed.map((line) => ({

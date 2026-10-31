@@ -36,8 +36,8 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
   {
     column: "Mobile",
     required: "No",
-    what: "Client's mobile number, with or without +91. Blank is fine.",
-    example: "9876543210",
+    what: "Client's phone number with country code (e.g. +91 9876543210 for India). Blank is fine.",
+    example: "+91 9876543210",
   },
   {
     column: "Investment Type",
@@ -78,7 +78,7 @@ export const IMPORT_GUIDE_ROWS: GuideRow[] = [
 ];
 
 const GUIDE_NOTES: string[] = [
-  "Dates: DD/MM/YYYY is recommended (e.g. 25/10/2026). DD-MM-YYYY and YYYY-MM-DD uploads also work; ambiguous numeric dates read as DD/MM/YYYY.",
+  "Dates: day/month/year (DD/MM/YYYY), e.g. 25/10/2026. DD-MM-YYYY and YYYY-MM-DD uploads also work; ambiguous numeric dates always read day-first.",
   "Investment Type accepts SIP, Lumpsum, Both, Insurance, or Other — anything else imports as Other with a warning.",
   "SIP Amount and Lumpsum Amount are optional relationship context, not portfolio value, AUM, holdings, returns, or profit. Your financial software remains the system of record.",
   "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients keep their record and only the filled-in fields change. Blank cells never erase existing details.",

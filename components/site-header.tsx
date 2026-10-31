@@ -11,6 +11,7 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { trackSignupOnce } from "@/lib/analytics";
 import { activeDestination } from "@/lib/nav";
 
 interface SessionIdentity {
@@ -68,6 +69,7 @@ export function SiteHeader() {
       .getUser()
       .then(({ data }) => {
         if (!activeFlag) return;
+        if (data.user) trackSignupOnce(data.user.id);
         setIdentity(
           identityFrom(data.user?.email ?? undefined, data.user?.user_metadata?.full_name),
         );
@@ -76,6 +78,7 @@ export function SiteHeader() {
         if (activeFlag) setIdentity(null);
       });
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) trackSignupOnce(session.user.id);
       setIdentity(
         identityFrom(session?.user?.email ?? undefined, session?.user?.user_metadata?.full_name),
       );

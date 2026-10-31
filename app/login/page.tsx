@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 export const metadata: Metadata = {
-  title: "Sign in — MicroNest MFD",
+  title: "Sign in — MicroNest",
   description:
     "Sign in with Google to open your MicroNest client list on your laptop and phone.",
 };
@@ -44,7 +44,9 @@ async function LoginCard({
           </span>
           <div className="flex min-w-0 flex-col">
             <p className="text-base font-semibold text-stone-900">MicroNest</p>
-            <p className="text-xs text-stone-500">For mutual fund distributors</p>
+            <p className="text-xs text-stone-500">
+              A simple relationship workspace for people who manage clients
+            </p>
           </div>
         </div>
         <GoogleSignInButton next={next} disabled={!configured} />
@@ -99,7 +101,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             </li>
             <li className="flex items-center gap-2">
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
-              No PAN, Aadhaar or bank details needed
+              No ID numbers or bank details needed
             </li>
           </ul>
         </section>

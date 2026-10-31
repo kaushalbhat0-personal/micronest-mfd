@@ -80,7 +80,11 @@ export interface RowValidation {
 }
 
 /** Validates one data record. Phone problems warn; everything else rejects the row. */
-export function validateRow(fields: string[], map: HeaderMap): RowValidation {
+export function validateRow(
+  fields: string[],
+  map: HeaderMap,
+  defaultRegion = "IN",
+): RowValidation {
   const pick = (key: TemplateHeader): string => {
     const index = map[key];
     if (index === -1) return "";
@@ -149,7 +153,7 @@ export function validateRow(fields: string[], map: HeaderMap): RowValidation {
   let phoneValid = false;
   let warning: string | null = null;
   if (phone.length > 0) {
-    if (normalizePhone(phone).ok) {
+    if (normalizePhone(phone, defaultRegion).ok) {
       phoneValid = true;
     } else {
       warning = "Phone number needs checking — WhatsApp is disabled for this row.";
