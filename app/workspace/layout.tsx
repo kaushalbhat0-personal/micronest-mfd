@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 
@@ -6,7 +7,17 @@ import { Card } from "@/components/ui/card";
  * exclusively in the site header (desktop) and the mobile bottom nav —
  * no in-page pills, no second identity row. Route protection itself lives
  * in proxy.ts.
+ *
+ * Defense in depth: the whole workspace subtree is noindex/nofollow so
+ * private routes can never be indexed even if proxy behavior changes.
  */
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-5">

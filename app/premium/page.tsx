@@ -3,12 +3,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PremiumForm } from "./premium-form";
 import { CLIENT_COUNT_BANDS } from "@/features/wtp/validation";
+import { publicRouteMeta } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Help shape MicroNest — MicroNest",
-  description:
-    "MicroNest is free while we're validating the product. Tell us how you would use it, what would make it more useful, and what you'd realistically pay.",
-};
+export const metadata: Metadata = publicRouteMeta(
+  "/premium",
+  "Help shape MicroNest — MicroNest",
+  "MicroNest is free while we're validating the product. Tell us how you would use it, what would make it more useful, and what you'd realistically pay.",
+);
 
 /**
  * Public product-research page (MFD-78). This is a feedback form, not a

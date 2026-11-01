@@ -4,6 +4,21 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  async headers() {
+    return [
+      // Route handlers carry no Metadata API: keep auth/API surfaces out
+      // of indexes via X-Robots-Tag. Public pages use meta robots +
+      // canonicals instead (never disallow what must be crawled).
+      {
+        source: "/auth/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/api/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
   async redirects() {
     return [
       // RCCF-MFD-18 transitional: Client Radar is now the Today view.

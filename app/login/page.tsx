@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: "Sign in — MicroNest",
   description:
     "Sign in with Google to open your MicroNest client list on your laptop and phone.",
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 const ERROR_COPY: Record<string, string> = {

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { publicRouteMeta } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Support — MicroNest",
-  description: "Get help with MicroNest: self-service options and how to contact us.",
-};
+export const metadata: Metadata = publicRouteMeta(
+  "/support",
+  "Support — MicroNest",
+  "Get help with MicroNest: self-service options and how to contact us.",
+);
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
 

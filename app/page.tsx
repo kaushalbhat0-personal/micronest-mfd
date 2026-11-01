@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { AndroidAppCta } from "@/components/android-app-cta";
+import { StructuredData } from "@/components/structured-data";
+import { publicRouteMeta } from "@/lib/seo/site";
 import { buttonClasses } from "@/components/ui/button";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { SignalBadge } from "@/components/ui/signal-badge";
@@ -24,11 +26,11 @@ import {
   UsersIcon,
 } from "@/components/ui/icons";
 
-export const metadata = {
-  title: "MicroNest — From first conversation to long-term client relationship",
-  description:
-    "Keep your clients organized, prepare the right message before you reach out, know who needs attention, and never lose track of the next follow-up.",
-};
+export const metadata = publicRouteMeta(
+  "/",
+  "MicroNest — From first conversation to long-term client relationship",
+  "Keep your clients organized, prepare the right message before you reach out, know who needs attention, and never lose track of the next follow-up.",
+);
 
 function SignedOutCtas() {
   return (
@@ -481,6 +483,7 @@ function SetupWorkflow() {
 export default function Home() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 sm:gap-12 lg:gap-16">
+      <StructuredData />
       <section
         className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12"
         aria-labelledby="home-heading"

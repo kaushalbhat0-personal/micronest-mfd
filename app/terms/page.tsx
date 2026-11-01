@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { publicRouteMeta } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Terms — MicroNest",
-  description: "The terms for using MicroNest.",
-};
+export const metadata: Metadata = publicRouteMeta(
+  "/terms",
+  "Terms — MicroNest",
+  "The terms for using MicroNest.",
+);
 
 export default function TermsPage() {
   return (

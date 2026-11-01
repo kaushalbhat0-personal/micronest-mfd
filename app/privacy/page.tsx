@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { publicRouteMeta } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy — MicroNest",
-  description: "How MicroNest handles your account and client data.",
-};
+export const metadata: Metadata = publicRouteMeta(
+  "/privacy",
+  "Privacy Policy — MicroNest",
+  "How MicroNest handles your account and client data.",
+);
 
 export default function PrivacyPage() {
   return (

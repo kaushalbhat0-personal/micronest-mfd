@@ -7,12 +7,22 @@ import { BrandMark } from "@/components/brand-mark";
 import { SiteHeader } from "@/components/site-header";
 import { NativeAppProvider } from "@/lib/native/provider";
 import { NativeRouteGuard } from "@/lib/native/guard";
+import { siteUrl } from "@/lib/seo/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: "MicroNest",
   description:
     "MicroNest is a simple relationship workspace for people who manage clients — including mutual fund distributors.",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "MicroNest",
+  },
+  twitter: {
+    card: "summary",
+  },
 };
 
 /**

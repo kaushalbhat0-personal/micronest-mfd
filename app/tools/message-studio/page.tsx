@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageStudioLoader } from "@/features/message-studio/components/message-studio-loader";
+import { publicRouteMeta } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Messages — MicroNest",
-  description:
-    "Create professional, ready-to-send client messages in seconds. No login, nothing stored — everything stays on your device.",
-};
+export const metadata: Metadata = publicRouteMeta(
+  "/tools/message-studio",
+  "Messages — MicroNest",
+  "Create professional, ready-to-send client messages in seconds. No login, nothing stored — everything stays on your device.",
+);
 
 // The form reads browser-local prefs (mode/purpose/tone) on first render,
 // which the server cannot know. It loads client-only (see
