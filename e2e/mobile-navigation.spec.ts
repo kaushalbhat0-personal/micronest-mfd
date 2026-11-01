@@ -49,12 +49,21 @@ test.describe("Navigation brand + mobile bottom nav", () => {
     }
   });
 
-  test("signed-out primary links keep 44px+ touch targets", async ({ page }) => {
+  test("public header exposes Sign in but no workspace navigation", async ({ page }) => {
     await page.goto("/");
-    for (const name of [/^today$/i, /^messages$/i, /^sign in$/i]) {
-      const box = await page.getByRole("link", { name }).first().boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole("link", { name: /^sign in$/i })).toBeVisible();
+    for (const name of [/^today$/i, /^messages$/i, /^clients$/i, /^follow-ups$/i]) {
+      await expect(page.locator("header").getByRole("link", { name })).toHaveCount(0);
     }
+  });
+
+  test("signed-out Sign in keeps a 44px+ touch target", async ({ page }) => {
+    await page.goto("/");
+    const box = await page
+      .locator("header")
+      .getByRole("link", { name: /^sign in$/i })
+      .boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
   test("0 serious/critical axe violations with the new header", async ({ page }) => {

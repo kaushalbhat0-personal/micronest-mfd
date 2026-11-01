@@ -61,6 +61,13 @@ export function SiteHeader() {
 
   const active = activeDestination(pathname);
 
+  // Public marketing surface (/) never shows workspace chrome — not even
+  // for signed-in visitors. Workspace tabs and the mobile bottom nav render
+  // only on non-marketing routes. Account controls (avatar/sheet, sign out)
+  // stay available everywhere so a signed-in visitor is never stranded.
+  const isMarketingRoute = pathname === "/";
+  const showWorkspaceChrome = Boolean(identity) && !isMarketingRoute;
+
   React.useEffect(() => {
     if (!isSupabaseConfigured()) return;
     let activeFlag = true;
@@ -106,15 +113,16 @@ export function SiteHeader() {
     };
   }, []);
 
-  // Reserve bottom space for the fixed mobile nav only while signed in, so
-  // it can never cover client cards, buttons, forms, or dialogs.
+  // Reserve bottom space for the fixed mobile nav only while the
+  // workspace chrome is shown, so it can never cover client cards,
+  // buttons, forms, or dialogs.
   React.useEffect(() => {
-    if (!identity) return;
+    if (!showWorkspaceChrome) return;
     document.body.classList.add("has-mobile-nav");
     return () => {
       document.body.classList.remove("has-mobile-nav");
     };
-  }, [identity]);
+  }, [showWorkspaceChrome]);
 
   React.useEffect(() => {
     if (!menuOpen) return;
@@ -211,6 +219,7 @@ export function SiteHeader() {
             <BrandMark href={identity ? "/workspace/today" : "/"} />
             {identity ? (
               <>
+                {showWorkspaceChrome && (
                 <nav
                   aria-label="Primary"
                   className="order-3 hidden w-full items-center gap-1 md:order-2 md:flex md:w-auto md:flex-1 lg:gap-2"
@@ -237,6 +246,7 @@ export function SiteHeader() {
                     Messages
                   </Link>
                 </nav>
+                )}
                 {/* Mobile compact account access — opens the account sheet. */}
                 <button
                   ref={mobileAvatarRef}
@@ -293,23 +303,9 @@ export function SiteHeader() {
               </>
             ) : (
               <>
-                <nav
-                  aria-label="Primary"
-                  className="order-3 flex w-full items-center gap-1 sm:order-2 sm:w-auto sm:flex-1 sm:justify-center"
-                >
-                  <Link
-                    href="/workspace/today"
-                    className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-                  >
-                    Today
-                  </Link>
-                  <Link
-                    href="/tools/message-studio"
-                    className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg px-3 text-sm font-medium text-emerald-900 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-                  >
-                    Messages
-                  </Link>
-                </nav>
+                {/* Public header: brand + Sign in only. Workspace
+                    destinations (Today/Messages/Clients/Follow-ups) never
+                    render here — not even as signed-out teasers. */}
                 <div className="order-2 ml-auto flex shrink-0 items-center sm:order-3">
                   <Link
                     href="/login"
@@ -323,7 +319,7 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
-      {identity && (
+      {showWorkspaceChrome && (
         <MobileBottomNav
           active={active}
           sheetOpen={sheetOpen}

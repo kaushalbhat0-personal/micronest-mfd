@@ -19,7 +19,7 @@ export function AndroidAppCta() {
   return (
     <section
       aria-labelledby="android-app-heading"
-      className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:gap-5 sm:p-6"
+      className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-5 text-center shadow-sm sm:flex-row sm:items-center sm:gap-5 sm:p-6 sm:text-left"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="eyebrow flex items-center gap-1.5">

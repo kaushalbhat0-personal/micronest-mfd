@@ -485,7 +485,7 @@ export default function Home() {
         className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12"
         aria-labelledby="home-heading"
       >
-        <div className="flex max-w-xl flex-col gap-4 lg:gap-5">
+        <div className="flex max-w-xl flex-col items-center gap-4 text-center lg:items-start lg:gap-5 lg:text-left">
           <p className="eyebrow">A simple relationship workspace for people who manage clients</p>
           <h1
             id="home-heading"
@@ -797,7 +797,7 @@ export default function Home() {
 
       <section
         aria-labelledby="cta-heading"
-        className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6"
+        className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-5 text-center shadow-sm sm:p-6 lg:text-left"
       >
         <h2
           id="cta-heading"

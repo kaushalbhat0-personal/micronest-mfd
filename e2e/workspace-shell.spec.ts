@@ -79,21 +79,18 @@ test.describe("Workspace shell", () => {
     expect(page.url()).not.toMatch(/name=|phone=|mobile=|note=/);
   });
 
-  test("single header navigation links workspace and studio with touch targets", async ({
+  test("signed-out workspace shell shows brand and Sign in, no workspace nav", async ({
     page,
   }) => {
     await page.goto("/workspace/today");
-    // Phase A: the header is the only navigation system — no in-page pills.
-    const navs = page.getByRole("navigation");
-    await expect(navs).toHaveCount(1);
-    const nav = page.getByRole("navigation", { name: /primary/i });
-    await expect(nav.getByRole("link", { name: /^today$/i })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^messages$/i })).toBeVisible();
-    for (const name of [/^today$/i, /^messages$/i]) {
-      const box = await nav.getByRole("link", { name }).boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
-    }
-    await nav.getByRole("link", { name: /^messages$/i }).click();
+    // Public chrome only: no Primary nav leaks workspace destinations to
+    // signed-out visitors, on any route.
+    await expect(page.getByRole("navigation", { name: /primary/i })).toHaveCount(0);
+    await expect(
+      page.locator("header").getByRole("link", { name: /^sign in$/i }),
+    ).toBeVisible();
+    // The studio stays reachable by direct navigation (it needs no login).
+    await page.goto("/tools/message-studio");
     await expect(page).toHaveURL(/\/tools\/message-studio/);
   });
 
