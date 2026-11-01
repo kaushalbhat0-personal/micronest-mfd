@@ -47,7 +47,10 @@ export type ValidationEvent =
   | "client_count_100"
   | "workspace_active"
   | "template_download"
-  | "import_success";
+  | "import_success"
+  | "validation_page_viewed"
+  | "validation_form_started"
+  | "validation_form_submitted";
 
 export interface ValidationBeacon {
   op: "validation.event";
@@ -98,6 +101,9 @@ const VALIDATION_EVENTS = new Set([
   "workspace_active",
   "template_download",
   "import_success",
+  "validation_page_viewed",
+  "validation_form_started",
+  "validation_form_submitted",
 ]);
 
 const VALIDATION_MILESTONES = new Set([1, 10, 50, 99, 100]);

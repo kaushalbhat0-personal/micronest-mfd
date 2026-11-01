@@ -82,6 +82,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Support
               </Link>
+              <Link
+                href="/premium"
+                className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                Help shape MicroNest
+              </Link>
             </nav>
           </div>
         </footer>

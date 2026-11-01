@@ -23,7 +23,8 @@ test.describe("Workspace shell", () => {
     await expect(
       page.getByRole("heading", { name: /from first conversation to long-term/i }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /^get started$/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /try micronest free/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /tell us what you need/i }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /explore messages/i }).first()).toBeVisible();
     // Lifecycle stages carry the positioning: reach out → book → attention → follow-up.
     await expect(

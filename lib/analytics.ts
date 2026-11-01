@@ -97,3 +97,37 @@ export function trackImportSuccess(imported: number): void {
   if (!Number.isFinite(imported) || imported < 0) return;
   reportValidation({ op: "validation.event", event: "import_success", clientCount: imported });
 }
+
+const WTP_STARTED_KEY = "micronest-validation-wtp-started";
+
+/**
+ * The public research page rendered. Bare aggregate event — no form
+ * content, identity, or locale metadata travels with it.
+ */
+export function trackValidationPageViewed(): void {
+  reportValidation({ op: "validation.event", event: "validation_page_viewed" });
+}
+
+/**
+ * The visitor first interacted with the research form. Fires at most once
+ * per tab session so edits and re-renders can never duplicate it.
+ */
+export function trackValidationFormStarted(): void {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    if (sessionStorage.getItem(WTP_STARTED_KEY) !== null) return;
+    sessionStorage.setItem(WTP_STARTED_KEY, "1");
+    reportValidation({ op: "validation.event", event: "validation_form_started" });
+  } catch {
+    // Telemetry is best-effort by design.
+  }
+}
+
+/**
+ * A research submission was accepted by the server. Bare aggregate event:
+ * the stored row already holds the details, and analytics must never see
+ * email, free text, or exact amounts.
+ */
+export function trackValidationFormSubmitted(): void {
+  reportValidation({ op: "validation.event", event: "validation_form_submitted" });
+}

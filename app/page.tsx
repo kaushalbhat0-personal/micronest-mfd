@@ -25,19 +25,15 @@ export const metadata = {
     "Keep your clients organized, prepare the right message before you reach out, know who needs attention, and never lose track of the next follow-up.",
 };
 
-function SignedOutCtas({
-  secondary = "#workflow" as "#workflow" | "/tools/message-studio",
-}: {
-  secondary?: "#workflow" | "/tools/message-studio";
-}) {
+function SignedOutCtas() {
   return (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
       <Link href="/login" className={cn(buttonClasses("primary"), "px-5 sm:flex-1")}>
-        Get started
+        Try MicroNest free
         <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
       </Link>
-      <Link href={secondary} className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
-        {secondary === "#workflow" ? "See how it works" : "Try Messages"}
+      <Link href="/premium" className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
+        Tell us what you need
       </Link>
     </div>
   );
@@ -46,13 +42,10 @@ function SignedOutCtas({
 /**
  * Session-aware CTAs stream behind Suspense so the marketing shell
  * prerenders (cacheComponents). Signed-in visitors get Open workspace;
- * everyone else gets Get started / Sign in. Failures read as signed out.
+ * everyone else gets Try MicroNest free / Tell us what you need.
+ * Failures read as signed out.
  */
-async function PrimaryCtas({
-  secondary = "#workflow" as "#workflow" | "/tools/message-studio",
-}: {
-  secondary?: "#workflow" | "/tools/message-studio";
-}) {
+async function PrimaryCtas() {
   let signedIn = false;
   try {
     const supabase = await createServerSupabase();
@@ -71,13 +64,13 @@ async function PrimaryCtas({
           Go to Today
           <ArrowRightIcon aria-hidden="true" className="ml-2 h-4 w-4" />
         </Link>
-        <Link href={secondary} className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
-          {secondary === "#workflow" ? "See how it works" : "Try Messages"}
+        <Link href="/premium" className={cn(buttonClasses("secondary"), "px-5 sm:flex-1")}>
+          Tell us what you need
         </Link>
       </div>
     );
   }
-  return <SignedOutCtas secondary={secondary} />;
+  return <SignedOutCtas />;
 }
 
 /**
@@ -293,7 +286,9 @@ export default function Home() {
             <PrimaryCtas />
           </Suspense>
           <p className="text-xs leading-relaxed text-stone-600">
-            Works alongside your existing financial software — nothing to migrate.
+            Keep client relationships organized, know who needs attention, and follow through —
+            without turning your work into a complicated CRM. Free while we&apos;re validating the
+            product.
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -591,10 +586,20 @@ export default function Home() {
           one place.
         </p>
         <div className="mt-1 max-w-xl">
-          <Suspense fallback={<SignedOutCtas secondary="/tools/message-studio" />}>
-            <PrimaryCtas secondary="/tools/message-studio" />
+          <Suspense fallback={<SignedOutCtas />}>
+            <PrimaryCtas />
           </Suspense>
         </div>
+        <p className="max-w-xl text-sm leading-relaxed text-stone-600">
+          MicroNest is free while we&apos;re validating the product.{" "}
+          <Link
+            href="/premium"
+            className="font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+          >
+            Tell us what you need
+          </Link>{" "}
+          — your feedback decides what gets built next.
+        </p>
       </section>
 
       <section className="rounded-xl border border-stone-200 bg-white p-5 text-sm leading-relaxed text-stone-600 shadow-sm">
