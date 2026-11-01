@@ -27,7 +27,8 @@ import { cn } from "@/lib/utils";
 import { todayInTimezone } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { resolveRegion, resolveTimeZone } from "@/lib/locale";
+import { resolveRegion, resolveTimeZone, useResolvedLocale } from "@/lib/locale";
+import { useResolvedVertical } from "@/lib/vertical";
 import { trackClientCountTransition, trackImportSuccess, trackTemplateDownload, trackWorkspaceActiveOnce } from "@/lib/analytics";
 import type { StoredFollowup } from "@/features/followups/types";
 import {
@@ -105,6 +106,11 @@ export function ClientsWorkspace({
   const [records, setRecords] = React.useState<ClientRecord[]>(() =>
     initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
   );
+  // Display-only presentation context (MFD-76 Phase A): the browser locale
+  // shapes date display and the browser-region vertical shapes copy verbs.
+  // Both resolve post-hydration so SSR output stays byte-identical.
+  const locale = useResolvedLocale();
+  const vertical = useResolvedVertical();
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<BookFilter>("all");
   const [adding, setAdding] = React.useState(false);
@@ -129,11 +135,11 @@ export function ClientsWorkspace({
   // source as the Today queue. Newly added/imported rows re-project
   // through the same engine; follow-up edits live in the client view.
   const items = React.useMemo(
-    () => buildTodayItems(records, initialFollowups, todayYMD),
-    [records, initialFollowups, todayYMD],
+    () => buildTodayItems(records, initialFollowups, todayYMD, { locale, vertical }),
+    [records, initialFollowups, todayYMD, locale, vertical],
   );
   const counts = React.useMemo(() => countToday(items), [items]);
-  const upcoming = React.useMemo(() => upcomingFollowups(items), [items]);
+  const upcoming = React.useMemo(() => upcomingFollowups(items, 3, locale), [items, locale]);
 
   const visible = React.useMemo(
     () => filterBookItems(items, filter, query, todayYMD),
@@ -546,7 +552,7 @@ export function ClientsWorkspace({
                 ? "Every client is looked after."
                 : filter === "followups"
                   ? "Follow-ups you plan for a client will appear here."
-                  : "Clients you mark as new will appear here."
+                  : "New clients appear here automatically based on recent activity."
           }
         />
       ) : (

@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Message Studio smoke", () => {
-  test("home links to studio; document request generates and copies", async ({ page, context }) => {
+  test("home links to studio; check-in is default and document request generates and copies", async ({
+    page,
+    context,
+  }) => {
     // Grant clipboard permissions for the copy assertion (Chromium).
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
@@ -10,7 +13,11 @@ test.describe("Message Studio smoke", () => {
     await page.getByRole("link", { name: /explore messages/i }).click();
     await expect(page).toHaveURL(/\/tools\/message-studio/);
 
-    // Document Request is the default purpose.
+    // Generic-first default (MFD-76 Phase A): new users land on Check-in.
+    await expect(page.getByRole("radio", { name: /^check-in$/i })).toBeChecked();
+
+    // Select Document Request explicitly for the generate-and-copy flow.
+    await page.getByRole("radio", { name: /document request/i }).click();
     await page.getByLabel("Client name").fill("Test Sharma");
     await page.getByLabel(/required documents/i).fill("KYC form, cancelled cheque");
     await page.getByRole("button", { name: /generate message/i }).click();

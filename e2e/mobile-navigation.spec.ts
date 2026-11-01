@@ -27,12 +27,12 @@ async function stubLogin(page: Page): Promise<boolean> {
  * credentials (real OAuth stays manual-only — never faked here).
  */
 test.describe("Navigation brand + mobile bottom nav", () => {
-  test("brand lockup is MicroNest with an MFD badge, never the old lockup", async ({ page }) => {
+  test("brand lockup is MicroNest alone, never MFD-branded", async ({ page }) => {
     await page.goto("/");
     const brand = page.getByTestId("brand-mark");
     await expect(brand).toBeVisible();
     await expect(brand).toContainText("MicroNest");
-    await expect(brand).toContainText("MFD");
+    await expect(brand).not.toContainText("MFD");
     await expect(page.getByText("MicroNest · MFD Workspace", { exact: true })).toHaveCount(0);
   });
 

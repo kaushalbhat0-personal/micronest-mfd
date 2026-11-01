@@ -4,6 +4,7 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatDisplayDate } from "@/lib/dates";
+import { useResolvedLocale } from "@/lib/locale";
 import { buildDirectMessage } from "../model";
 import type { FollowUpRow } from "../types";
 
@@ -14,7 +15,7 @@ interface FollowUpCardProps {
   onUndo: (id: string) => void;
 }
 
-function dueLabel(row: FollowUpRow): { text: string; className: string } {
+function dueLabel(row: FollowUpRow, locale: string): { text: string; className: string } {
   switch (row.status) {
     case "overdue":
       return {
@@ -24,12 +25,13 @@ function dueLabel(row: FollowUpRow): { text: string; className: string } {
     case "today":
       return { text: "Due today", className: "text-amber-700" };
     case "upcoming":
-      return { text: formatDisplayDate(row.date), className: "text-stone-500" };
+      return { text: formatDisplayDate(row.date, locale), className: "text-stone-500" };
   }
 }
 
 /** One follow-up: who, why, when — plus WhatsApp / Message / Done. */
 export function FollowUpCard({ row, onMessage, onDone, onUndo }: FollowUpCardProps) {
+  const locale = useResolvedLocale();
   if (row.done) {
     return (
       <div className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
@@ -43,7 +45,7 @@ export function FollowUpCard({ row, onMessage, onDone, onUndo }: FollowUpCardPro
     );
   }
 
-  const due = dueLabel(row);
+  const due = dueLabel(row, locale);
   const waUrl = row.phoneValid ? buildWhatsAppUrl(buildDirectMessage(row), row.phone) : null;
 
   return (

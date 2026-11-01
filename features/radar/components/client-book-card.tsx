@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/dates";
+import { useResolvedLocale } from "@/lib/locale";
+import { useResolvedVertical } from "@/lib/vertical";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { dueWords } from "../today";
 import { radarWhatsAppText } from "../view";
@@ -20,14 +22,14 @@ import { bookPillForItem } from "../book";
 import { investmentSummaryLine } from "../template";
 import type { TodayItem } from "../today";
 
-function investmentLine(item: TodayItem): string {
-  return investmentSummaryLine(item.record);
+function investmentLine(item: TodayItem, vertical: "generic" | "mfd", locale: string): string {
+  return investmentSummaryLine(item.record, { vertical, locale });
 }
 
-function contactLine(item: TodayItem): string {
+function contactLine(item: TodayItem, locale: string): string {
   const { record } = item;
   if (record.lastContacted) {
-    return `Last spoke ${formatDisplayDate(record.lastContacted)}`;
+    return `Last spoke ${formatDisplayDate(record.lastContacted, locale)}`;
   }
   return "Haven't spoken yet";
 }
@@ -44,6 +46,8 @@ const ACTION_BASE =
  */
 export function ClientBookCard({ item }: { item: TodayItem }) {
   const { record, why, followups } = item;
+  const locale = useResolvedLocale();
+  const vertical = useResolvedVertical();
   const pill = bookPillForItem(item);
   const detailHref = `/workspace/clients/${record.id}`;
 
@@ -81,17 +85,22 @@ export function ClientBookCard({ item }: { item: TodayItem }) {
           )}
           <p className="tnum flex items-center gap-1.5 truncate text-xs text-stone-600">
             <FileTextIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{investmentLine(item)}</span>
+            <span className="truncate">{investmentLine(item, vertical, locale)}</span>
           </p>
           <p className="tnum flex items-center gap-1.5 truncate text-xs text-stone-600">
             <ClockIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{contactLine(item)}</span>
+            <span className="truncate">{contactLine(item, locale)}</span>
           </p>
           {showFollowupLine && firstFollowup && (
             <p className="tnum flex items-center gap-1.5 truncate text-xs text-stone-600">
               <ClockIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
-                {dueWords(firstFollowup.status, firstFollowup.daysOverdue, firstFollowup.dueDate)}
+                {dueWords(
+                  firstFollowup.status,
+                  firstFollowup.daysOverdue,
+                  firstFollowup.dueDate,
+                  locale,
+                )}
                 {firstFollowup.reason ? ` · ${firstFollowup.reason}` : ""}
                 {followups.length > 1 ? ` (+${followups.length - 1} more)` : ""}
               </span>

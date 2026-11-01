@@ -1,4 +1,6 @@
 import { formatDisplayDate } from "@/lib/dates";
+import { DEFAULT_LOCALE } from "@/lib/locale";
+import { effectiveVertical, type VerticalContext } from "@/lib/vertical";
 import { getFollowUpStatus } from "../followups/dates";
 import type { StoredFollowup } from "../followups/types";
 import {
@@ -96,29 +98,49 @@ export function primaryActionFor(
   return "call";
 }
 
+/** Presentation options for Today copy. Display only — never lifecycle. */
+export interface TodayPresentationOptions {
+  /** Display locale for due/activity dates. Defaults to MFD-compatible output. */
+  locale?: string;
+  /**
+   * Presentation vertical. Defaults to "mfd" (byte-identical). Generic
+   * surfaces pass "generic" for relationship verbs ("Recent activity",
+   * "Last activity …") instead of investment verbs. Only applies where a
+   * plain-language equivalent exists; facts never change.
+   */
+  vertical?: VerticalContext;
+}
+
 /** Plain due-date words. Paired with icon + color at render, never alone. */
 export function dueWords(
   status: "overdue" | "today" | "upcoming",
   daysOverdue: number,
   dueDate: string,
+  locale: string = DEFAULT_LOCALE,
 ): string {
   if (status === "overdue") {
     return daysOverdue === 1 ? "1 day overdue" : `${daysOverdue} days overdue`;
   }
   if (status === "today") return "Due today";
-  return `Due ${formatDisplayDate(dueDate)}`;
+  return `Due ${formatDisplayDate(dueDate, locale)}`;
 }
 
 function whyFor(
   record: ClientRecord,
   followups: TodayFollowup[],
   todayYMD: string,
+  options?: TodayPresentationOptions,
 ): TodayWhy | null {
+  const locale = options?.locale ?? DEFAULT_LOCALE;
+  // Records carrying MFD data keep MFD wording even on generic surfaces;
+  // a bare activity date never upgrades (generic "Last activity" maps onto
+  // the same stored field).
+  const vertical = effectiveVertical(record, options?.vertical ?? "mfd");
   const overdue = followups.find((f) => f.status === "overdue");
   if (overdue) {
     return {
       kind: "followup-overdue",
-      title: `Follow-up overdue — ${dueWords("overdue", overdue.daysOverdue, overdue.dueDate)}`,
+      title: `Follow-up overdue — ${dueWords("overdue", overdue.daysOverdue, overdue.dueDate, locale)}`,
       detail: overdue.reason,
     };
   }
@@ -144,18 +166,23 @@ function whyFor(
   }
   if (record.signals.includes("recent-investor") && record.lastInvested) {
     const age = daysSince(record.lastInvested, todayYMD);
+    const when = formatDisplayDate(record.lastInvested, locale);
+    if (vertical === "generic") {
+      const title = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New activity" : "Recent activity";
+      return { kind: "recent", title, detail: `Last activity ${when}` };
+    }
     const title = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New investment" : "Recent investor";
     return {
       kind: "recent",
       title,
-      detail: `Invested ${formatDisplayDate(record.lastInvested)}`,
+      detail: `Invested ${when}`,
     };
   }
   const upcoming = followups.find((f) => f.status === "upcoming");
   if (upcoming) {
     return {
       kind: "followup-upcoming",
-      title: dueWords("upcoming", 0, upcoming.dueDate),
+      title: dueWords("upcoming", 0, upcoming.dueDate, locale),
       detail: upcoming.reason,
     };
   }
@@ -186,6 +213,7 @@ export function buildTodayItems(
   records: ClientRecord[],
   openFollowups: StoredFollowup[],
   todayYMD: string,
+  options?: TodayPresentationOptions,
 ): TodayItem[] {
   const byClient = new Map<string, TodayFollowup[]>();
   for (const stored of openFollowups) {
@@ -222,7 +250,7 @@ export function buildTodayItems(
       hasOverdue: followups.some((f) => f.status === "overdue"),
       hasDueToday: followups.some((f) => f.status === "today"),
       primary: primaryActionFor(record),
-      why: whyFor(record, followups, todayYMD),
+      why: whyFor(record, followups, todayYMD, options),
     };
   });
 
@@ -393,7 +421,11 @@ export function countToday(items: TodayItem[], todayYMD?: string): TodayCounts {
 }
 
 /** Upcoming explicit follow-ups across the queue, earliest first, capped. */
-export function upcomingFollowups(items: TodayItem[], limit = 3): UpcomingItem[] {
+export function upcomingFollowups(
+  items: TodayItem[],
+  limit = 3,
+  locale: string = DEFAULT_LOCALE,
+): UpcomingItem[] {
   const upcoming: UpcomingItem[] = [];
   for (const item of items) {
     for (const f of item.followups) {
@@ -403,7 +435,7 @@ export function upcomingFollowups(items: TodayItem[], limit = 3): UpcomingItem[]
         clientName: item.record.name,
         reason: f.reason,
         dueDate: f.dueDate,
-        label: dueWords("upcoming", 0, f.dueDate),
+        label: dueWords("upcoming", 0, f.dueDate, locale),
       });
     }
   }

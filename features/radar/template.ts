@@ -1,6 +1,7 @@
 import type { InvestmentType } from "./types";
 import { formatDisplayDate } from "@/lib/dates";
-import { formatMoneyMinor, type MoneyFormatOptions } from "@/lib/locale";
+import { DEFAULT_LOCALE, formatMoneyMinor, type MoneyFormatOptions } from "@/lib/locale";
+import { effectiveVertical, type VerticalContext } from "@/lib/vertical";
 
 /**
  * The application-owned radar CSV contract. The validator, the future
@@ -232,25 +233,52 @@ export interface InvestmentSummaryInput {
   lastInvested: string | null;
 }
 
+export interface InvestmentSummaryOptions {
+  /**
+   * Presentation vertical. Defaults to "mfd" so every existing caller
+   * keeps byte-identical output; generic surfaces pass "generic" to read
+   * relationship-oriented verbs ("Last activity", "No activity yet")
+   * instead of investment verbs ("Invested", "Never invested"). Recorded
+   * facts (type, amounts) are never hidden — only the verbs change.
+   */
+  vertical?: VerticalContext;
+  /** Display locale for the activity date. Defaults to the MFD-compatible output. */
+  locale?: string;
+}
+
 /**
- * One-line card summary (Phase 2 generic vocabulary). Display only:
- * a client with no investment data at all (type Other, no amounts, no
- * date) reads neutrally as "No investment details" instead of wearing
- * MFD wording; anything recorded keeps the existing MFD presentation.
- * Stored data is untouched — this only changes what the cards show.
+ * One-line card summary (Phase 2 generic vocabulary, gated MFD-76 Phase A).
+ * Display only: a client with no investment data at all (type Other, no
+ * amounts, no date) reads neutrally instead of wearing MFD wording;
+ * anything recorded keeps the existing MFD presentation unless the caller
+ * opts into the generic vertical. Stored data is untouched — this only
+ * changes what the cards show.
  */
-export function investmentSummaryLine(record: InvestmentSummaryInput): string {
+export function investmentSummaryLine(
+  record: InvestmentSummaryInput,
+  options?: InvestmentSummaryOptions,
+): string {
+  const vertical = effectiveVertical(record, options?.vertical ?? "mfd");
+  const locale = options?.locale ?? DEFAULT_LOCALE;
   const amounts = formatInvestmentAmounts(
     record.investmentType,
     record.sipAmountPaise,
     record.lumpsumAmountPaise,
   );
   if (!amounts && record.lastInvested === null && record.investmentType === "Other") {
-    return "No investment details";
+    return vertical === "generic" ? "No activity yet" : "No investment details";
+  }
+  if (vertical === "generic" && record.investmentType === "Other" && !amounts) {
+    // Generic client with only an activity date: no category to show.
+    if (record.lastInvested) {
+      return `Last activity ${formatDisplayDate(record.lastInvested, locale)}`;
+    }
+    return "No activity yet";
   }
   const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
   if (record.lastInvested) {
-    return `${base} · Invested ${formatDisplayDate(record.lastInvested)}`;
+    const when = formatDisplayDate(record.lastInvested, locale);
+    return vertical === "generic" ? `${base} · Last activity ${when}` : `${base} · Invested ${when}`;
   }
-  return `${base} · Never invested`;
+  return vertical === "generic" ? `${base} · No activity yet` : `${base} · Never invested`;
 }

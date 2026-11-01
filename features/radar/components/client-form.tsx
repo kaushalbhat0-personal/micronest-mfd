@@ -12,6 +12,7 @@ import { sipAmountHint, sipAmountLabel } from "../template";
 import type { InvestmentType } from "../types";
 import { validateClientFields, fieldForClientError, type ClientFieldName } from "../validation";
 import { resolveRegion } from "@/lib/locale";
+import { resolveVerticalContext, type VerticalContext } from "@/lib/vertical";
 
 export type ClientFormField = ClientFieldName;
 
@@ -106,6 +107,13 @@ interface ClientFormProps {
   saving?: boolean;
   /** Persistence errors from the caller (typed repository messages). */
   externalError?: string | null;
+  /**
+   * Presentation vertical for gating MFD-specific fields. Defaults to the
+   * browser-region heuristic (IN → "mfd", everywhere else → "generic").
+   * Validation and persistence are identical in both modes — only which
+   * fields are emphasized changes, so no MFD capability is ever removed.
+   */
+  vertical?: VerticalContext;
   onSubmit: (input: ClientInput) => void | Promise<void>;
   onCancel?: () => void;
 }
@@ -121,9 +129,18 @@ export function ClientForm({
   submitLabel,
   saving = false,
   externalError = null,
+  vertical,
   onSubmit,
   onCancel,
 }: ClientFormProps) {
+  // Presentation gating only (MFD-76 Phase A). This form mounts inside
+  // dialogs opened by user interaction, so the browser locale is always
+  // available here — no SSR/hydration concern. IN-region devices keep the
+  // full MFD form; everywhere else the investment group collapses behind
+  // an explicit disclosure. Hidden fields still submit (defaults
+  // Other/blank) and validate exactly as before.
+  const resolvedVertical = vertical ?? resolveVerticalContext();
+  const isMfd = resolvedVertical === "mfd";
   const [values, setValues] = React.useState<ClientFormInitial>(initial);
   const [errors, setErrors] = React.useState<ClientFormErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -180,64 +197,138 @@ export function ClientForm({
           />
         </Field>
 
-        <Field
-          id="client-investment"
-          label="Category"
-          hint={typeWarning ?? "For investments: SIP, Lumpsum, Both, Insurance, or Other."}
-        >
-          <Select
-            id="client-investment"
-            value={values.investmentType}
-            onChange={set("investmentType")}
-          >
-            {INVESTMENT_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {isMfd ? (
+          <>
+            <Field
+              id="client-investment"
+              label="Category"
+              hint={typeWarning ?? "For investments: SIP, Lumpsum, Both, Insurance, or Other."}
+            >
+              <Select
+                id="client-investment"
+                value={values.investmentType}
+                onChange={set("investmentType")}
+              >
+                {INVESTMENT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-        <Field
-          id="client-sip-amount"
-          label={sipAmountLabel()}
-          error={errors.sipAmount}
-          hint={sipAmountHint()}
-        >
-          <TextInput
-            id="client-sip-amount"
-            placeholder="e.g. 10000"
-            value={values.sipAmount}
-            onChange={set("sipAmount")}
-            error={errors.sipAmount}
-            autoComplete="off"
-            inputMode="decimal"
-          />
-        </Field>
+            <Field
+              id="client-sip-amount"
+              label={sipAmountLabel()}
+              error={errors.sipAmount}
+              hint={sipAmountHint()}
+            >
+              <TextInput
+                id="client-sip-amount"
+                placeholder="e.g. 10000"
+                value={values.sipAmount}
+                onChange={set("sipAmount")}
+                error={errors.sipAmount}
+                autoComplete="off"
+                inputMode="decimal"
+              />
+            </Field>
 
-        <Field
-          id="client-lumpsum-amount"
-          label={lumpsumAmountLabel()}
-          error={errors.lumpsumAmount}
-          hint={lumpsumAmountHint()}
-        >
-          <TextInput
-            id="client-lumpsum-amount"
-            placeholder="e.g. 200000"
-            value={values.lumpsumAmount}
-            onChange={set("lumpsumAmount")}
-            error={errors.lumpsumAmount}
-            autoComplete="off"
-            inputMode="decimal"
-          />
-        </Field>
+            <Field
+              id="client-lumpsum-amount"
+              label={lumpsumAmountLabel()}
+              error={errors.lumpsumAmount}
+              hint={lumpsumAmountHint()}
+            >
+              <TextInput
+                id="client-lumpsum-amount"
+                placeholder="e.g. 200000"
+                value={values.lumpsumAmount}
+                onChange={set("lumpsumAmount")}
+                error={errors.lumpsumAmount}
+                autoComplete="off"
+                inputMode="decimal"
+              />
+            </Field>
+          </>
+        ) : (
+          <details className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
+            <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900">
+              <span>Add investment details (optional)</span>
+              <span aria-hidden="true" className="text-xs font-medium text-stone-500">
+                SIP · Lumpsum · Insurance
+              </span>
+            </summary>
+            <p className="mt-1 text-xs leading-relaxed text-stone-600">
+              Only needed for mutual fund clients. Leave this closed for everyone else — the
+              client saves exactly the same without it.
+            </p>
+            <div className="mt-2 flex flex-col gap-4">
+              <Field
+                id="client-investment"
+                label="Category"
+                hint={typeWarning ?? "For investments: SIP, Lumpsum, Both, Insurance, or Other."}
+              >
+                <Select
+                  id="client-investment"
+                  value={values.investmentType}
+                  onChange={set("investmentType")}
+                >
+                  {INVESTMENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field
+                id="client-sip-amount"
+                label={sipAmountLabel()}
+                error={errors.sipAmount}
+                hint={sipAmountHint()}
+              >
+                <TextInput
+                  id="client-sip-amount"
+                  placeholder="e.g. 10000"
+                  value={values.sipAmount}
+                  onChange={set("sipAmount")}
+                  error={errors.sipAmount}
+                  autoComplete="off"
+                  inputMode="decimal"
+                />
+              </Field>
+
+              <Field
+                id="client-lumpsum-amount"
+                label={lumpsumAmountLabel()}
+                error={errors.lumpsumAmount}
+                hint={lumpsumAmountHint()}
+              >
+                <TextInput
+                  id="client-lumpsum-amount"
+                  placeholder="e.g. 200000"
+                  value={values.lumpsumAmount}
+                  onChange={set("lumpsumAmount")}
+                  error={errors.lumpsumAmount}
+                  autoComplete="off"
+                  inputMode="decimal"
+                />
+              </Field>
+            </div>
+          </details>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
             id="client-invested"
             label="Last activity (optional)"
             error={errors.lastInvested}
-            hint="For investments: the date of the most recent investment."
+            hint={
+              isMfd
+                ? "For investments: the date of the most recent investment."
+                : "The date of your last interaction or activity."
+            }
           >
             <TextInput
               id="client-invested"

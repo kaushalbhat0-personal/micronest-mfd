@@ -1,13 +1,21 @@
+import * as React from "react";
+
 /**
- * Thin locale/presentation adapter (MFD-72 Phase 1).
+ * Thin locale/presentation adapter (MFD-72 Phase 1, extended MFD-76 Phase A).
  *
  * MicroNest stores money as integer minor units and dates as YYYY-MM-DD —
- * both locale-neutral. Only *presentation* varies by locale, and only the
- * default (India: en-IN/INR) is wired today. There is deliberately no
- * language selector, no currency input, and no per-user locale setting
- * yet: callers pass explicit options when they have them, and everything
- * else falls back to the MFD-compatible default so output stays
- * byte-identical to before.
+ * both locale-neutral. *Presentation* varies by locale:
+ * - Stored data, lifecycle thresholds, date arithmetic, sorting, follow-up
+ *   semantics, and CSV interchange never vary by locale.
+ * - Display strings may use the resolved/browser locale where the caller
+ *   passes one explicitly, or via `useResolvedLocale()` in client
+ *   components. Bare `formatDisplayDate`/`formatMoneyMinor` defaults stay
+ *   pinned to the MFD-compatible output (en-IN/INR) so server pre-renders
+ *   and existing snapshots remain byte-identical.
+ *
+ * There is deliberately no language selector, no currency input, and no
+ * per-user locale setting yet: callers pass explicit options when they
+ * have them, and everything else falls back to the MFD-compatible default.
  *
  * SSR-safe: never touches `navigator` without a guard, so server
  * pre-rendering and hydration always agree on the default.
@@ -104,4 +112,24 @@ export function formatDateLocale(dateYMD: string, locale: string = DEFAULT_LOCAL
     month: "2-digit",
     year: "numeric",
   }).format(new Date(year, month - 1, day));
+}
+
+/**
+ * Hydration-safe browser locale for client components (MFD-76 Phase A).
+ * Server and hydration renders pin to the default (SSR HTML stays
+ * byte-identical); the committed client render reads the browser locale.
+ * Display only — thread the result into presentation helpers explicitly;
+ * never into storage or lifecycle logic.
+ */
+export function useResolvedLocale(): string {
+  return React.useSyncExternalStore(
+    subscribeNoop,
+    () => resolveLocale(),
+    () => DEFAULT_LOCALE,
+  );
+}
+
+/** No-op subscribe: the browser locale is read once per render. */
+function subscribeNoop(): () => void {
+  return () => {};
 }

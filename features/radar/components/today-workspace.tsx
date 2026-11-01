@@ -22,7 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/ui/stat-card";
 import { todayInTimezone } from "@/lib/dates";
-import { resolveTimeZone } from "@/lib/locale";
+import { resolveTimeZone, useResolvedLocale } from "@/lib/locale";
+import { useResolvedVertical } from "@/lib/vertical";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { trackWorkspaceActiveOnce } from "@/lib/analytics";
@@ -47,7 +48,7 @@ import { TodayCard } from "./today-card";
 
 const FILTERS: Array<{ id: TodayFilter; label: string }> = [
   { id: "attention", label: "Needs attention" },
-  { id: "followups", label: "Follow up today" },
+  { id: "followups", label: "Follow-ups" },
   { id: "new", label: "New" },
   { id: "reconnect", label: "Reconnect" },
   { id: "recent", label: "Recent" },
@@ -90,6 +91,11 @@ export function TodayWorkspace({
   const [records, setRecords] = React.useState(() =>
     initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
   );
+  // Display-only presentation context (MFD-76 Phase A): the browser locale
+  // shapes date display and the browser-region vertical shapes copy verbs.
+  // Both resolve post-hydration so SSR output stays byte-identical.
+  const locale = useResolvedLocale();
+  const vertical = useResolvedVertical();
   const [followups] = React.useState<StoredFollowup[]>(initialFollowups);
   const [filter, setFilter] = React.useState<TodayFilter>(initialFilter);
   const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set());
@@ -120,15 +126,15 @@ export function TodayWorkspace({
   );
 
   const items = React.useMemo(
-    () => buildTodayItems(records, followups, todayYMD),
-    [records, followups, todayYMD],
+    () => buildTodayItems(records, followups, todayYMD, { locale, vertical }),
+    [records, followups, todayYMD, locale, vertical],
   );
   const counts = React.useMemo(() => countToday(items, todayYMD), [items, todayYMD]);
   const visible = React.useMemo(
     () => filterTodayItems(items, filter, todayYMD),
     [items, filter, todayYMD],
   );
-  const upcoming = React.useMemo(() => upcomingFollowups(items, 3), [items]);
+  const upcoming = React.useMemo(() => upcomingFollowups(items, 3, locale), [items, locale]);
   const greeting = React.useMemo(() => greetingFor(), []);
   const dayLabel = React.useMemo(() => displayDay(todayYMD), [todayYMD]);
 
@@ -401,7 +407,7 @@ export function TodayWorkspace({
                       : filter === "reconnect"
                         ? "No reconnects due right now."
                         : filter === "recent"
-                          ? "No recent investors right now."
+                          ? "No recent activity right now."
                           : filter === "contacted"
                             ? "You haven't talked to anyone yet today."
                             : "Nothing in this view right now."

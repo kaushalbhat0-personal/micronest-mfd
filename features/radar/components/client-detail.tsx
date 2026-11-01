@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate, todayInTimezone } from "@/lib/dates";
-import { resolveTimeZone } from "@/lib/locale";
+import { resolveTimeZone, useResolvedLocale } from "@/lib/locale";
+import { useResolvedVertical } from "@/lib/vertical";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -92,8 +93,8 @@ function toFormInitial(
   };
 }
 
-function displayDate(value: string | null): string {
-  return value ? formatDisplayDate(value) : "—";
+function displayDate(value: string | null, locale: string): string {
+  return value ? formatDisplayDate(value, locale) : "—";
 }
 
 export type WhySeverity = "warning" | "reconnect" | "neutral";
@@ -134,6 +135,7 @@ function identityMeta(
     "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastContacted"
   >,
 ): string {
+  locale: string,
   const amounts = formatInvestmentAmounts(
     record.investmentType,
     record.sipAmountPaise,
@@ -141,7 +143,7 @@ function identityMeta(
   );
   const base = amounts ? `${record.investmentType} · ${amounts}` : record.investmentType;
   if (record.lastContacted) {
-    return `${base} · Last spoke ${formatDisplayDate(record.lastContacted)}`;
+    return `${base} · Last spoke ${formatDisplayDate(record.lastContacted, locale)}`;
   }
   return `${base} · Haven't spoken yet`;
 }
@@ -170,6 +172,11 @@ export function ClientDetail({
   // "today", never the server's. Re-resolved at each interaction below.
   const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
   const [record, setRecord] = React.useState(() =>
+  // Display-only presentation context (MFD-76 Phase A): the browser locale
+  // shapes date display and the browser-region vertical shapes copy verbs.
+  // Both resolve post-hydration so SSR output stays byte-identical.
+  const locale = useResolvedLocale();
+  const vertical = useResolvedVertical();
     toClientRecord(stored, 0, todayInTimezone(resolveTimeZone())),
   );
   const [messaging, setMessaging] = React.useState(false);
@@ -183,7 +190,11 @@ export function ClientDetail({
     prevLastContacted: string | null;
   } | null>(null);
 
-  const reasons = reasonsFor(record, record.signals, todayYMD);
+  const reasons = reasonsFor(record, record.signals, todayYMD, {
+    locale,
+    vertical,
+    evidence: record,
+  });
   const callUrl = buildCallUrl(record.phone);
   const waUrl = record.phoneValid
     ? buildWhatsAppUrl(radarWhatsAppText(record.name), record.phone)
@@ -277,7 +288,7 @@ export function ClientDetail({
             <h2 className="text-xl font-semibold break-words tracking-tight text-stone-900 lg:text-2xl">
               {record.name}
             </h2>
-            <p className="tnum text-sm text-stone-600">{identityMeta(record)}</p>
+            <p className="tnum text-sm text-stone-600">{identityMeta(record, locale)}</p>
             <p className="flex flex-wrap items-center gap-1.5">
               <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
                 {record.investmentType}
@@ -380,12 +391,12 @@ export function ClientDetail({
                 )}
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Last activity</dt>
-                  <dd className="font-medium text-stone-900">{displayDate(record.lastInvested)}</dd>
+                  <dd className="font-medium text-stone-900">{displayDate(record.lastInvested, locale)}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
                   <dt className="text-stone-500">Last spoke</dt>
                   <dd className="font-medium text-stone-900">
-                    {displayDate(record.lastContacted)}
+                    {displayDate(record.lastContacted, locale)}
                   </dd>
                 </div>
               </dl>

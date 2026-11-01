@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, TextArea, TextInput } from "@/components/ui/controls";
 import { formatDisplayDate, nowMs, todayLocalYMD } from "@/lib/dates";
+import { useResolvedLocale } from "@/lib/locale";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { reportPerf } from "@/lib/perf/report";
@@ -35,9 +36,9 @@ function followupErrorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
-function completedDisplayDate(completedAt: string): string {
+function completedDisplayDate(completedAt: string, locale: string): string {
   const ymd = completedAt.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? formatDisplayDate(ymd) : "—";
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? formatDisplayDate(ymd, locale) : "—";
 }
 
 /** Presentation-only tone for a follow-up status word. Text carries the meaning. */
@@ -65,11 +66,12 @@ export function FollowupStatusLine({
   dueDate: string;
   todayYMD: string;
 }): React.ReactNode {
+  const locale = useResolvedLocale();
   const { status, daysOverdue } = getFollowUpStatus(dueDate, todayYMD);
   if (status === "upcoming") return null;
   return (
     <p className={`text-xs font-medium ${followupStatusTone(status)}`}>
-      {dueWords(status, daysOverdue, dueDate)}
+      {dueWords(status, daysOverdue, dueDate, locale)}
     </p>
   );
 }
@@ -119,6 +121,7 @@ export function ClientFollowups({
   const [success, setSuccess] = React.useState<string | null>(null);
   const [toastId, setToastId] = React.useState<string | null>(null);
   const todayYMD = React.useMemo(() => todayLocalYMD(), []);
+  const locale = useResolvedLocale();
 
   function supabaseOrThrow(): SupabaseClient {
     if (!isSupabaseConfigured()) throw new Error("Sign-in isn't set up yet.");
@@ -467,7 +470,7 @@ export function ClientFollowups({
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <p className="text-sm font-medium text-stone-900">{item.reason}</p>
                       <FollowupStatusLine dueDate={item.dueDate} todayYMD={todayYMD} />
-                      <p className="text-xs text-stone-500">{formatDisplayDate(item.dueDate)}</p>
+                      <p className="text-xs text-stone-500">{formatDisplayDate(item.dueDate, locale)}</p>
                       {item.note.length > 0 && (
                         <p className="text-xs text-stone-600">{item.note}</p>
                       )}
@@ -503,7 +506,7 @@ export function ClientFollowups({
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <p className="text-sm font-medium text-stone-900">{item.reason}</p>
                         <p className="text-xs text-stone-500">
-                          {item.completedAt ? completedDisplayDate(item.completedAt) : "—"}
+                          {item.completedAt ? completedDisplayDate(item.completedAt, locale) : "—"}
                         </p>
                       </div>
                       <Button

@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/dates";
+import { useResolvedLocale } from "@/lib/locale";
+import { useResolvedVertical } from "@/lib/vertical";
 import { buildCallUrl, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { investmentSummaryLine } from "../template";
 import { radarWhatsAppText } from "../view";
@@ -93,14 +95,14 @@ export function todaySignalBadge(kind: TodayWhy["kind"]): { label: string; tone:
   }
 }
 
-function investmentLine(item: TodayItem): string {
-  return investmentSummaryLine(item.record);
+function investmentLine(item: TodayItem, vertical: "generic" | "mfd", locale: string): string {
+  return investmentSummaryLine(item.record, { vertical, locale });
 }
 
-function contactLine(item: TodayItem): string {
+function contactLine(item: TodayItem, locale: string): string {
   const { record } = item;
   if (record.lastContacted) {
-    return `Last spoke ${formatDisplayDate(record.lastContacted)}`;
+    return `Last spoke ${formatDisplayDate(record.lastContacted, locale)}`;
   }
   return "Haven't spoken yet";
 }
@@ -135,6 +137,8 @@ export function TodayCard({
 }: TodayCardProps) {
   const { record, why, primary } = item;
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const locale = useResolvedLocale();
+  const vertical = useResolvedVertical();
   const menuRef = React.useRef<HTMLDivElement>(null);
   const contacted = wasContactedToday(record, todayYMD);
 
@@ -344,11 +348,11 @@ export function TodayCard({
             </h3>
             <p className="tnum flex items-center gap-1.5 text-xs text-stone-600 lg:text-sm">
               <FileTextIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{investmentLine(item)}</span>
+              <span className="truncate">{investmentLine(item, vertical, locale)}</span>
             </p>
             <p className="tnum flex items-center gap-1.5 text-xs text-stone-600 lg:text-sm">
               <ClockIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{contactLine(item)}</span>
+              <span className="truncate">{contactLine(item, locale)}</span>
             </p>
             {why && <p className="mt-1 text-sm leading-relaxed text-stone-700">{why.detail}</p>}
 

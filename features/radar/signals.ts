@@ -1,4 +1,10 @@
 import { daysBetweenYMD, formatDisplayDate } from "@/lib/dates";
+import { DEFAULT_LOCALE } from "@/lib/locale";
+import {
+  effectiveVertical,
+  type VerticalContext,
+  type VerticalEvidence,
+} from "@/lib/vertical";
 import type { ClientRecord, Signal } from "./types";
 
 /** Fixed product rule: invested within the last 30 days (inclusive). */
@@ -118,17 +124,32 @@ export function hasActionableSignal(signals: Signal[]): boolean {
 /**
  * Factual why-contact reasons derived from data only.
  * No urgency language, no advice — the MFD decides what they mean.
+ * Display only: optional locale/vertical switch the recent-investment
+ * verbs to relationship verbs for generic surfaces ("Recent activity",
+ * "Last activity …"); the MFD default is byte-identical.
  */
 export function reasonsFor(
   input: Pick<SignalInput, "lastInvested" | "lastContacted">,
   signals: Signal[],
   todayYMD: string,
+  options?: { locale?: string; vertical?: VerticalContext; evidence?: VerticalEvidence },
 ): string[] {
+  const locale = options?.locale ?? DEFAULT_LOCALE;
+  // Records carrying MFD data keep MFD wording even on generic surfaces.
+  // Callers pass the record's category/amounts as evidence; a bare
+  // activity date never upgrades.
+  const vertical = effectiveVertical(options?.evidence ?? {}, options?.vertical ?? "mfd");
   const reasons: string[] = [];
   if (signals.includes("recent-investor") && input.lastInvested) {
     const age = daysBetweenYMD(input.lastInvested, todayYMD);
-    const label = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New investment" : "Recent investor";
-    reasons.push(`${label} · invested ${formatDisplayDate(input.lastInvested)}`);
+    const when = formatDisplayDate(input.lastInvested, locale);
+    if (vertical === "generic") {
+      const label = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New activity" : "Recent activity";
+      reasons.push(`${label} · last activity ${when}`);
+    } else {
+      const label = age >= 0 && age <= NEW_INVESTMENT_DAYS ? "New investment" : "Recent investor";
+      reasons.push(`${label} · invested ${when}`);
+    }
   }
   if (signals.includes("reconnect-due")) {
     if (input.lastContacted === null) {

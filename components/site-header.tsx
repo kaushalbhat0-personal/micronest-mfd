@@ -38,8 +38,8 @@ function topLinkClass(isActive: boolean): string {
 }
 
 /**
- * Site header with premium brand + adaptive navigation (RCCF-MFD-43).
- * Signed out: MicroNest [MFD] · Today / Messages · Sign in.
+ * Site header with product brand + adaptive navigation.
+ * Signed out: MicroNest · Today / Messages · Sign in.
  * Signed in: desktop/tablet top nav (Today / Clients / Messages +
  * avatar menu); mobile compact brand bar + fixed bottom navigation with a
  * More sheet for account functions. Static prerender stays signed-out until

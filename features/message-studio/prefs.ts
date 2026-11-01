@@ -20,7 +20,7 @@ export interface StudioPrefs {
 
 export const DEFAULT_PREFS: StudioPrefs = {
   mode: "templates",
-  purpose: "document-request",
+  purpose: "check-in",
   language: "en",
   tone: "professional",
   arn: "",

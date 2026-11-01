@@ -81,7 +81,7 @@ async function PrimaryCtas({
 }
 
 /**
- * Static Client Book preview: identities, investment context, attention
+ * Static Client Book preview: identities, relationship context, attention
  * signals, follow-up indicators, and a direct action. Clearly illustrative
  * presentation data — never workspace data, never a customer claim.
  */
@@ -111,7 +111,7 @@ function BookPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Alex Morgan</span>
                 <span className="truncate text-xs text-stone-600">
-                  SIP · Last spoke 62 days ago
+                  Last spoke 62 days ago
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
@@ -127,7 +127,7 @@ function BookPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Sofia Ramos</span>
                 <span className="truncate text-xs text-stone-600">
-                  Lumpsum · Last spoke 12 days ago
+                  Last spoke 12 days ago
                 </span>
               </span>
               <SignalBadge tone="emerald">Recent</SignalBadge>
@@ -137,7 +137,7 @@ function BookPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Jordan Lee</span>
                 <span className="truncate text-xs text-stone-600">
-                  Insurance · New client this month
+                  New client this month
                 </span>
               </span>
               <SignalBadge tone="emerald">New</SignalBadge>
@@ -192,7 +192,7 @@ function TodayPreview() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-semibold text-stone-900">Alex Morgan</span>
                 <span className="truncate text-xs text-stone-600">
-                  SIP · Reconnect — 62 days silent
+                  Reconnect — 62 days silent
                 </span>
               </span>
               <SignalBadge tone="amber">Reconnect</SignalBadge>
@@ -233,7 +233,7 @@ const LIFECYCLE = [
     title: "Reach out",
     heading: "Start the conversation",
     hint: "Prepare professional, personalized messages before you reach out — then copy or send them through WhatsApp.",
-    proofs: ["Templates", "English / Hinglish", "Copy", "WhatsApp"],
+    proofs: ["Templates", "Personal tone", "Copy", "WhatsApp"],
   },
   {
     icon: <UsersIcon />,
@@ -465,7 +465,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-center gap-2">
                     <MessageIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
-                    English / Hinglish · Professional / Friendly
+                    Professional / Friendly
                   </li>
                   <li className="flex items-center gap-2">
                     <SendIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-900" />
