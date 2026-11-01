@@ -35,14 +35,61 @@ export const MAPPABLE_HEADERS: RadarHeader[] = [...RADAR_HEADERS, LEGACY_AMOUNT_
 export const RADAR_REQUIRED_HEADERS: RadarHeader[] = ["Client Name"];
 
 /**
- * Generic-first template headers (Phase 2): the smallest relationship
- * record that imports cleanly — Client Name, Phone, Last Contacted, Note.
- * "Phone" auto-maps to the canonical Mobile field via the alias map, so a
- * generic file imports through the exact same pipeline, limits, dedup, and
- * blank-safe update behavior as the MFD template. No schema change: these
- * are presentation-only labels over the existing canonical fields.
+ * Generic-first template headers (Phase 2/3): the smallest relationship
+ * record that imports cleanly — Client Name, Phone, Last Activity, Last
+ * Contacted, Note. "Phone" auto-maps to the canonical Mobile field and
+ * "Last Activity" to the canonical Last Invested field via the alias map,
+ * so a generic file imports through the exact same pipeline, limits, dedup,
+ * and blank-safe update behavior as the MFD template. No schema change:
+ * these are presentation-only labels over the existing canonical fields.
  */
-export const GENERAL_TEMPLATE_HEADERS = ["Client Name", "Phone", "Last Contacted", "Note"];
+export const GENERAL_TEMPLATE_HEADERS = [
+  "Client Name",
+  "Phone",
+  "Last Activity",
+  "Last Contacted",
+  "Note",
+];
+
+/**
+ * Canonical fields that only appear in MFD-shaped imports. A source whose
+ * mapping includes any of these is treated as MFD for presentation
+ * (mapping options, preview, error CSV); otherwise it is generic. The
+ * activity/contact dates are deliberately absent — the generic template
+ * uses them too (via Last Activity / Last Contacted).
+ */
+export const MFD_ONLY_HEADERS: RadarHeader[] = [
+  "Investment Type",
+  "SIP Amount",
+  "Lumpsum Amount",
+  LEGACY_AMOUNT_HEADER,
+];
+
+/**
+ * The canonical subset a generic source can map onto. MFD-only fields are
+ * hidden from the generic mapping UI so a generic user is never confronted
+ * with investment concepts they did not ask for. MFD sources still see the
+ * full MAPPABLE_HEADERS set.
+ */
+export const GENERIC_CANONICAL_HEADERS: RadarHeader[] = [
+  "Client Name",
+  "Mobile",
+  "Last Invested",
+  "Last Contacted",
+  "Note",
+];
+
+/**
+ * Generic-presentation label for a canonical field (mapping UI). The
+ * canonical value is unchanged — only the visible label differs, so a
+ * generic user reads "Phone" / "Last Activity" while the pipeline still
+ * stores Mobile / Last Invested.
+ */
+export function genericFieldLabel(canonical: RadarHeader): string {
+  if (canonical === "Mobile") return "Phone";
+  if (canonical === "Last Invested") return "Last Activity";
+  return canonical;
+}
 
 export const INVESTMENT_TYPES: InvestmentType[] = ["SIP", "Lumpsum", "Both", "Insurance", "Other"];
 

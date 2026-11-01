@@ -48,14 +48,24 @@ export function resolveLocale(): string {
 
 /**
  * Device region ("US", "IN", …) from the browser locale when available;
- * the pinned default otherwise. Used only to disambiguate phone input —
- * never for identity, storage, or access control.
+ * the pinned default otherwise. Used only to disambiguate phone input and
+ * vertical presentation — never for identity, storage, or access control.
+ *
+ * A region-specific locale (en-US, fr-FR) resolves to its region. A
+ * genuinely region-less browser locale (en, fr, ja) resolves to unknown
+ * ("") so it is never silently treated as India — a region-less device must
+ * not get the +91 phone inference or the MFD vertical. The pinned India
+ * default still applies on the server / no-navigator path, where
+ * resolveLocale() falls back to the MFD-compatible en-IN default.
  */
 export function resolveRegion(): string {
   const locale = resolveLocale();
   const subtag = locale.split(/[-_]/)[1];
   if (subtag && /^[A-Za-z]{2}$/.test(subtag)) return subtag.toUpperCase();
-  return DEFAULT_REGION;
+  // Region-less browser locale (e.g. "en"): unknown, not India. The pinned
+  // DEFAULT_REGION only applies when there is no browser locale at all
+  // (resolveLocale already returned the en-IN default in that case).
+  return locale === DEFAULT_LOCALE ? DEFAULT_REGION : "";
 }
 
 /**

@@ -1,10 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { autoMapColumns, normalizeAliasKey } from "@/features/radar/import/aliases";
+import {
+  autoMapColumns,
+  normalizeAliasKey,
+  sourceLooksMfd,
+} from "@/features/radar/import/aliases";
 import { RADAR_HEADERS } from "@/features/radar/template";
 
 describe("normalizeAliasKey", () => {
   it("lowercase-trims and collapses whitespace", () => {
     expect(normalizeAliasKey("  Mobile   Number ")).toBe("mobile number");
+  });
+});
+
+describe("sourceLooksMfd", () => {
+  it("detects the full MFD template as MFD", () => {
+    expect(sourceLooksMfd([...RADAR_HEADERS])).toBe(true);
+    expect(sourceLooksMfd(["Client Name", "Investment Type", "SIP Amount"])).toBe(true);
+    expect(sourceLooksMfd(["Client Name", "Amount"])).toBe(true);
+  });
+
+  it("treats the generic template as generic", () => {
+    expect(
+      sourceLooksMfd(["Client Name", "Phone", "Last Activity", "Last Contacted", "Note"]),
+    ).toBe(false);
+    expect(sourceLooksMfd(["Client Name", "Phone"])).toBe(false);
+    // Last Activity maps to Last Invested but is NOT an investment field.
+    expect(sourceLooksMfd(["Client Name", "Last Activity"])).toBe(false);
   });
 });
 
@@ -62,5 +83,12 @@ describe("autoMapColumns", () => {
     ]);
     // First source column wins; repeats stay unmapped instead of merging.
     expect(autoMapColumns(["Lumpsum Amount", "Lump Sum Amount"])).toEqual(["Lumpsum Amount", null]);
+  });
+
+  it("maps generic name and activity aliases", () => {
+    expect(autoMapColumns(["Full Name", "Last Activity"])).toEqual(["Client Name", "Last Invested"]);
+    expect(autoMapColumns(["Name", "Phone"])).toEqual(["Client Name", "Mobile"]);
+    // Do not map a generic Category concept onto Investment Type.
+    expect(autoMapColumns(["Client Name", "Category"])).toEqual(["Client Name", null]);
   });
 });

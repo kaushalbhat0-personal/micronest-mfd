@@ -67,6 +67,14 @@ async function expectAxeClean(page: Page) {
  * is skipped without SUPABASE_TEST_* credentials (real OAuth stays manual).
  */
 test.describe("Client import", () => {
+  // The MFD fixtures use bare Indian mobiles (e.g. 9876543210) that rely on
+  // the +91 inference. That inference only applies when India is explicitly
+  // established (an en-IN device) — a region-less or US browser must not
+  // silently treat bare 10-digit numbers as Indian. These are Indian MFD
+  // scenarios, so the suite pins the locale to en-IN to establish it
+  // explicitly and keep phone/duplicate behavior deterministic.
+  test.use({ locale: "en-IN" });
+
   test.describe("preview without a session", () => {
     test.skip(
       Boolean(process.env.SUPABASE_E2E),
@@ -96,11 +104,12 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Legacy eight-column file: every column maps automatically, no manual step.
+      // Legacy eight-column file: all live columns auto-map; the retired
+      // New Client column lands in "Don't import", so 7 of 8 are mapped.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
-      expect(mappedCount).toBe(8);
+      expect(mappedCount).toBe(7);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
@@ -213,7 +222,15 @@ test.describe("Client import", () => {
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: /download csv template/i }).click();
       const template = await download;
-      expect(template.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
+      // Generic-first: the default template is the plain relationship list.
+      expect(template.suggestedFilename()).toBe("micronest-general-client-template.csv");
+
+      // The MFD template keeps the full investment contract.
+      await page.getByRole("radio", { name: /mfd clients/i }).click();
+      const mfdDownload = page.waitForEvent("download");
+      await page.getByRole("button", { name: /download csv template/i }).click();
+      const mfdTemplate = await mfdDownload;
+      expect(mfdTemplate.suggestedFilename()).toBe("micronest-mfd-client-template.csv");
 
       await upload(page, "import-valid.csv");
       await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
@@ -221,11 +238,12 @@ test.describe("Client import", () => {
         .getByRole("dialog", { name: /add clients from a file/i })
         .locator("select");
       await expect(selects.first()).toHaveValue("Client Name");
-      // Legacy eight-column file: every column maps automatically, no manual step.
+      // Legacy eight-column file: all live columns auto-map; the retired
+      // New Client column lands in "Don't import", so 7 of 8 are mapped.
       const mappedCount = await selects.evaluateAll(
         (elements) => elements.filter((el) => (el as HTMLSelectElement).value !== "").length,
       );
-      expect(mappedCount).toBe(8);
+      expect(mappedCount).toBe(7);
 
       await page.getByRole("button", { name: /review 3 rows/i }).click();
       await expect(page.getByText("3 rows found")).toBeVisible();
@@ -310,6 +328,40 @@ test.describe("Client import", () => {
       await expect(page.getByRole("article", { name: /rajesh sharma/i })).toHaveCount(1);
       await expect(page.getByRole("article", { name: /priya mehta/i })).toHaveCount(1);
       await expect(page.getByRole("article", { name: /amit shah/i })).toHaveCount(1);
+    });
+
+    test("generic template imports and rounds Last Activity / Last Contacted", async ({ page }) => {
+      await openImport(page);
+
+      // Default template is the generic relationship list.
+      const download = page.waitForEvent("download");
+      await page.getByRole("button", { name: /download csv template/i }).click();
+      const template = await download;
+      expect(template.suggestedFilename()).toBe("micronest-general-client-template.csv");
+
+      await upload(page, "import-general.csv");
+      await expect(page.getByRole("button", { name: /review 3 rows/i })).toBeVisible();
+      await page.getByRole("button", { name: /review 3 rows/i }).click();
+      await expect(page.getByText("3 rows found")).toBeVisible();
+      // Generic import surfaces no unexplained MFD investment concept.
+      await expect(page.getByText("Other")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /add 3 clients/i })).toBeEnabled();
+      await page.getByRole("button", { name: /add 3 clients/i }).click();
+      await expect(page.getByText("Here's what changed")).toBeVisible();
+      // Zero updates on a fresh import — the receipt never claims updates.
+      await expect(page.getByText("Nothing was duplicated")).toBeVisible();
+      await expect(page.getByText(/matching clients were updated/i)).toHaveCount(0);
+      await page.getByRole("button", { name: /view clients/i }).click();
+
+      // Clients round-trip into the book.
+      await expect(page.getByRole("article", { name: /alex morgan/i })).toBeVisible();
+      await expect(page.getByRole("article", { name: /sofia ramos/i })).toBeVisible();
+      await expect(page.getByRole("article", { name: /jordan lee/i })).toBeVisible();
+
+      // Detail shows the imported activity/contact dates (round-trip).
+      await page.getByRole("article", { name: /alex morgan/i }).click();
+      await expect(page.getByText(/last contacted/i).first()).toBeVisible();
+      await expect(page.getByText(/last activity/i).first()).toBeVisible();
     });
 
     test("manual add blocks an exact duplicate without overwriting", async ({ page }) => {

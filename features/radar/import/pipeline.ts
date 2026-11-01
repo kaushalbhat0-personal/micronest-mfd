@@ -4,6 +4,7 @@ import { formatDisplayDate } from "@/lib/dates";
 import {
   LEGACY_AMOUNT_HEADER,
   MAPPABLE_HEADERS,
+  MFD_ONLY_HEADERS,
   type RadarHeader,
 } from "@/features/radar/template";
 import { amountPaiseToInput } from "@/features/radar/template";
@@ -112,6 +113,14 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
     });
     return { row, fields, display };
   });
+
+  // A source with no MFD-only column mapped (Investment Type / SIP /
+  // Lumpsum / legacy Amount) is a generic import: the investment-type
+  // concept is never surfaced in the preview (no unexplained "Other"). The
+  // persistence input above is unaffected — the stored shape is unchanged.
+  const investmentColumnMapped = input.mapping.some(
+    (canonical) => canonical !== null && MFD_ONLY_HEADERS.includes(canonical),
+  );
 
   const identities = candidates.map(({ display }) =>
     identityOf(display["Client Name"], display["Mobile"], defaultRegion),
@@ -227,6 +236,11 @@ export function buildPreview(input: PreviewInput): PreviewOutput {
       reasons: ["This line couldn't be read (check quotes and commas)."],
       fields: {},
     });
+  }
+  if (!investmentColumnMapped) {
+    // Generic import: hide the investment-type column value entirely so a
+    // generic user never sees an unexplained MFD concept like "Other".
+    for (const row of rows) row.investmentType = "";
   }
   rows.sort((a, b) => a.line - b.line);
 

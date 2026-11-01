@@ -20,8 +20,18 @@ export function detectSensitiveInput(field: string, value: string): SensitiveHit
   if (PAN_PATTERN.test(value)) {
     return { field, reason: "Looks like a PAN number. Do not enter PAN details here." };
   }
+  // An international phone number carries a "+", which a real Aadhaar
+  // number never does. Guarding the two 12-digit Aadhaar checks with this
+  // signal stops a phone-like sequence (e.g. "+44 7911 123456" or
+  // "+91 98765 43210", both 12 digits) from being misflagged, without
+  // weakening real protection: a genuine PAN/Aadhaar has no "+" and keeps
+  // the exact existing screening. OTP/password/PIN keywords still run.
+  const phoneLike = /\+/.test(value);
   const digitsOnly = value.replace(/\D/g, "");
-  if (AADHAAR_PATTERN.test(value) || (digitsOnly.length === 12 && /^\d{12}$/.test(digitsOnly))) {
+  if (
+    !phoneLike &&
+    (AADHAAR_PATTERN.test(value) || (digitsOnly.length === 12 && /^\d{12}$/.test(digitsOnly)))
+  ) {
     return { field, reason: "Looks like a 12-digit ID number. Do not enter Aadhaar details here." };
   }
   if (SECRET_KEYWORDS.test(value)) {

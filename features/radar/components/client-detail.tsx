@@ -402,11 +402,11 @@ export function ClientDetail({
                   </div>
                 )}
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Last activity</dt>
+                  <dt className="text-stone-500">{vertical === "mfd" ? "Last Invested" : "Last activity"}</dt>
                   <dd className="font-medium text-stone-900">{displayDate(record.lastInvested, locale)}</dd>
                 </div>
                 <div className="flex justify-between gap-2 sm:block">
-                  <dt className="text-stone-500">Last spoke</dt>
+                  <dt className="text-stone-500">Last Contacted</dt>
                   <dd className="font-medium text-stone-900">
                     {displayDate(record.lastContacted, locale)}
                   </dd>

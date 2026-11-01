@@ -322,7 +322,7 @@ export function ClientForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
             id="client-invested"
-            label="Last activity (optional)"
+            label={isMfd ? "Last Invested (optional)" : "Last activity (optional)"}
             error={errors.lastInvested}
             hint={
               isMfd
@@ -341,8 +341,9 @@ export function ClientForm({
           </Field>
           <Field
             id="client-contacted"
-            label="Last spoke (optional)"
+            label="Last Contacted (optional)"
             error={errors.lastContacted}
+            hint="Date you last spoke with the client."
           >
             <TextInput
               id="client-contacted"

@@ -21,14 +21,25 @@ import {
 } from "@/features/radar/repository";
 import { MAX_DATA_ROWS, validateRadarFileMeta } from "@/features/radar/validation";
 import {
+  GENERIC_CANONICAL_HEADERS,
+  genericFieldLabel,
   LEGACY_AMOUNT_HEADER,
   MAPPABLE_HEADERS,
+  MFD_ONLY_HEADERS,
   type RadarHeader,
 } from "@/features/radar/template";
-import { autoMapColumns } from "./aliases";
+import {
+  autoMapColumns,
+  sourceLooksMfd,
+} from "./aliases";
 import type { DuplicateIdentity } from "./duplicates";
 import type { BookRecord } from "./import-types";
 import { buildPreview, importableRows } from "./pipeline";
+import {
+  PREVIEW_BLANK_SAFE_NOTE,
+  PREVIEW_UPDATE_NOTE,
+  receiptUpdateNote,
+} from "./copy";
 import {
   buildErrorCsv,
   buildGeneralTemplateCsv,
@@ -36,6 +47,7 @@ import {
   GENERAL_TEMPLATE_FILENAME,
   TEMPLATE_FILENAME,
   downloadTextFile,
+  type ErrorCsvKind,
 } from "./template-csv";
 import {
   buildGeneralTemplateXlsx,
@@ -136,6 +148,19 @@ export function ImportDialog({
   const duplicates = rows.filter((r) => r.duplicate).length;
   const otherSkipped = skipped - duplicates;
   const nameMapped = mapping.some((m) => m === "Client Name");
+  /**
+   * Source shape drives the mapping options (MFD sources see the full
+   * canonical set; generic sources only the relationship fields) and the
+   * error-CSV schema. Derived from the actual file headers / mapping —
+   * never from the download radio — so instructions always describe the
+   * file the user is really importing.
+   */
+  const sourceMfd = sheet ? sourceLooksMfd(sheet.header) : false;
+  const effectiveKind: ErrorCsvKind = mapping.some(
+    (m) => m !== null && MFD_ONLY_HEADERS.includes(m),
+  )
+    ? "mfd"
+    : "generic";
 
   const reset = React.useCallback(() => {
     setStep("file");
@@ -328,7 +353,11 @@ export function ImportDialog({
   }
 
   function handleDownloadErrors() {
-    downloadTextFile("import-needs-attention.csv", buildErrorCsv(rows), "text/csv");
+    downloadTextFile(
+      "import-needs-attention.csv",
+      buildErrorCsv(rows, effectiveKind),
+      "text/csv",
+    );
   }
 
   if (!open) return null;
@@ -416,7 +445,7 @@ export function ImportDialog({
                     >
                       <span className="text-sm font-semibold text-stone-900">General clients</span>
                       <span className="text-xs text-stone-600">
-                        Name, phone, last contacted, note
+                        Name, phone, last activity, last contacted, note
                       </span>
                     </button>
                     <button
@@ -500,18 +529,23 @@ export function ImportDialog({
                   <p>
                     <strong className="font-semibold text-stone-900">Optional:</strong>{" "}
                     {templateKind === "generic"
-                      ? "Phone, Last Contacted, Note"
+                      ? "Phone, Last Activity, Last Contacted, Note"
                       : "Mobile, Investment Type, SIP Amount, Lumpsum Amount, Last Invested, Last Contacted, Note"}
                   </p>
                   {templateKind === "generic" ? (
                     <p className="text-xs">
-                      Dates: day/month/year (DD/MM/YYYY), e.g. 20/10/2026 —
-                      ambiguous numeric dates always read day-first · Phone:
-                      include the country code, e.g. +1 5551234567 · Notes up
-                      to 200 characters · Blank optional fields are fine.
-                      Re-uploading updates matching clients instead of adding
-                      duplicates. Need investment fields? Switch to the MFD
-                      clients template above.
+                      Dates are read day-first — 20/10/2026 means 20 October 2026 · Last
+                      Activity: the date of the client&apos;s most recent meaningful
+                      activity · Last Contacted: the date you last spoke with the
+                      client · Phone: include the country code for international
+                      numbers (e.g. +44 7911 123456, +1 555 123 4567, +61 412 345 678);
+                      a plain 10-digit Indian mobile may be entered without +91. If a
+                      number can&apos;t be recognised we&apos;ll flag it as Check now — the
+                      client still imports, but Call and WhatsApp may not work until
+                      it&apos;s corrected · Notes up to 200 characters · Blank optional
+                      fields are fine. Re-uploading updates matching clients with only
+                      the fields you filled in — blank cells never erase existing
+                      details. Need investment fields? Use the MFD clients template.
                     </p>
                   ) : (
                     <p className="text-xs">
@@ -530,7 +564,7 @@ export function ImportDialog({
                     <span>How to fill your template</span>
                     <span aria-hidden="true" className="text-xs text-stone-500">
                       {templateKind === "generic"
-                        ? "4 fields · Client Name is required"
+                        ? "5 fields · Client Name is required"
                         : "8 fields · Client Name is required"}
                     </span>
                   </summary>
@@ -587,9 +621,11 @@ export function ImportDialog({
               </li>
             </ol>
             <p className="text-xs leading-relaxed text-stone-500">
-              Your existing financial software remains your main record — only add the client
-              details you need for relationship management. Your file stays on this device while it
-              is being prepared; it is never uploaded to MicroNest.
+              {templateKind === "mfd"
+                ? "Your existing financial software remains your main record — only add the client details you need for relationship management. "
+                : "Only add the client details you need for relationship management. "}
+              Your file stays on this device while it is being prepared; it is never uploaded to
+              MicroNest.
             </p>
             {parsing && (
               <p role="status" className="text-sm text-stone-600">
@@ -684,15 +720,23 @@ export function ImportDialog({
                       className="min-h-[44px] w-full rounded-lg border border-stone-300 bg-white px-2 text-sm text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                     >
                       <option value="">Don&apos;t import</option>
-                      {MAPPABLE_HEADERS.map((canonical) => (
-                        <option
-                          key={canonical}
-                          value={canonical}
-                          disabled={usedCanonicals.has(canonical) && mapping[column] !== canonical}
-                        >
-                          {canonical === LEGACY_AMOUNT_HEADER ? "Amount (older files)" : canonical}
-                        </option>
-                      ))}
+                      {(sourceMfd ? MAPPABLE_HEADERS : GENERIC_CANONICAL_HEADERS).map(
+                        (canonical) => (
+                          <option
+                            key={canonical}
+                            value={canonical}
+                            disabled={
+                              usedCanonicals.has(canonical) && mapping[column] !== canonical
+                            }
+                          >
+                            {sourceMfd
+                              ? canonical === LEGACY_AMOUNT_HEADER
+                                ? "Amount (older files)"
+                                : canonical
+                              : genericFieldLabel(canonical)}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                 </div>
@@ -796,7 +840,7 @@ export function ImportDialog({
                 {fileName} · {receipt.timestamp}
               </p>
               <p className="mt-1 text-xs text-emerald-900/80">
-                Matching clients were updated with the new information — nothing was duplicated.
+                {receiptUpdateNote(receipt.updated)}
               </p>
             </Card>
             {(invalid > 0 || skipped > 0) && (
@@ -930,8 +974,8 @@ function PreviewStep({
               {updated} already in your list{updated === 1 ? "" : "s"} — will update
             </p>
             <p className="mt-0.5 text-xs leading-relaxed text-emerald-900/80">
-              These rows match clients you already have. Only the filled-in fields change, and
-              blank cells keep the existing details. Nothing will be duplicated.
+              These rows match clients you already have. {PREVIEW_UPDATE_NOTE} Nothing will be
+              duplicated.
             </p>
           </div>
         )}
@@ -995,8 +1039,7 @@ function PreviewStep({
         </Alert>
       )}
       <p className="text-xs leading-relaxed text-stone-500">
-        Only ready rows and rows to check will be added. Nothing already in your
-        clients will be overwritten.
+        {PREVIEW_BLANK_SAFE_NOTE}
       </p>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         {(invalid > 0 || duplicates > 0 || otherSkipped > 0) && (

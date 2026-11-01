@@ -24,16 +24,39 @@ function escapeCsvCell(value: string): string {
   return value;
 }
 
+/** Which template family produced the rows — decides the error-CSV schema. */
+export type ErrorCsvKind = "generic" | "mfd";
+
 /**
- * Local error export: original mapped values plus the reason, so the MFD
- * can fix their spreadsheet. Generated in the browser; never uploaded.
+ * Generic error-CSV columns: the generic template headers (presentation)
+ * each mapped to the canonical field their values live under. "Phone" reads
+ * from Mobile and "Last Activity" from Last Invested — same stored data,
+ * generic labels.
  */
-export function buildErrorCsv(rows: PreviewRow[]): string {
-  const headers = [...RADAR_HEADERS, "Issue"];
+const GENERIC_ERROR_COLUMNS: ReadonlyArray<{ header: string; key: string }> = [
+  { header: "Client Name", key: "Client Name" },
+  { header: "Phone", key: "Mobile" },
+  { header: "Last Activity", key: "Last Invested" },
+  { header: "Last Contacted", key: "Last Contacted" },
+  { header: "Note", key: "Note" },
+];
+
+/**
+ * Local error export: original mapped values plus the reason, so the user
+ * can fix their spreadsheet. Generic sources export the generic schema;
+ * MFD sources keep the full canonical schema. Generated in the browser;
+ * never uploaded.
+ */
+export function buildErrorCsv(rows: PreviewRow[], kind: ErrorCsvKind = "mfd"): string {
+  const columns: ReadonlyArray<{ header: string; key: string }> =
+    kind === "generic"
+      ? GENERIC_ERROR_COLUMNS
+      : RADAR_HEADERS.map((header) => ({ header, key: header }));
+  const headers = [...columns.map((c) => c.header), "Issue"];
   const lines = rows
     .filter((row) => row.status === "invalid" || row.status === "skipped")
     .map((row) => {
-      const cells = RADAR_HEADERS.map((header) => escapeCsvCell(row.fields[header] ?? ""));
+      const cells = columns.map((c) => escapeCsvCell(row.fields[c.key] ?? ""));
       cells.push(escapeCsvCell(row.reasons.join(" ")));
       return cells.join(",");
     });

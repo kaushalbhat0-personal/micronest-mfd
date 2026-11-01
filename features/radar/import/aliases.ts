@@ -1,4 +1,8 @@
-import { RADAR_HEADERS, type RadarHeader } from "@/features/radar/template";
+import {
+  MFD_ONLY_HEADERS,
+  RADAR_HEADERS,
+  type RadarHeader,
+} from "@/features/radar/template";
 
 /**
  * Deterministic alias map (RCCF-MFD-44). Normalized header text
@@ -8,6 +12,7 @@ import { RADAR_HEADERS, type RadarHeader } from "@/features/radar/template";
 const ALIASES: Record<string, RadarHeader> = {
   // Client name
   name: "Client Name",
+  "full name": "Client Name",
   "client name": "Client Name",
   client: "Client Name",
   "investor name": "Client Name",
@@ -38,11 +43,12 @@ const ALIASES: Record<string, RadarHeader> = {
   "investment amount": "Amount",
   investmentamount: "Amount",
   "amount invested": "Amount",
-  // Last invested
+  // Last invested / generic Last Activity (same canonical field)
   "last invested": "Last Invested",
   "last investment": "Last Invested",
   "last investment date": "Last Invested",
   "investment date": "Last Invested",
+  "last activity": "Last Invested",
   // Last contacted
   "last contacted": "Last Contacted",
   "last contact": "Last Contacted",
@@ -77,6 +83,17 @@ export function autoMapColumns(header: string[]): Array<RadarHeader | null> {
     used.add(canonical);
     return canonical;
   });
+}
+
+/**
+ * True when a source file's headers auto-map onto any MFD-only field
+ * (Investment Type / SIP / Lumpsum / legacy Amount). Drives the
+ * context-aware import UI: MFD sources keep the full mapping options and
+ * investment preview, generic sources get the relationship-only surface.
+ * Detection is by header only — no guessing, no fuzzy matching.
+ */
+export function sourceLooksMfd(header: string[]): boolean {
+  return autoMapColumns(header).some((m) => m !== null && MFD_ONLY_HEADERS.includes(m));
 }
 
 export function canonicalHeaders(): RadarHeader[] {

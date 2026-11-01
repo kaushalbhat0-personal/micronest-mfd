@@ -6,17 +6,32 @@ export interface PhoneResult {
 }
 
 /**
+ * Well-formed E.164 digit string: 8–15 digits, no leading zero. This is a
+ * length/format boundary only — never a guess about which country a number
+ * belongs to. A real country code never starts with 0.
+ */
+function isE164Digits(digits: string): boolean {
+  return /^[1-9]\d{7,14}$/.test(digits);
+}
+
+/**
  * Normalises an optional phone number for wa.me links.
  * Empty input is valid (means "let the user pick the contact").
  *
- * Region handling (MFD-72): bare 10-digit numbers and 0-prefixed 11-digit
- * numbers are an explicitly Indian format, so the +91 inference applies
- * only when `defaultRegion` is "IN" (the default — existing behavior,
- * deterministic on server and in tests). For any other region a bare
- * 10-digit number is rejected so it can never be silently misdialed as
- * Indian; the user must include the country code. Explicitly prefixed
- * numbers (+91…, 12-digit 91…, other 12–15 digit international formats)
- * are accepted regardless of region.
+ * Two paths:
+ * - Explicit international format (a leading "+" or "00" country prefix):
+ *   the digits that follow must form a well-formed E.164 number (8–15
+ *   digits, no leading zero). This accepts valid international numbers of
+ *   any country — +44, +1, +61, +33, +81, +65 — without hardcoding lengths
+ *   or inferring a country from a digit count. This is the only path that
+ *   accepts 11-digit international numbers such as +61 / +33.
+ * - National / bare format (no "+" or "00"): region handling (MFD-72).
+ *   Bare 10-digit and 0-prefixed 11-digit numbers are explicitly Indian, so
+ *   the +91 inference applies only when `defaultRegion` is "IN" (the
+ *   default — deterministic on server and in tests). For any other region a
+ *   bare 10-digit number is rejected so it is never silently misdialed as
+ *   Indian; the user must include the country code. NANP-style 11-digit
+ *   (1…) and already-international 12–15 digit forms are accepted as-is.
  */
 export function normalizePhone(input: string | undefined, defaultRegion = "IN"): PhoneResult {
   if (!input || input.trim().length === 0) return { ok: true };
@@ -24,7 +39,21 @@ export function normalizePhone(input: string | undefined, defaultRegion = "IN"):
   if (/[a-zA-Z]/.test(raw)) {
     return { ok: false, error: "Phone number should contain digits only (country code allowed)." };
   }
-  let digits = raw.replace(/\D/g, "");
+
+  // Explicit international marker: "+" or "00". Strip it, then require a
+  // well-formed E.164 number. No country inference, no hardcoded lengths.
+  if (raw.startsWith("+") || raw.startsWith("00")) {
+    const digits = (raw.startsWith("+") ? raw.slice(1) : raw.slice(2)).replace(/\D/g, "");
+    if (!isE164Digits(digits)) {
+      return {
+        ok: false,
+        error: "Enter a valid phone number, including the country code when outside India.",
+      };
+    }
+    return { ok: true, digits };
+  }
+
+  const digits = raw.replace(/\D/g, "");
   if (digits.length === 10) {
     if (defaultRegion !== "IN") {
       return {
@@ -32,28 +61,33 @@ export function normalizePhone(input: string | undefined, defaultRegion = "IN"):
         error: "Include the country code for this number, e.g. +1 5551234567.",
       };
     }
-    digits = `91${digits}`;
-  } else if (digits.length === 11 && digits.startsWith("0")) {
+    return { ok: true, digits: `91${digits}` };
+  }
+  if (digits.length === 11 && digits.startsWith("0")) {
     if (defaultRegion !== "IN") {
       return {
         ok: false,
         error: "Include the country code for this number, e.g. +1 5551234567.",
       };
     }
-    digits = `91${digits.slice(1)}`;
-  } else if (digits.length === 11 && digits.startsWith("1")) {
-    // NANP-style country-code-prefixed number (+1 …), accepted as-is.
-  } else if (digits.length === 12 && digits.startsWith("91")) {
-    // already international
-  } else if (digits.length >= 12 && digits.length <= 15) {
-    // other international formats, accept as-is
-  } else {
-    return {
-      ok: false,
-      error: "Enter a valid phone number, including the country code when outside India.",
-    };
+    return { ok: true, digits: `91${digits.slice(1)}` };
   }
-  return { ok: true, digits };
+  if (digits.length === 11 && digits.startsWith("1")) {
+    // NANP-style country-code-prefixed number (+1 …), accepted as-is.
+    return { ok: true, digits };
+  }
+  if (digits.length === 12 && digits.startsWith("91")) {
+    // Already international (India), accepted as-is.
+    return { ok: true, digits };
+  }
+  if (digits.length >= 12 && digits.length <= 15) {
+    // Other international formats without an explicit marker, accepted as-is.
+    return { ok: true, digits };
+  }
+  return {
+    ok: false,
+    error: "Enter a valid phone number, including the country code when outside India.",
+  };
 }
 
 export function buildWhatsAppUrl(

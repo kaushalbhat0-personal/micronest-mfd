@@ -63,6 +63,56 @@ describe("buildErrorCsv", () => {
     ]);
     expect(csv).toContain('"Met, at branch"');
   });
+
+  it("defaults to the MFD schema (legacy callers)", () => {
+    const csv = buildErrorCsv([
+      {
+        key: "row-2",
+        line: 2,
+        name: "Rajesh",
+        mobile: "9876543210",
+        investmentType: "SIP",
+        status: "invalid",
+        reasons: ["Please enter the client's name."],
+        fields: {},
+      },
+    ]);
+    expect(csv.trim().split("\n")[0]).toBe(`${[...RADAR_HEADERS].join(",")},Issue`);
+  });
+
+  it("exports the generic schema when the source import is generic", () => {
+    const csv = buildErrorCsv(
+      [
+        {
+          key: "row-2",
+          line: 2,
+          name: "Alex Morgan",
+          mobile: "+44 7911 123456",
+          investmentType: "",
+          status: "invalid",
+          reasons: ["Please check the Last Contacted date."],
+          // Generic values live under canonical keys: Phone→Mobile, Last Activity→Last Invested.
+          fields: {
+            "Client Name": "Alex Morgan",
+            Mobile: "+44 7911 123456",
+            "Last Invested": "20/10/2026",
+            "Last Contacted": "bad-date",
+            Note: "Prefers morning calls",
+          },
+        },
+      ],
+      "generic",
+    );
+    const lines = csv.trim().split("\n");
+    expect(lines[0]).toBe("Client Name,Phone,Last Activity,Last Contacted,Note,Issue");
+    // Phone reads from Mobile, Last Activity from Last Invested.
+    expect(lines[1]).toContain("+44 7911 123456");
+    expect(lines[1]).toContain("20/10/2026");
+    expect(lines[1]).toContain("Please check the Last Contacted date.");
+    // Generic schema never leaks MFD columns.
+    expect(lines[0]).not.toContain("Investment Type");
+    expect(lines[0]).not.toContain("SIP Amount");
+  });
 });
 
 describe("parseCsvSheet", () => {

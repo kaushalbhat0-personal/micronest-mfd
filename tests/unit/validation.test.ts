@@ -71,4 +71,21 @@ describe("detectSensitiveInput", () => {
   it("detects 12-digit numbers", () => {
     expect(detectSensitiveInput("action", "Aadhaar 1234 5678 9012")).not.toBeNull();
   });
+
+  it("still flags a bare contiguous 12-digit Aadhaar without a +", () => {
+    expect(detectSensitiveInput("action", "my id is 123456789012")).not.toBeNull();
+  });
+
+  it("still flags PAN and OTP/password keywords", () => {
+    expect(detectSensitiveInput("note", "PAN ABCDE1234F")).not.toBeNull();
+    expect(detectSensitiveInput("note", "share the 123456789012 OTP")).not.toBeNull();
+  });
+
+  it("does not misflag an international phone number in a note", () => {
+    // 12-digit international phone-like sequences with a "+" are not Aadhaar.
+    expect(detectSensitiveInput("note", "+44 7911 123456")).toBeNull();
+    expect(detectSensitiveInput("note", "+91 98765 43210")).toBeNull();
+    expect(detectSensitiveInput("note", "+447911123456")).toBeNull();
+    expect(detectSensitiveInput("note", "call me on +61 412 345 678")).toBeNull();
+  });
 });

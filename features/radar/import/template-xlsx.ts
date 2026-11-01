@@ -90,7 +90,7 @@ const GUIDE_NOTES: string[] = [
 ];
 
 /**
- * Generic-first filling guide (Phase 2): only the four generic columns.
+ * Generic-first filling guide (Phase 2/3): only the five generic columns.
  * Neutral examples — no region-specific names, numbers, or product terms.
  * The MFD guide above stays untouched for the MFD template.
  */
@@ -104,13 +104,19 @@ export const GENERAL_GUIDE_ROWS: GuideRow[] = [
   {
     column: "Phone",
     required: "No",
-    what: "Client's phone number with country code (e.g. +1 5551234567). Blank is fine.",
-    example: "+1 5551234567",
+    what: "Phone number including country code (e.g. +44 7911 123456). Blank is fine.",
+    example: "+44 7911 123456",
+  },
+  {
+    column: "Last Activity",
+    required: "No",
+    what: "Date of the client's most recent meaningful activity or interaction, as day/month/year (DD/MM/YYYY). Blank is fine.",
+    example: "20/10/2026",
   },
   {
     column: "Last Contacted",
     required: "No",
-    what: "Date you last spoke with the client, as day/month/year (DD/MM/YYYY). Blank means never contacted.",
+    what: "Date you last contacted or spoke with the client, as day/month/year (DD/MM/YYYY). Blank means never contacted.",
     example: "20/10/2026",
   },
   {
@@ -122,9 +128,9 @@ export const GENERAL_GUIDE_ROWS: GuideRow[] = [
 ];
 
 const GENERAL_GUIDE_NOTES: string[] = [
-  "Dates: day/month/year (DD/MM/YYYY), e.g. 20/10/2026. Ambiguous numeric dates always read day-first.",
-  "Phone: always include the country code so the number is never misread.",
-  "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients keep their record and only the filled-in fields change. Blank cells never erase existing details.",
+  "Dates are read day-first. For example, 20/10/2026 means 20 October 2026. YYYY-MM-DD also works. Ambiguous numeric dates always read day-first — a month-first date like 10/20/2026 is not read as October.",
+  "Phone: include the country code for international numbers, e.g. +44 7911 123456, +1 555 123 4567, +61 412 345 678, +91 9876543210. A plain 10-digit Indian mobile may be entered without +91. If a number can't be recognised we flag it as Check now — the client still imports, but Call and WhatsApp may not work until it's corrected.",
+  "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients are updated only with the fields you filled in. Blank cells never erase existing details.",
   "Only the Clients sheet is imported. If your file has several sheets, pick Clients when uploading.",
   "Need investment fields (SIP, Lumpsum, Investment Type)? Use the MFD clients template instead.",
 ];

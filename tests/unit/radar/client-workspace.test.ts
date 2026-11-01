@@ -142,7 +142,7 @@ describe("fieldForClientError", () => {
       ),
     ).toBe("lastInvested");
     expect(
-      fieldForClientError("The Last spoke date \"x\" can't be in the future."),
+      fieldForClientError("The Last Contacted date \"x\" can't be in the future."),
     ).toBe("lastContacted");
     expect(fieldForClientError("Note looks like sensitive information — please remove it.")).toBe(
       "note",

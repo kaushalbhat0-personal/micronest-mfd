@@ -131,7 +131,7 @@ export function fieldForClientError(error: string | null): ClientFieldName | nul
   if (error.startsWith("SIP Amount")) return "sipAmount";
   if (error.startsWith("Lumpsum Amount")) return "lumpsumAmount";
   if (error.includes("Last activity") || error.startsWith("Last Invested")) return "lastInvested";
-  if (error.includes("Last spoke") || error.startsWith("Last Contacted")) return "lastContacted";
+  if (error.includes("Last Contacted") || error.startsWith("Last Contacted")) return "lastContacted";
   if (error.startsWith("Note")) return "note";
   return null;
 }
@@ -165,7 +165,7 @@ export function validateClientFields(
 
   const lastInvested = parseOptionalDate(input.lastInvested, "Last activity", todayYMD);
   if (lastInvested.error) return { row: null, error: lastInvested.error, warnings: [] };
-  const lastContacted = parseOptionalDate(input.lastContacted, "Last spoke", todayYMD);
+  const lastContacted = parseOptionalDate(input.lastContacted, "Last Contacted", todayYMD);
   if (lastContacted.error) return { row: null, error: lastContacted.error, warnings: [] };
 
   const note = input.note.trim();
