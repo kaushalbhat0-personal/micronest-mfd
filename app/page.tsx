@@ -281,11 +281,11 @@ function SetupWorkflow() {
           CSV or Excel upload. Then use MicroNest from your phone to add new clients, see who
           needs attention, and stay on top of every follow-up.
         </p>
-        <ol className="grid grid-cols-1 gap-2.5 lg:grid-cols-3 lg:gap-4">
+        <ol className="grid grid-cols-1 gap-2.5 lg:grid-cols-3 lg:gap-8">
           <li className="relative">
             <span
               aria-hidden="true"
-              className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+              className="absolute top-1/2 -right-6 hidden -translate-y-1/2 text-stone-300 lg:block"
             >
               <ArrowRightIcon className="h-4 w-4" />
             </span>
@@ -347,7 +347,7 @@ function SetupWorkflow() {
             </span>
             <span
               aria-hidden="true"
-              className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+              className="absolute top-1/2 -right-6 hidden -translate-y-1/2 text-stone-300 lg:block"
             >
               <ArrowRightIcon className="h-4 w-4" />
             </span>
