@@ -4,7 +4,7 @@
  * imports so this stays unit-testable in plain Node.
  */
 
-export type NavDestination = "today" | "clients" | "studio" | null;
+export type NavDestination = "today" | "clients" | "followups" | "studio" | null;
 
 /**
  * Which primary destination owns a pathname. Detail and legacy routes
@@ -15,7 +15,7 @@ export function activeDestination(pathname: string | null): NavDestination {
   if (!pathname) return null;
   if (pathname === "/workspace/today" || pathname.startsWith("/workspace/today/")) return "today";
   if (pathname === "/workspace/followups" || pathname.startsWith("/workspace/followups/")) {
-    return "today";
+    return "followups";
   }
   if (pathname.startsWith("/workspace/clients")) return "clients";
   if (pathname.startsWith("/tools/message-studio")) return "studio";

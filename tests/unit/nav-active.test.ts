@@ -20,6 +20,12 @@ describe("activeDestination", () => {
     expect(activeDestination("/tools/message-studio/custom")).toBe("studio");
   });
 
+  test("followups owns the global follow-ups route", () => {
+    // usePathname() never carries a query string; ?tab=completed is handled
+    // by the page, not the nav.
+    expect(activeDestination("/workspace/followups")).toBe("followups");
+  });
+
   test("marketing, login, and unknown routes own nothing", () => {
     expect(activeDestination("/")).toBeNull();
     expect(activeDestination("/login")).toBeNull();

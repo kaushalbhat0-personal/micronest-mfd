@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { DotsIcon, MessageIcon, SunIcon, UsersIcon } from "@/components/ui/icons";
+import { CalendarIcon, DotsIcon, MessageIcon, SunIcon, UsersIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { NavDestination } from "@/lib/nav";
 
@@ -30,7 +30,7 @@ export function MobileBottomNav({
       data-testid="mobile-bottom-nav"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 backdrop-blur md:hidden"
     >
-      <div className="grid grid-cols-4 gap-1 px-2 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
+      <div className="grid grid-cols-5 gap-1 px-2 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
         <Link
           href="/workspace/today"
           aria-current={active === "today" ? "page" : undefined}
@@ -69,6 +69,26 @@ export function MobileBottomNav({
           )}
           <UsersIcon aria-hidden="true" className="h-5 w-5" />
           Clients
+        </Link>
+        <Link
+          href="/workspace/followups"
+          aria-label="Follow-ups"
+          aria-current={active === "followups" ? "page" : undefined}
+          className={cn(
+            ITEM_BASE,
+            active === "followups"
+              ? "font-semibold text-emerald-900"
+              : "font-medium text-stone-500 hover:text-stone-800",
+          )}
+        >
+          {active === "followups" && (
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-emerald-900"
+            />
+          )}
+          <CalendarIcon aria-hidden="true" className="h-5 w-5" />
+          Follow-ups
         </Link>
         <Link
           href="/tools/message-studio"

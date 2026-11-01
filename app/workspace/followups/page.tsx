@@ -29,7 +29,8 @@ interface FollowupsPageProps {
  * bounded completed history once (RLS final); grouping and display copy
  * are the pure view-model in features/followups/model.ts. Streams behind
  * Suspense so the shell prerenders (cacheComponents). Secondary workspace
- * destination — no primary nav entry; activeDestination resolves to today.
+ * destination with a mobile bottom-nav tab; activeDestination resolves
+ * to followups so the tab reads active.
  */
 export default function FollowupsPage({ searchParams }: FollowupsPageProps) {
   return (
