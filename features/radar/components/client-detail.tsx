@@ -41,6 +41,7 @@ import {
   type ClientInput,
   type StoredRadarClient,
 } from "../repository";
+import { revalidateWorkspace } from "../actions";
 import { reasonsFor } from "../signals";
 import type { Signal } from "../types";
 import { radarWhatsAppText } from "../view";
@@ -217,6 +218,10 @@ export function ClientDetail({
       await updateLastContacted(supabase, record.id, today);
       setLastContact({ prevLastContacted: record.lastContacted });
       setRecord((prev) => markContacted(prev, today));
+      // Retire cached Today/Clients representations before refreshing, so
+      // navigating back never resurrects the pre-contact attention count.
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
     } catch (error) {
       setStoreError(storeErrorMessage(error));
     } finally {
@@ -236,6 +241,8 @@ export function ClientDetail({
       setTodayYMD(today);
       setRecord(toClientRecord(updated, 0, today));
       setLastContact(null);
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
     } catch (error) {
       setStoreError(storeErrorMessage(error));
     } finally {
@@ -254,6 +261,8 @@ export function ClientDetail({
       setRecord(toClientRecord(updated, 0, today));
       setEditing(false);
       setFormKey((k) => k + 1);
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
     } catch (error) {
       setSaveError(storeErrorMessage(error));
     } finally {
@@ -267,6 +276,9 @@ export function ClientDetail({
     try {
       const supabase = supabaseOrThrow();
       await deleteClient(supabase, record.id);
+      // Retire the cached Clients list (which still contains this row)
+      // before navigating to it.
+      await revalidateWorkspace().catch(() => undefined);
       router.push("/workspace/clients");
     } catch (error) {
       setStoreError(storeErrorMessage(error));

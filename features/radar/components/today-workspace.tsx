@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +36,7 @@ import {
   updateLastContacted,
   type StoredRadarClient,
 } from "../repository";
+import { revalidateWorkspace } from "../actions";
 import {
   buildTodayItems,
   countToday,
@@ -85,6 +87,7 @@ export function TodayWorkspace({
   signedIn,
   userName,
 }: TodayWorkspaceProps) {
+  const router = useRouter();
   // Explicit day boundary (Phase 2): the user's resolved timezone defines
   // "today", never the server's. Re-resolved at each interaction below.
   const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
@@ -171,6 +174,13 @@ export function TodayWorkspace({
       setRecords((prev) => prev.map((r) => (r.id === id ? markContacted(r, today) : r)));
       undoPrevRef.current.set(id, prevLastContacted);
       setUndoPrev((prev) => new Map(prev).set(id, prevLastContacted));
+      // Invalidate the shared workspace cache BEFORE refreshing, so the
+      // sibling route (Clients) cannot serve its pre-mutation payload on
+      // navigation and back-navigation cannot resurrect it here. A failed
+      // invalidation must never surface as a mutation error: the write
+      // already persisted and local state already reflects it.
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
       showToast({
         tone: "success",
         message: `You spoke to ${target.name}.`,
@@ -203,6 +213,10 @@ export function TodayWorkspace({
           r.id === id ? toClientRecord(updated, Math.max(0, r.rowNumber - 1), today) : r,
         ),
       );
+      // Same cross-route invalidation as contact: an undone contact must
+      // also retire cached Today/Clients representations.
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
       setUndoPrev((prev) => {
         const next = new Map(prev);
         next.delete(id);

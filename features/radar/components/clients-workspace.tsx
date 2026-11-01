@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
   type ClientInput,
   type StoredRadarClient,
 } from "../repository";
+import { revalidateWorkspace } from "../actions";
 import type { ClientRecord } from "../types";
 import { BOOK_FILTERS, countToday, filterBookItems, type BookFilter } from "../book";
 import { buildTodayItems, upcomingFollowups } from "../today";
@@ -100,6 +102,7 @@ export function ClientsWorkspace({
   configured,
   signedIn,
 }: ClientsWorkspaceProps) {
+  const router = useRouter();
   // Explicit day boundary (Phase 2): the user's resolved timezone defines
   // "today", never the server's. Re-resolved at each interaction below.
   const [todayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
@@ -221,6 +224,10 @@ export function ClientsWorkspace({
       });
       setAdding(false);
       setFormKey((k) => k + 1);
+      // A manually added client must also appear on Today without a hard
+      // refresh: same invalidation boundary as the contact mutation.
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
     } catch (error) {
       setSaveError(storeErrorMessage(error));
     } finally {
@@ -400,6 +407,11 @@ export function ClientsWorkspace({
               }
               return next;
             });
+            // Same cross-route invalidation as manual add: Today must not
+            // keep rendering its pre-import snapshot.
+            void revalidateWorkspace()
+              .catch(() => undefined)
+              .finally(() => router.refresh());
           }}
         />
       )}
