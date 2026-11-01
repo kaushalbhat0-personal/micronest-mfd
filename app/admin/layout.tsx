@@ -59,13 +59,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Users · soon
         </span>
-        <span
-          aria-disabled="true"
-          title="Available in a later phase"
-          className="min-h-[44px] shrink-0 cursor-not-allowed rounded-lg px-4 py-2 text-sm text-stone-400"
+        <Link
+          href="/admin/suggestions"
+          className="min-h-[44px] shrink-0 rounded-lg px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
         >
-          Suggestions · soon
-        </span>
+          Suggestions
+        </Link>
       </nav>
       <div className={cn("flex min-w-0 flex-col gap-5")}>{children}</div>
     </div>
