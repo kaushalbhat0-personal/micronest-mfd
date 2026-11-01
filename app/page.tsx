@@ -569,13 +569,13 @@ export default function Home() {
           >
             One workflow. From first message to follow-up.
           </h2>
-          <ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-4">
+          <ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-8">
             {LIFECYCLE.map((stage, i) => (
               <li key={stage.title} className="relative">
-                {i < LIFECYCLE.length - 1 && (
+                {i % 2 === 0 && i < LIFECYCLE.length - 1 && (
                   <span
                     aria-hidden="true"
-                    className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+                    className="absolute top-1/2 -right-6 hidden -translate-y-1/2 text-stone-300 lg:block"
                   >
                     <ArrowRightIcon className="h-4 w-4" />
                   </span>
