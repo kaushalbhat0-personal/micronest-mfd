@@ -112,6 +112,8 @@ test.describe("Admin foundation", () => {
 
 const SUGG_EMAIL = `e2e-sugg-${Date.now()}@example.invalid`;
 const SUGG_PREFIX = `e2ep1a-${Date.now()}`;
+const USER_EMAIL = `e2e-user-${Date.now()}@example.invalid`;
+const USER_PREFIX = `e2ep1b-${Date.now()}`;
 
 async function seedSuggestion(
   admin: ReturnType<typeof adminClient>,
@@ -129,6 +131,13 @@ async function cleanupSuggestions(admin: ReturnType<typeof adminClient>): Promis
     .ilike("message", `%${SUGG_PREFIX}%`);
   const ids = (data ?? []).map((r) => (r as { id: string }).id);
   if (ids.length > 0) await admin.from("wtp_interest").delete().in("id", ids);
+}
+
+async function cleanupUserSubmissions(
+  admin: ReturnType<typeof adminClient>,
+  userId: string,
+): Promise<void> {
+  await admin.from("wtp_interest").delete().eq("user_id", userId);
 }
 
 /**
@@ -289,6 +298,120 @@ test.describe("Admin suggestions", () => {
     } finally {
       await cleanupSuggestions(admin);
       await cleanupUser(SUGG_EMAIL);
+    }
+  });
+});
+
+/**
+ * Super Admin P1B users workspace.
+ *
+ * - Signed-out tests run in every mode (layout redirects to login).
+ * - Authenticated tests run ONLY with SUPABASE_E2E=stub plus
+ *   SUPABASE_TEST_* credentials against the isolated test project.
+ */
+test.describe("Admin users", () => {
+  test("signed-out /admin/users redirects to login", async ({ page }) => {
+    await page.goto("/admin/users");
+    // Configured proxy preserves the full path; the layout backstop in
+    // unconfigured mode lands on /admin. Both keep the surface closed.
+    await expect(page).toHaveURL(/\/login\?next=%2Fadmin/);
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+  });
+
+  test("plain authenticated user gets 404 on user routes", async ({ page }) => {
+    test.skip(!stubConfigured, "Requires SUPABASE_E2E=stub with SUPABASE_TEST_* credentials.");
+    expect(await stubLogin(page, PLAIN_EMAIL)).toBe(true);
+    try {
+      await page.goto("/admin/users");
+      await expect(page.getByText(/page could not be found|not found/i).first()).toBeVisible();
+      expect(await page.content()).not.toContain("Accounts");
+      await page.goto("/admin/users/00efbebd-d993-44d4-9d14-cf621f897342");
+      await expect(page.getByText(/page could not be found|not found/i).first()).toBeVisible();
+    } finally {
+      await cleanupUser(PLAIN_EMAIL);
+    }
+  });
+
+  test("admin browses, searches, and opens a user profile", async ({ page }) => {
+    test.skip(!stubConfigured, "Requires SUPABASE_E2E=stub with SUPABASE_TEST_* credentials.");
+    expect(await stubLogin(page, USER_EMAIL)).toBe(true);
+    const admin = adminClient();
+    const adminId = await userIdFor(USER_EMAIL);
+    expect(
+      await admin.from("admin_users").insert({ user_id: adminId, role: "admin" }),
+    ).toMatchObject({ error: null });
+    await seedSuggestion(admin, {
+      user_id: adminId,
+      email: `${USER_PREFIX}@example.invalid`,
+      country: "IN",
+      profession: "coach",
+      profession_other: null,
+      client_count_band: "11-25",
+      current_solution: ["excel"],
+      current_solution_other: null,
+      desired_features: ["followup-reminders"],
+      other_feature: null,
+      quoted_price_minor: null,
+      quoted_currency: null,
+      price_band: "under-5",
+      message: `${USER_PREFIX} user history submission`,
+    });
+    try {
+      await page.goto("/admin/users");
+      await expect(page.getByRole("heading", { name: /accounts/i })).toBeVisible();
+      await expect(page.getByText(/showing \d+ of \d+ accounts/i)).toBeVisible();
+
+      // Search narrows to the stub admin account (WTP provided email is
+      // distinct and must not match here).
+      await page.getByLabel("Search accounts").fill(USER_EMAIL);
+      await page.getByRole("button", { name: /^search$/i }).click();
+      await expect(page.getByText(/showing 1 of 1/i)).toBeVisible();
+      await expect(page.getByText(USER_EMAIL)).toBeVisible();
+      expect(await page.content()).not.toContain(`${USER_PREFIX}@example.invalid`);
+
+      // Profile shows Auth identity, counts, and linked research history.
+      await page.getByRole("link", { name: /open profile/i }).click();
+      await expect(page.getByText("Auth email:")).toBeVisible();
+      await expect(page.getByText(USER_EMAIL)).toBeVisible();
+      await expect(page.getByText(/research history/i)).toBeVisible();
+      await expect(page.getByText(/user history submission/i)).toBeVisible();
+      await expect(await page.content()).not.toContain("service_role");
+      const robots = await page.locator('meta[name="robots"]').getAttribute("content");
+      expect(robots ?? "").toContain("noindex");
+
+      // Malformed and unknown ids resolve to not-found.
+      await page.goto("/admin/users/not-a-uuid");
+      await expect(page.getByText(/page could not be found|not found/i).first()).toBeVisible();
+      await page.goto("/admin/users/11111111-2222-4333-8444-555555555555");
+      await expect(page.getByText(/page could not be found|not found/i).first()).toBeVisible();
+    } finally {
+      await cleanupUserSubmissions(admin, adminId);
+      await cleanupUser(USER_EMAIL);
+    }
+  });
+
+  test("admin users stay usable on a small viewport", async ({ page }) => {
+    test.skip(!stubConfigured, "Requires SUPABASE_E2E=stub with SUPABASE_TEST_* credentials.");
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await stubLogin(page, USER_EMAIL)).toBe(true);
+    const admin = adminClient();
+    const adminId = await userIdFor(USER_EMAIL);
+    await admin.from("admin_users").insert({ user_id: adminId, role: "admin" });
+    try {
+      await page.goto("/admin/users");
+      await expect(page.getByRole("heading", { name: /accounts/i })).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      );
+      expect(overflow).toBe(true);
+      await page.goto(`/admin/users/${adminId}`);
+      await expect(page.getByText("Auth email:")).toBeVisible();
+      const detailOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      );
+      expect(detailOverflow).toBe(true);
+    } finally {
+      await cleanupUser(USER_EMAIL);
     }
   });
 });

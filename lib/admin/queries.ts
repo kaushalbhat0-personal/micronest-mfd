@@ -8,6 +8,20 @@ import {
   isValidUuid,
   type SuggestionAuthStatus,
 } from "@/features/admin/filters";
+import {
+  MAX_ADMIN_USERS_WINDOW,
+  USERS_PER_AUTH_CALL,
+  USER_AGGREGATION_CHUNK_SIZE,
+  USER_PAGE_SIZE,
+  applyUserSearch,
+  applyUserUsageFilter,
+  countByUserId,
+  displayNameFromMetadata,
+  splitFollowupsByUser,
+  type AdminApiUser,
+  type UserFilters,
+  type UserSummary,
+} from "@/features/admin/users";
 
 /**
  * Centralized privileged admin reads (P0, read-only).
@@ -304,6 +318,7 @@ export interface WtpSuggestionDetail {
  * existence oracle is exposed. Never conflates the WTP provided email
  * with the authenticated user's email (see page copy).
  */
+
 export async function getSuggestionDetail(id: string): Promise<WtpSuggestionDetail | null> {
   if (!isValidUuid(id)) return null;
   const service = await adminClient();
@@ -352,5 +367,245 @@ export async function getSuggestionDetail(id: string): Promise<WtpSuggestionDeta
     quotedCurrency: row.quoted_currency,
     priceBand: row.price_band,
     message: row.message,
+  };
+}
+
+export interface UserListPage {
+  rows: UserSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface UserDetail {
+  user: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+    createdAt: string;
+    lastSignInAt: string | null;
+  };
+  counts: {
+    clientCount: number;
+    openFollowupCount: number;
+    completedFollowupCount: number;
+    submissionCount: number;
+  };
+  submissions: WtpSuggestionSummary[];
+}
+
+/**
+ * Fill the bounded account window from the Auth Admin API. Loops pages
+ * until a short page or the safety ceiling — never unbounded. Order is
+ * whatever the Auth API returns; the directory sorts newest-first in code.
+ */
+async function fetchBoundedUsers(
+  service: ReturnType<typeof createAdminServiceClient>,
+): Promise<AdminApiUser[]> {
+  const users: AdminApiUser[] = [];
+  for (let page = 1; users.length < MAX_ADMIN_USERS_WINDOW; page += 1) {
+    const { data, error } = await service.auth.admin.listUsers({
+      page,
+      perPage: USERS_PER_AUTH_CALL,
+    });
+    if (error) throw new Error("Could not load user directory.");
+    const batch = (data.users ?? []) as AdminApiUser[];
+    users.push(...batch);
+    if (batch.length < USERS_PER_AUTH_CALL) break;
+  }
+  return users.slice(0, MAX_ADMIN_USERS_WINDOW);
+}
+
+function toUserBase(user: AdminApiUser): Omit<UserSummary, keyof UserUsageCounts> {
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    displayName: displayNameFromMetadata(user.user_metadata),
+    createdAt: user.created_at,
+    lastSignInAt: user.last_sign_in_at ?? null,
+  };
+}
+
+interface UserUsageCounts {
+  clientCount: number;
+  openFollowupCount: number;
+  completedFollowupCount: number;
+  submissionCount: number;
+}
+
+function chunkIds(ids: string[], size: number): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * Count-only usage aggregation for a set of user ids. Selects user_id
+ * columns only — never customer rows, names, notes, or amounts. Chunked
+ * so `.in()` lists stay bounded; exact while per-chunk rows stay under
+ * the PostgREST row cap (true at early-stage scale; see carryover).
+ */
+async function aggregateUsage(
+  service: ReturnType<typeof createAdminServiceClient>,
+  ids: string[],
+): Promise<Map<string, UserUsageCounts>> {
+  const counts = new Map<string, UserUsageCounts>();
+  const ensure = (id: string): UserUsageCounts => {
+    let entry = counts.get(id);
+    if (!entry) {
+      entry = {
+        clientCount: 0,
+        openFollowupCount: 0,
+        completedFollowupCount: 0,
+        submissionCount: 0,
+      };
+      counts.set(id, entry);
+    }
+    return entry;
+  };
+  for (const chunk of chunkIds(ids, USER_AGGREGATION_CHUNK_SIZE)) {
+    if (chunk.length === 0) continue;
+    const [clients, followups, submissions] = await Promise.all([
+      service.from("radar_clients").select("user_id").in("user_id", chunk),
+      service.from("client_followups").select("user_id,completed_at").in("user_id", chunk),
+      service.from("wtp_interest").select("user_id").in("user_id", chunk),
+    ]);
+    if (clients.error) throw new Error("Could not load client counts.");
+    if (followups.error) throw new Error("Could not load follow-up counts.");
+    if (submissions.error) throw new Error("Could not load submission counts.");
+    for (const [id, count] of countByUserId(
+      (clients.data ?? []) as Array<{ user_id: string | null }>,
+    )) {
+      ensure(id).clientCount = count;
+    }
+    const split = splitFollowupsByUser(
+      (followups.data ?? []) as Array<{ user_id: string | null; completed_at: string | null }>,
+    );
+    for (const [id, count] of split.open) ensure(id).openFollowupCount = count;
+    for (const [id, count] of split.completed) ensure(id).completedFollowupCount = count;
+    for (const [id, count] of countByUserId(
+      (submissions.data ?? []) as Array<{ user_id: string | null }>,
+    )) {
+      ensure(id).submissionCount = count;
+    }
+  }
+  return counts;
+}
+
+/**
+ * Paginated user directory over the bounded account window. Search and
+ * usage filters apply in code over fetched summaries — honest about the
+ * Auth API having no server-side user search. Usage aggregation runs over
+ * the search-narrowed set (chunked, count-only, no N+1).
+ */
+export async function listUsersPage(filters: UserFilters, page: number): Promise<UserListPage> {
+  const service = await adminClient();
+  const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+
+  const allUsers = await fetchBoundedUsers(service);
+  const searched = applyUserSearch(
+    allUsers.map((user) => ({
+      ...toUserBase(user),
+      clientCount: 0,
+      openFollowupCount: 0,
+      completedFollowupCount: 0,
+      submissionCount: 0,
+    })),
+    filters.q,
+  );
+  const usage = await aggregateUsage(
+    service,
+    searched.map((s) => s.id),
+  );
+  const withCounts: UserSummary[] = searched.map((summary) => {
+    const counts = usage.get(summary.id);
+    return {
+      ...summary,
+      clientCount: counts?.clientCount ?? 0,
+      openFollowupCount: counts?.openFollowupCount ?? 0,
+      completedFollowupCount: counts?.completedFollowupCount ?? 0,
+      submissionCount: counts?.submissionCount ?? 0,
+    };
+  });
+  const filtered = applyUserUsageFilter(withCounts, filters.usage);
+
+  const total = filtered.length;
+  const from = (safePage - 1) * USER_PAGE_SIZE;
+  return {
+    rows: filtered.slice(from, from + USER_PAGE_SIZE),
+    total,
+    page: safePage,
+    pageSize: USER_PAGE_SIZE,
+    totalPages: Math.max(1, Math.ceil(total / USER_PAGE_SIZE)),
+  };
+}
+
+/**
+ * One user profile with usage counts and WTP research history linked by
+ * `wtp_interest.user_id` — the only authoritative linkage (never email
+ * matching). Returns null for malformed or unknown ids; callers map both
+ * uniformly to `notFound()`.
+ */
+export async function getUserDetail(userId: string): Promise<UserDetail | null> {
+  if (!isValidUuid(userId)) return null;
+  const service = await adminClient();
+  const { data, error } = await service.auth.admin.getUserById(userId);
+  if (error || !data.user) return null;
+  const user = data.user as AdminApiUser;
+
+  const [clients, followups, submissions] = await Promise.all([
+    service
+      .from("radar_clients")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    service.from("client_followups").select("completed_at").eq("user_id", userId),
+    service
+      .from("wtp_interest")
+      .select(
+        "id,created_at,user_id,email,country,profession,client_count_band,price_band,desired_features,message",
+        { count: "exact" },
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
+  if (clients.error) throw new Error("Could not load client count.");
+  if (followups.error) throw new Error("Could not load follow-up counts.");
+  if (submissions.error) throw new Error("Could not load user submissions.");
+
+  const submissionRows = (submissions.data ?? []) as WtpRow[];
+  const submissionCount =
+    typeof submissions.count === "number" && Number.isFinite(submissions.count)
+      ? submissions.count
+      : submissionRows.length;
+
+  const followupRows = (followups.data ?? []) as Array<{ completed_at: string | null }>;
+  let openFollowups = 0;
+  let completedFollowups = 0;
+  for (const row of followupRows) {
+    if (row.completed_at) completedFollowups += 1;
+    else openFollowups += 1;
+  }
+  const clientCount =
+    typeof clients.count === "number" && Number.isFinite(clients.count) ? clients.count : 0;
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email ?? null,
+      displayName: displayNameFromMetadata(user.user_metadata),
+      createdAt: user.created_at,
+      lastSignInAt: user.last_sign_in_at ?? null,
+    },
+    counts: {
+      clientCount,
+      openFollowupCount: openFollowups,
+      completedFollowupCount: completedFollowups,
+      submissionCount,
+    },
+    submissions: submissionRows.map(toSummary),
   };
 }

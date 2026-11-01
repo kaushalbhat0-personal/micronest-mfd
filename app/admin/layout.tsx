@@ -52,13 +52,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Overview
         </Link>
-        <span
-          aria-disabled="true"
-          title="Available in a later phase"
-          className="min-h-[44px] shrink-0 cursor-not-allowed rounded-lg px-4 py-2 text-sm text-stone-400"
+        <Link
+          href="/admin/users"
+          className="min-h-[44px] shrink-0 rounded-lg px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
         >
-          Users · soon
-        </span>
+          Users
+        </Link>
         <Link
           href="/admin/suggestions"
           className="min-h-[44px] shrink-0 rounded-lg px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
