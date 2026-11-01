@@ -10,12 +10,16 @@ import {
   ArrowRightIcon,
   CalendarIcon,
   CheckIcon,
+  ChevronDownIcon,
   ClockIcon,
+  FileTextIcon,
   MessageIcon,
   PhoneIcon,
+  PlusIcon,
   SendIcon,
   SunIcon,
   TargetIcon,
+  UploadIcon,
   UsersIcon,
 } from "@/components/ui/icons";
 
@@ -255,6 +259,219 @@ const LIFECYCLE = [
 ];
 
 /**
+ * Setup-once → phone-daily workflow story. Static marketing content only:
+ * bulk import is easiest on a desktop; everyday relationship work is
+ * designed for the phone. Advisory positioning — the product itself has
+ * no device restriction. Device frames are decorative (aria-hidden);
+ * each step carries the same meaning as text.
+ */
+function SetupWorkflow() {
+  return (
+    <section aria-labelledby="setup-heading">
+      <div className="flex flex-col gap-3">
+        <p className="eyebrow">From setup to everyday</p>
+        <h2
+          id="setup-heading"
+          className="max-w-2xl text-2xl font-semibold tracking-tight text-stone-900 lg:text-3xl"
+        >
+          Set up once. Manage clients anywhere.
+        </h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base">
+          Already have a client list? Bring it into MicroNest from your desktop with a simple
+          CSV or Excel upload. Then use MicroNest from your phone to add new clients, see who
+          needs attention, and stay on top of every follow-up.
+        </p>
+        <ol className="grid grid-cols-1 gap-2.5 lg:grid-cols-3 lg:gap-4">
+          <li className="relative">
+            <span
+              aria-hidden="true"
+              className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+            >
+              <ArrowRightIcon className="h-4 w-4" />
+            </span>
+            <Card padding="compact" className="h-full lg:p-5">
+              <div className="flex min-w-0 flex-col gap-2">
+                <span
+                  aria-hidden="true"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900"
+                >
+                  <UploadIcon />
+                </span>
+                <p className="text-sm font-semibold text-stone-900">
+                  <span className="tnum mr-1.5 text-xs font-medium text-stone-500">01</span>
+                  Start on desktop
+                </p>
+                <h3 className="text-sm font-medium text-stone-900">
+                  Import your existing clients
+                </h3>
+                <span className="text-xs leading-relaxed text-stone-500">
+                  Bring your existing client list into MicroNest in one go. Only the client name
+                  is required — everything else is optional.
+                </span>
+                <div
+                  aria-hidden="true"
+                  className="mt-1 rounded-lg border border-stone-200 bg-stone-50 p-3"
+                >
+                  <div className="flex items-center gap-1 pb-2">
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200">
+                      <FileTextIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                      clients.csv
+                    </div>
+                    <div className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200">
+                      <FileTextIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                      clients.xlsx
+                    </div>
+                  </div>
+                </div>
+                <span className="mt-1 flex flex-wrap gap-1.5">
+                  {["CSV", "Excel", "One-time setup"].map((proof) => (
+                    <span
+                      key={proof}
+                      className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-700"
+                    >
+                      {proof}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </Card>
+          </li>
+          <li className="relative flex flex-col">
+            <span aria-hidden="true" className="flex justify-center py-0.5 text-stone-300 lg:hidden">
+              <ChevronDownIcon className="h-5 w-5" />
+            </span>
+            <span
+              aria-hidden="true"
+              className="absolute top-8 -right-2 hidden text-stone-300 lg:block"
+            >
+              <ArrowRightIcon className="h-4 w-4" />
+            </span>
+            <Card padding="compact" className="h-full flex-1 lg:p-5">
+              <div className="flex min-w-0 flex-col gap-2">
+                <span
+                  aria-hidden="true"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900"
+                >
+                  <PhoneIcon />
+                </span>
+                <p className="text-sm font-semibold text-stone-900">
+                  <span className="tnum mr-1.5 text-xs font-medium text-stone-500">02</span>
+                  Continue from your phone
+                </p>
+                <h3 className="text-sm font-medium text-stone-900">Take MicroNest with you</h3>
+                <span className="text-xs leading-relaxed text-stone-500">
+                  Once your clients are in, they are ready on your phone — wherever the day
+                  takes you.
+                </span>
+                <div
+                  aria-hidden="true"
+                  className="mx-auto mt-1 w-full max-w-[240px] rounded-2xl border border-stone-200 bg-white p-2.5 shadow-sm"
+                >
+                  <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-stone-200" />
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-stone-200 px-2 py-1.5">
+                      <ClientAvatar name="Alex Morgan" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-stone-900">
+                        Alex Morgan
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-stone-200 px-2 py-1.5">
+                      <ClientAvatar name="Sofia Ramos" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-stone-900">
+                        Sofia Ramos
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    <div className="flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg bg-emerald-900 px-2 text-xs font-medium text-white">
+                      <PhoneIcon className="h-3.5 w-3.5" />
+                      Call
+                    </div>
+                    <div className="flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg border border-emerald-900 bg-white px-2 text-xs font-medium text-emerald-900">
+                      <MessageIcon className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </div>
+                  </div>
+                </div>
+                <span className="mt-1 flex flex-wrap gap-1.5">
+                  {["Phone", "Clients ready"].map((proof) => (
+                    <span
+                      key={proof}
+                      className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-700"
+                    >
+                      {proof}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </Card>
+          </li>
+          <li className="relative flex flex-col">
+            <span aria-hidden="true" className="flex justify-center py-0.5 text-stone-300 lg:hidden">
+              <ChevronDownIcon className="h-5 w-5" />
+            </span>
+            <Card padding="compact" className="h-full flex-1 lg:p-5">
+              <div className="flex min-w-0 flex-col gap-2">
+                <span
+                  aria-hidden="true"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900"
+                >
+                  <CalendarIcon />
+                </span>
+                <p className="text-sm font-semibold text-stone-900">
+                  <span className="tnum mr-1.5 text-xs font-medium text-stone-500">03</span>
+                  Your everyday workspace
+                </p>
+                <h3 className="text-sm font-medium text-stone-900">
+                  Manage relationships every day
+                </h3>
+                <span className="text-xs leading-relaxed text-stone-500">
+                  Add new clients manually, check who needs attention, call or WhatsApp, and
+                  plan the next follow-up — without sitting at a desk.
+                </span>
+                <div aria-hidden="true" className="mt-1 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs font-medium text-stone-700">
+                    <PlusIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                    Add a new client
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs font-medium text-stone-700">
+                    <TargetIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                    Check who needs attention
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs font-medium text-stone-700">
+                    <PhoneIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                    Call or WhatsApp
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs font-medium text-stone-700">
+                    <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-emerald-900" />
+                    Plan a follow-up
+                  </div>
+                </div>
+                <span className="mt-1 flex flex-wrap gap-1.5">
+                  {["Add", "Attention", "Call", "WhatsApp", "Follow-up"].map((proof) => (
+                    <span
+                      key={proof}
+                      className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-700"
+                    >
+                      {proof}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </Card>
+          </li>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/**
  * Public marketing homepage (RCCF-MFD-47). The relationship-workspace
  * story: promise → problem → lifecycle → Client Book → before/after →
  * Today proof → trust → CTA. Session-aware CTAs only; no workspace data
@@ -398,6 +615,8 @@ export default function Home() {
           </ol>
         </div>
       </section>
+
+      <SetupWorkflow />
 
       <section aria-labelledby="book-heading">
         <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
