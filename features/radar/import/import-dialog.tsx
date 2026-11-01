@@ -214,6 +214,27 @@ export function ImportDialog({
     };
   }, [open, handleClose]);
 
+  // MFD-64 release: let the Android hardware-back handler dismiss this
+  // dialog (highest priority). Mid-import the press falls through (false).
+  React.useEffect(() => {
+    if (!open) return undefined;
+    let unregister: (() => void) | null = null;
+    let cancelled = false;
+    void (async () => {
+      const { pushBackDismiss } = await import("@/lib/native/back");
+      if (cancelled) return;
+      unregister = pushBackDismiss(() => {
+        if (step === "importing") return false;
+        handleClose();
+        return true;
+      });
+    })();
+    return () => {
+      cancelled = true;
+      unregister?.();
+    };
+  }, [open, step, handleClose]);
+
   async function handleFile(file: File) {
     setFileError(null);
     setFatal(null);
@@ -400,7 +421,7 @@ export function ImportDialog({
   }
 
   function handleDownloadErrors() {
-    downloadTextFile(
+    void downloadTextFile(
       "import-needs-attention.csv",
       buildErrorCsv(rows, effectiveKind),
       "text/csv",
@@ -517,7 +538,7 @@ export function ImportDialog({
                       variant="primary"
                       onClick={() => {
                         trackTemplateDownload(templateKind);
-                        downloadTextFile(
+                        void downloadTextFile(
                           templateKind === "generic"
                             ? GENERAL_TEMPLATE_FILENAME
                             : TEMPLATE_FILENAME,
@@ -540,7 +561,7 @@ export function ImportDialog({
                               ? await buildGeneralTemplateXlsx()
                               : await buildTemplateXlsx();
                           trackTemplateDownload(templateKind);
-                          downloadBinaryFile(
+                          await downloadBinaryFile(
                             templateKind === "generic"
                               ? GENERAL_TEMPLATE_XLSX_FILENAME
                               : TEMPLATE_XLSX_FILENAME,

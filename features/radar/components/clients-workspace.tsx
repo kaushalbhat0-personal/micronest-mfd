@@ -657,7 +657,7 @@ export function ClientsWorkspace({
                 variant="ghost"
                 onClick={() => {
                   trackTemplateDownload("generic");
-                  downloadTextFile(GENERAL_TEMPLATE_FILENAME, buildGeneralTemplateCsv(), "text/csv");
+                  void downloadTextFile(GENERAL_TEMPLATE_FILENAME, buildGeneralTemplateCsv(), "text/csv");
                 }}
               >
                 <DownloadIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />

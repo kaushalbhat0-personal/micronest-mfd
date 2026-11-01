@@ -60,6 +60,17 @@ export function createMemoryStorage(initial: Record<string, string> = {}): Nativ
 }
 
 /**
+ * Sign out the native session. supabase-js clears the persisted session
+ * from the Preferences-backed storage on signOut, so a relaunch cannot
+ * restore the previous user. The web cookie session (if any) must be
+ * cleared separately by the caller — see SiteHeader.handleSignOut.
+ */
+export async function signOutNative(): Promise<void> {
+  const client = await createNativeClient();
+  await client.auth.signOut();
+}
+
+/**
  * Create the native Supabase browser client:
  * persist + auto-refresh ON, detectSessionInUrl OFF (deep links are
  * handled manually via parseNativeAuthCallback, never via URL sniffing).

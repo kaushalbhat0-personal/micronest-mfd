@@ -52,6 +52,31 @@ export function MessagePreview({
       if (navigator.clipboard && window.isSecureContext !== false) {
         await navigator.clipboard.writeText(message);
       } else {
+        throw new Error("async clipboard unavailable");
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+      return;
+    } catch {
+      // Async clipboard failed — try the native fallback first when running
+      // inside Capacitor, then the legacy browser fallback. Visible UX
+      // (Copied / error text) is unchanged.
+      try {
+        const { isNative } = await import("@/lib/native/runtime");
+        if (isNative()) {
+          const { copyTextNativeFallback } = await import("@/lib/native/files");
+          if (await copyTextNativeFallback(message)) {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2500);
+            return;
+          }
+          throw new Error("native copy failed");
+        }
+      } catch {
+        setCopyError("Copy failed in this browser. Please select the text manually.");
+        return;
+      }
+      try {
         // Fallback for browsers without async clipboard.
         const ta = document.createElement("textarea");
         ta.value = message;
@@ -62,11 +87,11 @@ export function MessagePreview({
         const ok = document.execCommand("copy");
         document.body.removeChild(ta);
         if (!ok) throw new Error("copy failed");
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2500);
+      } catch {
+        setCopyError("Copy failed in this browser. Please select the text manually.");
       }
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
-    } catch {
-      setCopyError("Copy failed in this browser. Please select the text manually.");
     }
   }
 

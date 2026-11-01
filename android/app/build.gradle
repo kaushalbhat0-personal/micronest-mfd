@@ -3,12 +3,33 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.micronest.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    // MFD-64 release signing. Credentials NEVER live in source control:
+    // the keystore file stays outside the repository (user-owned, backed up
+    // separately) and all four values come from environment variables:
+    //   MICRONEST_KEYSTORE_FILE      absolute path to the release .jks
+    //   MICRONEST_KEYSTORE_PASSWORD  keystore password
+    //   MICRONEST_KEY_ALIAS          key alias
+    //   MICRONEST_KEY_PASSWORD       key password
+    // Without them, release builds fail clearly at validateSigningRelease
+    // (see below) instead of producing a misleading "signed" artifact.
+    // Debug builds are unaffected.
+    signingConfigs {
+        release {
+            def keystoreFile = System.getenv("MICRONEST_KEYSTORE_FILE")
+            if (keystoreFile) {
+                storeFile file(keystoreFile)
+                storePassword System.getenv("MICRONEST_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("MICRONEST_KEY_ALIAS")
+                keyPassword System.getenv("MICRONEST_KEY_PASSWORD")
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.micronest.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,6 +41,34 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigningCredentials()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+def hasReleaseSigningCredentials() {
+    return System.getenv("MICRONEST_KEYSTORE_FILE") &&
+        System.getenv("MICRONEST_KEYSTORE_PASSWORD") &&
+        System.getenv("MICRONEST_KEY_ALIAS") &&
+        System.getenv("MICRONEST_KEY_PASSWORD")
+}
+
+// Fail clearly (not silently unsigned) when a signed release is attempted
+// without credentials. Debug and unsigned assemble tasks are unaffected.
+afterEvaluate {
+    tasks.matching { it.name == "validateSigningRelease" }.configureEach {
+        doFirst {
+            if (!hasReleaseSigningCredentials()) {
+                throw new GradleException(
+                    "Release signing credentials are not configured. Set " +
+                    "MICRONEST_KEYSTORE_FILE, MICRONEST_KEYSTORE_PASSWORD, " +
+                    "MICRONEST_KEY_ALIAS and MICRONEST_KEY_PASSWORD in the " +
+                    "environment (keystore file stays OUTSIDE the repository). " +
+                    "Debug builds do not need these variables."
+                )
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 import { GENERAL_TEMPLATE_HEADERS, RADAR_HEADERS } from "@/features/radar/template";
+import { isNative } from "@/lib/native/runtime";
 
 export const TEMPLATE_XLSX_FILENAME = "micronest-mfd-client-template.xlsx";
 
@@ -193,8 +194,12 @@ export async function buildTemplateXlsx(): Promise<ArrayBuffer> {
   return output instanceof ArrayBuffer ? output : (new Uint8Array(output).buffer as ArrayBuffer);
 }
 
-/** Triggers a browser download for locally generated binary content. */
-export function downloadBinaryFile(fileName: string, content: ArrayBuffer, mimeType: string): void {
+/** Browser download transport. Used on web and as the native fallback. */
+function browserDownloadBinaryFile(
+  fileName: string,
+  content: ArrayBuffer,
+  mimeType: string,
+): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -204,4 +209,29 @@ export function downloadBinaryFile(fileName: string, content: ArrayBuffer, mimeT
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Native-aware download for locally generated binary content.
+ * Web: normal browser download (unchanged). Native: Filesystem cache +
+ * Share sheet via downloadFileNativeAware (lib/native/files.ts).
+ * Content is identical either way.
+ */
+export async function downloadBinaryFile(
+  fileName: string,
+  content: ArrayBuffer,
+  mimeType: string,
+): Promise<void> {
+  if (isNative()) {
+    try {
+      const { downloadFileNativeAware } = await import("@/lib/native/files");
+      await downloadFileNativeAware(fileName, new Uint8Array(content), mimeType, () =>
+        browserDownloadBinaryFile(fileName, content, mimeType),
+      );
+      return;
+    } catch {
+      // Fall through to the browser transport below.
+    }
+  }
+  browserDownloadBinaryFile(fileName, content, mimeType);
 }

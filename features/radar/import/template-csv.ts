@@ -1,5 +1,6 @@
 import { GENERAL_TEMPLATE_HEADERS, RADAR_HEADERS } from "@/features/radar/template";
 import type { PreviewRow } from "./import-types";
+import { isNative } from "@/lib/native/runtime";
 
 /** Blank canonical template — no example rows, so nothing imports by accident. */
 export function buildTemplateCsv(): string {
@@ -63,8 +64,8 @@ export function buildErrorCsv(rows: PreviewRow[], kind: ErrorCsvKind = "mfd"): s
   return `${headers.join(",")}\n${lines.join("\n")}${lines.length > 0 ? "\n" : ""}`;
 }
 
-/** Triggers a browser download for locally generated text content. */
-export function downloadTextFile(fileName: string, content: string, mimeType: string): void {
+/** Browser download transport. Used on web and as the native fallback. */
+function browserDownloadTextFile(fileName: string, content: string, mimeType: string): void {
   const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -74,4 +75,29 @@ export function downloadTextFile(fileName: string, content: string, mimeType: st
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Native-aware download for locally generated text content.
+ * Web: normal browser download (unchanged). Native: Filesystem cache +
+ * Share sheet via downloadFileNativeAware (lib/native/files.ts).
+ * Content is identical either way.
+ */
+export async function downloadTextFile(
+  fileName: string,
+  content: string,
+  mimeType: string,
+): Promise<void> {
+  if (isNative()) {
+    try {
+      const { downloadFileNativeAware } = await import("@/lib/native/files");
+      await downloadFileNativeAware(fileName, content, mimeType, () =>
+        browserDownloadTextFile(fileName, content, mimeType),
+      );
+      return;
+    } catch {
+      // Fall through to the browser transport below.
+    }
+  }
+  browserDownloadTextFile(fileName, content, mimeType);
 }

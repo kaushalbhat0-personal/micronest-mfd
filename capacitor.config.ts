@@ -12,7 +12,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * Never commit secrets here.
  */
 const serverUrl =
-  process.env.CAP_SERVER_URL ?? "https://micronestmicrotools.vercel.app";
+  process.env.CAP_SERVER_URL ?? "https://micronest-mfd-six.vercel.app";
 
 const config: CapacitorConfig = {
   appId: "com.micronest.app",
@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
     url: serverUrl,
     cleartext: false,
     // Allow the remote app origin to navigate inside the WebView.
-    allowNavigation: ["micronestmicrotools.vercel.app"],
+    allowNavigation: ["micronest-mfd-six.vercel.app"],
   },
   android: {
     allowMixedContent: false,

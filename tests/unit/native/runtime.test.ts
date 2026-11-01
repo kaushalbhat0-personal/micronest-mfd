@@ -8,6 +8,6 @@ describe("native runtime detection", () => {
   });
 
   it("defaults to the production web base URL", () => {
-    expect(getWebBaseUrl()).toContain("micronestmicrotools.vercel.app");
+    expect(getWebBaseUrl()).toContain("micronest-mfd-six.vercel.app");
   });
 });

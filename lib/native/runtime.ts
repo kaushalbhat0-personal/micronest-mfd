@@ -2,7 +2,7 @@
  * MFD-64 P0 — native runtime detection.
  *
  * The same Next.js app runs in two contexts:
- * - web: normal browser at https://micronestmicrotools.vercel.app (cookies, proxy.ts)
+ * - web: normal browser at https://micronest-mfd-six.vercel.app (cookies, proxy.ts)
  * - native: Capacitor WebView loading the remote URL (bridges required)
  *
  * All Capacitor-specific behavior MUST be gated behind isNative().
@@ -10,7 +10,7 @@
  */
 
 /** Remote web app origin. Overridable for dev via NEXT_PUBLIC_WEB_BASE_URL. */
-export const PROD_WEB_BASE_URL = "https://micronestmicrotools.vercel.app";
+export const PROD_WEB_BASE_URL = "https://micronest-mfd-six.vercel.app";
 
 /** Dedicated native auth-callback scheme. No other custom schemes allowed. */
 export const NATIVE_AUTH_SCHEME = "micronest://";

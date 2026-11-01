@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyUrl } from "@/lib/native/links";
 
-const WEB = "https://micronestmicrotools.vercel.app";
+const WEB = "https://micronest-mfd-six.vercel.app";
 
 describe("native URL classification", () => {
   it("keeps same-origin app URLs internal", () => {
@@ -21,7 +21,7 @@ describe("native URL classification", () => {
 
   it("rejects unknown external URLs", () => {
     expect(classifyUrl("https://evil.example.com/phish", WEB)).toBe("blocked");
-    expect(classifyUrl("https://micronestmicrotools.vercel.app.evil.com/", WEB)).toBe(
+    expect(classifyUrl("https://micronest-mfd-six.vercel.app.evil.com/", WEB)).toBe(
       "blocked",
     );
   });

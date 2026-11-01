@@ -40,7 +40,7 @@ describe("native auth callback", () => {
   });
 
   it("rejects non-callback schemes and missing codes", () => {
-    expect(parseNativeAuthCallback("https://micronestmicrotools.vercel.app/")).toBeNull();
+    expect(parseNativeAuthCallback("https://micronest-mfd-six.vercel.app/")).toBeNull();
     expect(parseNativeAuthCallback("myapp://auth/callback?code=x")).toBeNull();
     expect(parseNativeAuthCallback("micronest://auth/callback?next=/workspace")).toBeNull();
   });

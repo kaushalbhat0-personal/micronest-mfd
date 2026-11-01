@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { isNative, getWebBaseUrl } from "@/lib/native/runtime";
 import { classifyUrl } from "@/lib/native/links";
 import { parseNativeAuthCallback, claimAuthCodeOnce } from "@/lib/native/auth";
+import { tryDismissTop, resolveRootBack } from "@/lib/native/back";
 
 let providerMounted = false;
 
@@ -54,6 +55,7 @@ export function NativeAppProvider({ children }: { children: React.ReactNode }) {
 
     let appListener: { remove: () => void } | null = null;
     let resumeListener: { remove: () => void } | null = null;
+    let backListener: { remove: () => void } | null = null;
 
     (async () => {
       try {
@@ -76,6 +78,23 @@ export function NativeAppProvider({ children }: { children: React.ReactNode }) {
             await supabase.auth.getSession();
           } catch {
             // Offline on resume — pages render their existing error states.
+          }
+        });
+        // MFD-64 release: single Android hardware-back handler.
+        // Priority: dismiss topmost overlay → WebView history → calm
+        // exit confirm at root. Never fires on iOS or web.
+        backListener = await App.addListener("backButton", ({ canGoBack }) => {
+          // 1. An open dialog/sheet consumes the press.
+          if (tryDismissTop()) return;
+          // 2. Meaningful history: follow it (wizard-internal Back buttons
+          // are plain buttons and are unaffected).
+          if (canGoBack) {
+            router.back();
+            return;
+          }
+          // 3. App root: confirm once instead of exiting immediately.
+          if (resolveRootBack(window.confirm("Exit MicroNest?"))) {
+            void App.exitApp();
           }
         });
       } catch {
@@ -107,6 +126,7 @@ export function NativeAppProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener("click", onClick, true);
       appListener?.remove();
       resumeListener?.remove();
+      backListener?.remove();
       providerMounted = false;
     };
   }, [router]);

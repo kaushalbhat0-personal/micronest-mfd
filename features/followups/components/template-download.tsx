@@ -1,6 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { buttonClasses } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { TEMPLATE_EXAMPLE_ROWS } from "../template";
 
 /** First-run explainer: download, 4 steps, format notes, and a visual example. */
@@ -8,13 +9,31 @@ export function TemplateDownload() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <a
-          href="/followup-template.csv"
-          download="followup-template.csv"
-          className={cn(buttonClasses("primary"), "sm:flex-1")}
+        <Button
+          variant="primary"
+          className="sm:flex-1"
+          onClick={() => {
+            void (async () => {
+              try {
+                const { downloadStaticAssetNativeAware } = await import("@/lib/native/files");
+                await downloadStaticAssetNativeAware(
+                  "followup-template.csv",
+                  "/followup-template.csv",
+                  "text/csv",
+                );
+              } catch {
+                // Last-resort fallback: plain navigation to the asset.
+                const link = document.createElement("a");
+                link.href = "/followup-template.csv";
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+              }
+            })();
+          }}
         >
           Download Follow-up Template
-        </a>
+        </Button>
       </div>
 
       <ol className="list-decimal space-y-1 pl-5 text-sm leading-relaxed text-stone-600">

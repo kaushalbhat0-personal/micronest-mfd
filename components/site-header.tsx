@@ -64,28 +64,45 @@ export function SiteHeader() {
   React.useEffect(() => {
     if (!isSupabaseConfigured()) return;
     let activeFlag = true;
-    const supabase = createClient();
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
+    // MFD-64 release: natively the live session is the Preferences-backed
+    // native client (lib/native/session-store.ts); the web cookie session
+    // may be absent. Observe the correct client per runtime so the header,
+    // account controls, and mobile bottom nav reflect native sessions.
+    // Web behavior is unchanged.
+    let subscription: { unsubscribe: () => void } | null = null;
+    (async () => {
+      try {
+        const { isNative } = await import("@/lib/native/runtime");
+        const supabase = isNative()
+          ? await (await import("@/lib/native/session-store")).createNativeClient()
+          : createClient();
         if (!activeFlag) return;
-        if (data.user) trackSignupOnce(data.user.id);
-        setIdentity(
-          identityFrom(data.user?.email ?? undefined, data.user?.user_metadata?.full_name),
-        );
-      })
-      .catch(() => {
+        supabase.auth
+          .getUser()
+          .then(({ data }) => {
+            if (!activeFlag) return;
+            if (data.user) trackSignupOnce(data.user.id);
+            setIdentity(
+              identityFrom(data.user?.email ?? undefined, data.user?.user_metadata?.full_name),
+            );
+          })
+          .catch(() => {
+            if (activeFlag) setIdentity(null);
+          });
+        const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session?.user) trackSignupOnce(session.user.id);
+          setIdentity(
+            identityFrom(session?.user?.email ?? undefined, session?.user?.user_metadata?.full_name),
+          );
+        });
+        subscription = sub.subscription;
+      } catch {
         if (activeFlag) setIdentity(null);
-      });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) trackSignupOnce(session.user.id);
-      setIdentity(
-        identityFrom(session?.user?.email ?? undefined, session?.user?.user_metadata?.full_name),
-      );
-    });
+      }
+    })();
     return () => {
       activeFlag = false;
-      subscription.subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -139,7 +156,20 @@ export function SiteHeader() {
       }
     }
     document.addEventListener("keydown", onKey);
+    // MFD-64 release: Android hardware-back dismisses the account sheet.
+    let unregister: (() => void) | null = null;
+    let cancelled = false;
+    void (async () => {
+      const { pushBackDismiss } = await import("@/lib/native/back");
+      if (cancelled) return;
+      unregister = pushBackDismiss(() => {
+        setSheetOpen(false);
+        return true;
+      });
+    })();
     return () => {
+      cancelled = true;
+      unregister?.();
       document.removeEventListener("keydown", onKey);
       sheetTriggerRef.current?.focus();
     };
@@ -148,6 +178,19 @@ export function SiteHeader() {
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      // MFD-64 release: natively the session lives in Capacitor Preferences.
+      // Clearing only the web cookie client would leave the native session
+      // intact and a relaunch would restore the previous user. Clear the
+      // native session first, then the web session (best-effort both).
+      const { isNative } = await import("@/lib/native/runtime");
+      if (isNative()) {
+        try {
+          const { signOutNative } = await import("@/lib/native/session-store");
+          await signOutNative();
+        } catch {
+          // Continue to the web sign-out below.
+        }
+      }
       const supabase = createClient();
       await supabase.auth.signOut();
     } catch {

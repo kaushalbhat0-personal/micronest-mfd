@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/react";
@@ -13,6 +13,17 @@ export const metadata: Metadata = {
   title: "MicroNest",
   description:
     "MicroNest is a simple relationship workspace for people who manage clients — including mutual fund distributors.",
+};
+
+/**
+ * Mobile-shell viewport (MFD-64 release prep).
+ * viewport-fit=cover activates the env(safe-area-inset-*) handling already
+ * in globals.css / mobile bottom nav — without it, notched devices report
+ * zero insets. theme-color matches the app background token (--app-bg).
+ */
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#faf7f2",
 };
 
 /**

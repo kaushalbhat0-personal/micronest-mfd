@@ -3,12 +3,11 @@
 import * as React from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
-import { Button, buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/controls";
 import { MessageStudioForm } from "@/features/message-studio/components/message-studio-form";
 import { todayLocalYMD } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { RADAR_HEADERS } from "../template";
@@ -337,15 +336,37 @@ export function RadarWorkspace() {
 
   function handleExport() {
     const csv = serializeRadarCsv(records);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "client-radar-updated.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    const browserDownload = () => {
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "client-radar-updated.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    };
+    // MFD-64 release: native transport (Filesystem cache + Share sheet);
+    // web keeps the browser download above. Content identical either way.
+    void (async () => {
+      try {
+        const { isNative } = await import("@/lib/native/runtime");
+        if (!isNative()) {
+          browserDownload();
+          return;
+        }
+        const { downloadFileNativeAware } = await import("@/lib/native/files");
+        await downloadFileNativeAware(
+          "client-radar-updated.csv",
+          csv,
+          "text/csv",
+          browserDownload,
+        );
+      } catch {
+        browserDownload();
+      }
+    })();
   }
 
   const summary = React.useMemo(() => summarizeRadar(records), [records]);
@@ -404,13 +425,33 @@ export function RadarWorkspace() {
               Know which clients are worth talking to this week — and why.
             </p>
 
-            <a
-              href="/client-radar-template.csv"
-              download="client-radar-template.csv"
-              className={cn(buttonClasses("primary"), "sm:self-start")}
+            <Button
+              variant="primary"
+              className="sm:self-start"
+              onClick={() => {
+                void (async () => {
+                  try {
+                    const { downloadStaticAssetNativeAware } = await import(
+                      "@/lib/native/files"
+                    );
+                    await downloadStaticAssetNativeAware(
+                      "client-radar-template.csv",
+                      "/client-radar-template.csv",
+                      "text/csv",
+                    );
+                  } catch {
+                    // Last-resort fallback: plain navigation to the asset.
+                    const link = document.createElement("a");
+                    link.href = "/client-radar-template.csv";
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                  }
+                })();
+              }}
             >
               Download CSV Template
-            </a>
+            </Button>
 
             <ol className="list-decimal space-y-1 pl-5 text-sm leading-relaxed text-stone-600">
               <li>Download the template.</li>

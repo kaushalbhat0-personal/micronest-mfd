@@ -73,6 +73,38 @@ export async function saveBytesNative(
 }
 
 /**
+ * Download a same-origin static asset (e.g. /followup-template.csv).
+ * Web: plain anchor download (unchanged). Native: fetch the asset text,
+ * then Filesystem cache + Share sheet. Content identical either way.
+ */
+export async function downloadStaticAssetNativeAware(
+  fileName: string,
+  assetPath: string,
+  mimeType: string,
+): Promise<void> {
+  const browserDownload = () => {
+    const anchor = document.createElement("a");
+    anchor.href = assetPath;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  };
+  if (!isNative()) {
+    browserDownload();
+    return;
+  }
+  try {
+    const response = await fetch(assetPath);
+    if (!response.ok) throw new Error("static asset fetch failed");
+    const text = await response.text();
+    await downloadFileNativeAware(fileName, text, mimeType, browserDownload);
+  } catch {
+    browserDownload();
+  }
+}
+
+/**
  * Native-aware download: web uses the provided browser downloader,
  * native uses Filesystem+Share. Content identical either way.
  */
