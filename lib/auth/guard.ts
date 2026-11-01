@@ -4,7 +4,7 @@
  */
 
 /** Paths that require an authenticated session. */
-const PROTECTED_PREFIXES = ["/workspace"] as const;
+const PROTECTED_PREFIXES = ["/workspace", "/admin"] as const;
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(

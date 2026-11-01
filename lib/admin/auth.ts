@@ -1,0 +1,75 @@
+import "server-only";
+
+import { createServerSupabase } from "@/lib/supabase/server";
+
+/**
+ * Server-side admin authorization gate (P0).
+ *
+ * Source of truth: the `admin_users` table (one row per administrator,
+ * `revoked_at IS NULL` = active). Flow is always:
+ *
+ * 1. Resolve the session with the normal anon server client.
+ * 2. `auth.getUser()` — no user means unauthorized.
+ * 3. Membership lookup with the SAME anon client (RLS self-read policy
+ *    `admin_users_self_select`); a non-admin reads zero rows and learns
+ *    nothing about other admins.
+ * 4. Only after membership succeeds may callers create the service-role
+ *    client and run privileged reads.
+ *
+ * The service-role client is NEVER used to decide authorization — it is
+ * only the data-access credential used after this gate passes.
+ */
+export class AdminUnauthorized extends Error {
+  constructor() {
+    super("Admin access required.");
+    this.name = "AdminUnauthorized";
+  }
+}
+
+/** Session user id from the anon server client, or null when signed out. */
+export async function getSessionUserId(): Promise<string | null> {
+  const supabase = await createServerSupabase();
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True only when `userId` has an active (non-revoked) `admin_users` row.
+ * Uses the anon server client — never the service-role client.
+ */
+export async function isAdmin(userId: string | null | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const supabase = await createServerSupabase();
+  if (!supabase) return false;
+  try {
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", userId)
+      .is("revoked_at", null)
+      .limit(1);
+    if (error) return false;
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Require an active admin session. Returns the admin user id.
+ * Throws `AdminUnauthorized` for signed-out, unknown, or revoked callers.
+ * Admin pages/layouts translate this to login-redirect (signed out) or
+ * `notFound()` (signed in) so no existence oracle is exposed.
+ */
+export async function requireAdmin(): Promise<string> {
+  const userId = await getSessionUserId();
+  if (!userId) throw new AdminUnauthorized();
+  const ok = await isAdmin(userId);
+  if (!ok) throw new AdminUnauthorized();
+  return userId;
+}
