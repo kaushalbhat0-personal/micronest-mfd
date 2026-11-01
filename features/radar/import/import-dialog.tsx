@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/controls";
 import { SignalBadge } from "@/components/ui/signal-badge";
@@ -13,9 +14,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { resolveRegion } from "@/lib/locale";
 import { nowMs } from "@/lib/dates";
 import { reportPerf } from "@/lib/perf/report";
-import { trackTemplateDownload } from "@/lib/analytics";
+import { FREE_CLIENT_LIMIT, importAdmission } from "@/features/radar/limits";
+import { trackClientCreationBlocked, trackTemplateDownload } from "@/lib/analytics";
 import {
   createClient as createStoredClient,
+  countOwnedClients,
   updateClient as updateStoredClient,
   type StoredRadarClient,
 } from "@/features/radar/repository";
@@ -126,6 +129,19 @@ export function ImportDialog({
     skipped: number;
     timestamp: string;
   } | null>(null);
+  /**
+   * Over-limit rejection for the pending file. Set only by the write-time
+   * admission check in handleImport, before any writes — the file is
+   * rejected whole, never partially imported. Cleared whenever the pending
+   * rows change so trimming rows lets the user retry.
+   */
+  const [limitReject, setLimitReject] = React.useState<{
+    owned: number;
+    wanted: number;
+    newRows: number;
+    updates: number;
+    overBy: number;
+  } | null>(null);
   const [parsing, setParsing] = React.useState(false);
   /**
    * Template family for download (Phase 2). Generic-first: a plain
@@ -171,6 +187,7 @@ export function ImportDialog({
     setMapping([]);
     setRows([]);
     setFatal(null);
+    setLimitReject(null);
     setProgress({ done: 0, total: 0 });
     setReceipt(null);
     setParsing(false);
@@ -288,10 +305,12 @@ export function ImportDialog({
    * from the import set; removing them just clears the review list.
    */
   function handleRemoveRow(key: string) {
+    setLimitReject(null);
     setRows((prev) => prev.filter((r) => r.key !== key));
   }
 
   function handleRemoveDuplicates() {
+    setLimitReject(null);
     setRows((prev) => prev.filter((r) => !r.duplicate));
   }
 
@@ -299,13 +318,41 @@ export function ImportDialog({
     if (!isSupabaseConfigured()) return;
     const targets = importableRows(rows);
     if (targets.length === 0) return;
+    const supabase: SupabaseClient = createClient();
+    // Free validation boundary: authoritative owned count (RLS-scoped)
+    // plus genuinely NEW rows only — updates to existing clients never
+    // consume capacity. Over-limit files are rejected whole before any
+    // writes. An unknown count (query failure) fails open: the boundary
+    // is messaging, not security, and a blip must not break imports —
+    // the next admission re-derives the true count.
+    let owned: number | null = null;
+    try {
+      owned = await countOwnedClients(supabase);
+    } catch {
+      owned = null;
+    }
+    const newRows = targets.filter((t) => t.status !== "update").length;
+    const updates = targets.length - newRows;
+    if (owned !== null) {
+      const admission = importAdmission(owned, newRows);
+      if (!admission.allowed) {
+        trackClientCreationBlocked(owned, admission.wanted);
+        setLimitReject({
+          owned,
+          wanted: admission.wanted,
+          newRows,
+          updates,
+          overBy: admission.overBy,
+        });
+        return;
+      }
+    }
     // Aggregate import observability (counts + durations only — no client
     // data, filenames, or file contents). Fire-and-forget; never blocks.
     const started = nowMs();
     setStep("importing");
     setProgress({ done: 0, total: targets.length });
     const writeStarted = nowMs();
-    const supabase: SupabaseClient = createClient();
     const created: StoredRadarClient[] = [];
     const updatedRows: StoredRadarClient[] = [];
     let failed = 0;
@@ -774,6 +821,8 @@ export function ImportDialog({
             rows={rows}
             importableCount={importable.length}
             configured={configured}
+            limitReject={limitReject}
+            onDismissLimit={() => setLimitReject(null)}
             onBack={() => setStep("mapping")}
             onImport={handleImport}
             onDownloadErrors={handleDownloadErrors}
@@ -896,6 +945,8 @@ function PreviewStep({
   rows,
   importableCount,
   configured,
+  limitReject,
+  onDismissLimit,
   onBack,
   onImport,
   onDownloadErrors,
@@ -914,6 +965,14 @@ function PreviewStep({
   rows: PreviewRow[];
   importableCount: number;
   configured: boolean;
+  limitReject: {
+    owned: number;
+    wanted: number;
+    newRows: number;
+    updates: number;
+    overBy: number;
+  } | null;
+  onDismissLimit: () => void;
   onBack: () => void;
   onImport: () => void;
   onDownloadErrors: () => void;
@@ -991,6 +1050,34 @@ function PreviewStep({
             <Button variant="secondary" onClick={onRemoveDuplicates} className="mt-2">
               Remove these rows
             </Button>
+          </div>
+        )}
+        {limitReject && (
+          <div
+            role="alert"
+            className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3"
+          >
+            <p className="text-sm font-semibold text-amber-900">Too many new clients for free</p>
+            <p className="tnum mt-0.5 text-xs leading-relaxed text-amber-900/80">
+              This file would take you to {limitReject.wanted} of {FREE_CLIENT_LIMIT} free
+              clients. Remove {limitReject.overBy} new{" "}
+              {limitReject.overBy === 1 ? "client" : "clients"} and try again — nothing from
+              this file was saved.
+            </p>
+            {limitReject.updates > 0 && (
+              <p className="mt-0.5 text-xs leading-relaxed text-amber-900/80">
+                Updates to your existing clients don&apos;t use free space, but this file
+                can&apos;t be saved as-is while it&apos;s over the limit.
+              </p>
+            )}
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Link href="/premium?context=limit" className={buttonClasses("primary")}>
+                Tell us what you need
+              </Link>
+              <Button variant="secondary" onClick={onDismissLimit}>
+                Back to list
+              </Button>
+            </div>
           </div>
         )}
       </div>

@@ -78,6 +78,16 @@ test.describe("Validation funnel", () => {
     }
   });
 
+  test("limit context preselects the matching client-count band", async ({ page }) => {
+    await page.goto("/premium?context=limit");
+    await expect(page.getByLabel("Approximate client count")).toHaveValue("101-250");
+    // Unknown contexts and normal access keep the blank default.
+    await page.goto("/premium?context=billing");
+    await expect(page.getByLabel("Approximate client count")).toHaveValue("");
+    await page.goto("/premium");
+    await expect(page.getByLabel("Approximate client count")).toHaveValue("");
+  });
+
   test("submission succeeds end to end", async ({ page }) => {
     test.skip(!stubAuth, "Requires SUPABASE_E2E=stub with a real test project.");
     await page.goto("/premium");

@@ -265,6 +265,29 @@ export async function getClient(supabase: SupabaseClient, id: string): Promise<S
 }
 
 /**
+ * Counts owned clients for the free validation boundary. RLS-scoped head
+ * count — no rows cross the boundary, no user_id is supplied by callers.
+ * Used only for admission messaging (see features/radar/limits.ts); RLS
+ * remains the security boundary, not this count.
+ */
+export async function countOwnedClients(supabase: SupabaseClient): Promise<number> {
+  try {
+    const result = await supabase.from(TABLE).select("id", { count: "exact", head: true });
+    if (result.error) {
+      if (result.error.code === "PGRST301" || /jwt|auth/i.test(result.error.message)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("load", "We couldn't check your client limit. Please try again.");
+    }
+    const count = typeof result.count === "number" ? result.count : 0;
+    return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+  } catch (error) {
+    if (error instanceof RadarStoreError) throw error;
+    throw toStoreError("load", "We couldn't check your client limit. Please try again.");
+  }
+}
+
+/**
  * Creates one client for the authenticated user. Ownership is assigned by
  * the database/RLS from the session — the caller supplies no user_id.
  */

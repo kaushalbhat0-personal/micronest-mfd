@@ -505,7 +505,7 @@ export default function Home() {
           <p className="text-xs leading-relaxed text-stone-600">
             Keep client relationships organized, know who needs attention, and follow through —
             without turning your work into a complicated CRM. Free while we&apos;re validating the
-            product.
+            product — up to 100 clients.
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -810,7 +810,7 @@ export default function Home() {
           </Suspense>
         </div>
         <p className="max-w-xl text-sm leading-relaxed text-stone-600">
-          MicroNest is free while we&apos;re validating the product.{" "}
+          MicroNest is free while we&apos;re validating the product — up to 100 clients.{" "}
           <Link
             href="/premium"
             className="font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"

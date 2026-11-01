@@ -45,6 +45,7 @@ export type ValidationEvent =
   | "client_count_50"
   | "client_count_99"
   | "client_count_100"
+  | "client_creation_blocked"
   | "workspace_active"
   | "template_download"
   | "import_success"
@@ -59,6 +60,10 @@ export interface ValidationBeacon {
   clientCount?: number;
   /** Milestone threshold crossed, when the event is milestone-related. */
   milestone?: number;
+  /** Owned clients when creation was refused at the free boundary. */
+  owned?: number;
+  /** Owned + requested new rows when creation was refused. Counts only. */
+  wanted?: number;
   /**
    * Which template family was downloaded (Phase 2 generic/MFD split).
    * Strict allow-list — never a filename, path, or any client content.
@@ -89,7 +94,15 @@ const FOLLOWUP_KEYS = new Set(["op", "kind", "ok", "writeMs", "requeryMs", "rows
 
 const FOLLOWUP_KINDS = new Set(["create", "complete", "reopen"]);
 
-const VALIDATION_KEYS = new Set(["op", "event", "clientCount", "milestone", "templateType"]);
+const VALIDATION_KEYS = new Set([
+  "op",
+  "event",
+  "clientCount",
+  "milestone",
+  "owned",
+  "wanted",
+  "templateType",
+]);
 
 const VALIDATION_EVENTS = new Set([
   "signup",
@@ -98,6 +111,7 @@ const VALIDATION_EVENTS = new Set([
   "client_count_50",
   "client_count_99",
   "client_count_100",
+  "client_creation_blocked",
   "workspace_active",
   "template_download",
   "import_success",
@@ -199,9 +213,11 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
   }
   if (input.op === "validation.event") {
     if (!hasOnlyKeys(input, VALIDATION_KEYS)) return null;
-    const { event, clientCount, milestone, templateType } = input;
+    const { event, clientCount, milestone, owned, wanted, templateType } = input;
     if (typeof event !== "string" || !VALIDATION_EVENTS.has(event)) return null;
     if (clientCount !== undefined && !isCount(clientCount, 100000)) return null;
+    if (owned !== undefined && !isCount(owned, 100000)) return null;
+    if (wanted !== undefined && !isCount(wanted, 100000)) return null;
     if (
       milestone !== undefined &&
       (typeof milestone !== "number" || !VALIDATION_MILESTONES.has(milestone))
@@ -219,6 +235,8 @@ export function parsePerfBeacon(input: unknown): PerfBeacon | null {
       event: event as ValidationBeacon["event"],
       ...(clientCount === undefined ? {} : { clientCount }),
       ...(milestone === undefined ? {} : { milestone }),
+      ...(owned === undefined ? {} : { owned }),
+      ...(wanted === undefined ? {} : { wanted }),
       ...(templateType === undefined ? {} : { templateType: templateType as TemplateType }),
     };
   }

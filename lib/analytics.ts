@@ -98,6 +98,16 @@ export function trackImportSuccess(imported: number): void {
   reportValidation({ op: "validation.event", event: "import_success", clientCount: imported });
 }
 
+/**
+ * A new client creation was refused at the free validation boundary.
+ * Counts only (owned now, wanted after the request) — never client
+ * content. Best-effort like all validation telemetry.
+ */
+export function trackClientCreationBlocked(owned: number, wanted: number): void {
+  if (!Number.isFinite(owned) || owned < 0 || !Number.isFinite(wanted) || wanted < 0) return;
+  reportValidation({ op: "validation.event", event: "client_creation_blocked", owned, wanted });
+}
+
 const WTP_STARTED_KEY = "micronest-validation-wtp-started";
 
 /**

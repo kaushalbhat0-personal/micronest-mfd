@@ -30,10 +30,11 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { resolveRegion, resolveTimeZone, useResolvedLocale } from "@/lib/locale";
 import { useResolvedVertical } from "@/lib/vertical";
-import { trackClientCountTransition, trackImportSuccess, trackTemplateDownload, trackWorkspaceActiveOnce } from "@/lib/analytics";
+import { trackClientCountTransition, trackClientCreationBlocked, trackImportSuccess, trackTemplateDownload, trackWorkspaceActiveOnce } from "@/lib/analytics";
 import type { StoredFollowup } from "@/features/followups/types";
 import {
   createClient as createStoredClient,
+  countOwnedClients,
   RadarStoreError,
   toClientRecord,
   type ClientInput,
@@ -48,6 +49,11 @@ import { ClientBookCard } from "./client-book-card";
 import { ImportTriggerIcon } from "../import/import-trigger-icon";
 import { downloadTextFile, buildGeneralTemplateCsv, GENERAL_TEMPLATE_FILENAME } from "../import/template-csv";
 import { identityOf, manualDuplicateCopy, matchExisting } from "../import/duplicates";
+import {
+  FREE_CLIENT_LIMIT,
+  isApproachingClientLimit,
+  isAtClientLimit,
+} from "../limits";
 
 // The import flow (dialog + preview pipeline + workbook parsing) only runs
 // after the user chooses Import, so it stays out of the initial Client Book
@@ -78,6 +84,17 @@ const ImportDialog = dynamic(
 function storeErrorMessage(error: unknown): string {
   if (error instanceof RadarStoreError) return error.message;
   return "Something went wrong. Please try again.";
+}
+
+/** sessionStorage key for the approaching-limit nudge dismissal. */
+const LIMIT_WARN_KEY = "micronest-limit-warning-dismissed";
+
+function dismissLimitWarning() {
+  try {
+    sessionStorage.setItem(LIMIT_WARN_KEY, "1");
+  } catch {
+    // Best effort: the nudge simply reappears next mount.
+  }
 }
 
 interface ClientsWorkspaceProps {
@@ -126,6 +143,19 @@ export function ClientsWorkspace({
     kind: "mobile" | "name";
   } | null>(null);
   const [formKey, setFormKey] = React.useState(0);
+  const [limitDialog, setLimitDialog] = React.useState<{ owned: number; wanted: number } | null>(
+    null,
+  );
+  // Approaching-limit nudge dismissal lasts the tab session at minimum.
+  const [warnDismissed, setWarnDismissed] = React.useState(() => {
+    try {
+      return typeof sessionStorage !== "undefined" && sessionStorage.getItem(LIMIT_WARN_KEY) !== null;
+    } catch {
+      return false;
+    }
+  });
+  const limitPanelRef = React.useRef<HTMLDivElement>(null);
+  const wasLimitOpen = React.useRef(false);
   const panelRef = React.useRef<HTMLDivElement>(null);
   const wasAdding = React.useRef(false);
 
@@ -188,6 +218,31 @@ export function ClientsWorkspace({
     return undefined;
   }, [adding]);
 
+  // Boundary dialog focus management: same contract as the Add dialog —
+  // focus into the panel on open, Escape/backdrop close, focus returns to
+  // the Add-client trigger on close.
+  React.useEffect(() => {
+    if (limitDialog) {
+      wasLimitOpen.current = true;
+      limitPanelRef.current?.focus();
+      function onKey(event: KeyboardEvent) {
+        if (event.key === "Escape") setLimitDialog(null);
+      }
+      document.addEventListener("keydown", onKey);
+      return () => document.removeEventListener("keydown", onKey);
+    }
+    if (wasLimitOpen.current) {
+      wasLimitOpen.current = false;
+      document.getElementById("add-client-button")?.focus();
+    }
+    return undefined;
+  }, [limitDialog]);
+
+  function dismissWarning() {
+    dismissLimitWarning();
+    setWarnDismissed(true);
+  }
+
   async function handleAdd(input: ClientInput) {
     if (!isSupabaseConfigured()) return;
     // Manual-Add duplicate guard: same shared engine as import (mobile
@@ -212,6 +267,24 @@ export function ClientsWorkspace({
     setSaveError(null);
     try {
       const supabase: SupabaseClient = createClient();
+      // Free validation boundary: authoritative owned count (RLS-scoped),
+      // never the in-memory list. At 100, new creation stops here — the
+      // Add dialog closes and the boundary dialog takes over. An unknown
+      // count (query failure) fails open: the boundary is messaging, not
+      // security, and a blip must not break adding. See limits.ts for the
+      // accepted two-tab race at the boundary.
+      let owned: number | null = null;
+      try {
+        owned = await countOwnedClients(supabase);
+      } catch {
+        owned = null;
+      }
+      if (owned !== null && isAtClientLimit(owned)) {
+        trackClientCreationBlocked(owned, owned + 1);
+        setAdding(false);
+        setLimitDialog({ owned, wanted: owned + 1 });
+        return;
+      }
       const stored = await createStoredClient(supabase, input);
       // Milestone telemetry from the observed transition (not from render).
       trackClientCountTransition(records.length, records.length + 1);
@@ -517,6 +590,54 @@ export function ClientsWorkspace({
         </div>
       )}
 
+      {limitDialog && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-6">
+          <button
+            type="button"
+            aria-label="Close free limit dialog"
+            onClick={() => setLimitDialog(null)}
+            className="absolute inset-0 cursor-default bg-stone-900/40"
+          />
+          <div
+            ref={limitPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="limit-dialog-heading"
+            tabIndex={-1}
+            className="today-enter relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-stone-200 bg-white p-5 shadow-xl focus-visible:outline-none sm:max-w-md sm:rounded-3xl sm:p-6"
+          >
+            <div className="flex min-w-0 flex-col gap-2">
+              <h2 id="limit-dialog-heading" className="text-lg font-semibold text-stone-900">
+                You&apos;ve reached the free limit
+              </h2>
+              <p className="text-sm leading-relaxed text-stone-600">
+                MicroNest is free for up to {FREE_CLIENT_LIMIT} clients. Tell us what you need
+                next.
+              </p>
+              <p className="tnum text-xs text-stone-500">
+                {limitDialog.owned} of {FREE_CLIENT_LIMIT} free clients used. Your existing
+                clients stay fully usable.
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <Link
+                  href="/premium?context=limit"
+                  className={cn(buttonClasses("primary"), "sm:flex-1")}
+                >
+                  Tell us what you need
+                </Link>
+                <Button
+                  variant="secondary"
+                  onClick={() => setLimitDialog(null)}
+                  className="sm:flex-1"
+                >
+                  Back to Clients
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {records.length === 0 ? (
         <EmptyState
           icon={<UsersIcon />}
@@ -581,6 +702,21 @@ export function ClientsWorkspace({
               {visible.length}
             </SignalBadge>
           </h2>
+          <p className="tnum text-xs text-stone-600">
+            {records.length} / {FREE_CLIENT_LIMIT} free
+          </p>
+          {isApproachingClientLimit(records.length) && !warnDismissed && (
+            <Alert variant="warning" title="Almost at your free limit">
+              <p className="mt-1 text-xs">
+                You&apos;re getting close to your free {FREE_CLIENT_LIMIT}-client limit.
+              </p>
+              <div className="mt-2">
+                <Button variant="ghost" onClick={dismissWarning} className="min-h-[44px]">
+                  Dismiss
+                </Button>
+              </div>
+            </Alert>
+          )}
           <div
             className="grid grid-cols-1 items-stretch gap-2.5 sm:grid-cols-2 lg:gap-4 xl:grid-cols-3"
             aria-live="polite"

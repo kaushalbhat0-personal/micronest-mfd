@@ -99,12 +99,17 @@ function toggle(list: string[], value: string): string[] {
  * nothing is written to localStorage — and only aggregate, PII-free
  * events go to analytics. Ownership is derived server-side.
  */
-export function PremiumForm() {
+export function PremiumForm({
+  initialClientCountBand = "",
+}: {
+  /** Preselected approximate-client-count band (validated against the allow-list). */
+  initialClientCountBand?: string;
+}) {
   const countries = useCountryOptions();
   const [country, setCountry] = React.useState("");
   const [profession, setProfession] = React.useState("");
   const [professionOther, setProfessionOther] = React.useState("");
-  const [clientCountBand, setClientCountBand] = React.useState("");
+  const [clientCountBand, setClientCountBand] = React.useState(initialClientCountBand);
   const [currentSolution, setCurrentSolution] = React.useState<string[]>([]);
   const [currentSolutionOther, setCurrentSolutionOther] = React.useState("");
   const [desiredFeatures, setDesiredFeatures] = React.useState<string[]>([]);
