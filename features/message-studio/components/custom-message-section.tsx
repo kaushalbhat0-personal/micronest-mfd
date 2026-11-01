@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Field, TextArea, TextInput } from "@/components/ui/controls";
 import { PhoneField } from "@/components/ui/phone-field";
 import { normalizePhone } from "@/lib/whatsapp";
+import { resolveRegion } from "@/lib/locale";
 import { scanMessage } from "../compliance";
 import { CUSTOM_MESSAGE_MAX_LENGTH, countChars, validateCustomMessage } from "../validation";
 import { MessagePlaceholder } from "./message-placeholder";
@@ -33,7 +34,7 @@ export function CustomMessageSection() {
     () => (prepared ? scanMessage(prepared).map((m) => m.label) : []),
     [prepared],
   );
-  const phoneCheck = normalizePhone(phone);
+  const phoneCheck = normalizePhone(phone, resolveRegion());
 
   function handlePrepare() {
     const result = validateCustomMessage(text);

@@ -59,6 +59,21 @@ describe("normalizePhone", () => {
     expect(normalizePhone("+0 555 123 4567").ok).toBe(false);
     expect(normalizePhone("+9198765432109876").ok).toBe(false); // > 15 digits
   });
+
+  it("uses region-neutral error copy that names the expected format", () => {
+    const bad = normalizePhone("+123");
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) {
+      expect(bad.error).toMatch(/country code/);
+      expect(bad.error).not.toMatch(/India/);
+    }
+    const short = normalizePhone("12345");
+    expect(short.ok).toBe(false);
+    if (!short.ok) {
+      expect(short.error).toMatch(/country code/);
+      expect(short.error).not.toMatch(/India/);
+    }
+  });
 });
 
 describe("buildWhatsAppUrl", () => {
@@ -79,6 +94,13 @@ describe("buildWhatsAppUrl", () => {
   it("encodes special characters and newlines", () => {
     const url = buildWhatsAppUrl("Line1\nLine2 & more", "9876543210");
     expect(url).toContain("Line1%0ALine2%20%26%20more");
+  });
+
+  it("honors an explicit non-IN region for bare numbers", () => {
+    expect(buildWhatsAppUrl("Hello", "9876543210", "US")).toBeNull();
+    expect(buildWhatsAppUrl("Hello", "+1 555 123 4567", "US")).toBe(
+      "https://wa.me/15551234567?text=Hello",
+    );
   });
 });
 

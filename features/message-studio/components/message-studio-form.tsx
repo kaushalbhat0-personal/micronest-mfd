@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Field, TextInput } from "@/components/ui/controls";
 import { MessageIcon, SendIcon } from "@/components/ui/icons";
 import { normalizePhone } from "@/lib/whatsapp";
+import { resolveRegion } from "@/lib/locale";
 import { scanMessage } from "../compliance";
 import { clearPrefs, loadPrefs, savePrefs, type StudioMode } from "../prefs";
 import {
@@ -73,7 +74,7 @@ export function MessageStudioForm({
     () => (generated ? scanMessage(generated).map((m) => m.label) : []),
     [generated],
   );
-  const phoneCheck = normalizePhone(phone);
+  const phoneCheck = normalizePhone(phone, resolveRegion());
 
   function handleGenerate() {
     const result = validateMessageInput(purpose, fields);

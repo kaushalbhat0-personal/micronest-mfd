@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { normalizePhone, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { resolveRegion } from "@/lib/locale";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { PhoneField } from "@/components/ui/phone-field";
@@ -95,10 +96,15 @@ export function MessagePreview({
     }
   }
 
-  const waUrl = blocked ? null : buildWhatsAppUrl(message, phone);
+  // Device region disambiguates bare national numbers here (this preview
+  // renders client-only, so there is no SSR/hydration concern). Stored
+  // client numbers elsewhere keep the MFD-domain default.
+  const region = resolveRegion();
+  const waUrl = blocked ? null : buildWhatsAppUrl(message, phone, region);
   // Custom mode hides the action when no phone is on hand; template mode
   // keeps the contact-picker link / disabled button as before.
-  const showWhatsApp = !hideWhatsAppWhenNoPhone || normalizePhone(phone).digits !== undefined;
+  const showWhatsApp =
+    !hideWhatsAppWhenNoPhone || normalizePhone(phone, region).digits !== undefined;
 
   return (
     <section aria-label="Generated message" className="today-enter flex flex-col gap-3">

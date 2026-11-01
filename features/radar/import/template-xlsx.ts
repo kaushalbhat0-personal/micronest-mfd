@@ -130,7 +130,7 @@ export const GENERAL_GUIDE_ROWS: GuideRow[] = [
 
 const GENERAL_GUIDE_NOTES: string[] = [
   "Dates are read day-first. For example, 20/10/2026 means 20 October 2026. YYYY-MM-DD also works. Ambiguous numeric dates always read day-first — a month-first date like 10/20/2026 is not read as October.",
-  "Phone: include the country code for international numbers, e.g. +44 7911 123456, +1 555 123 4567, +61 412 345 678, +91 9876543210. A plain 10-digit Indian mobile may be entered without +91. If a number can't be recognised we flag it as Check now — the client still imports, but Call and WhatsApp may not work until it's corrected.",
+  "Phone: include the country code for international numbers, e.g. +44 7911 123456, +1 555 123 4567, +61 412 345 678, +91 9876543210. If a number can't be recognised we flag it as Check now — the client still imports, but Call and WhatsApp may not work until it's corrected.",
   "Re-uploading the same file updates matching clients instead of adding duplicates: matching clients are updated only with the fields you filled in. Blank cells never erase existing details.",
   "Only the Clients sheet is imported. If your file has several sheets, pick Clients when uploading.",
   "Need investment fields (SIP, Lumpsum, Investment Type)? Use the MFD clients template instead.",

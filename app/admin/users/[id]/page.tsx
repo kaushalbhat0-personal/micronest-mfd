@@ -112,13 +112,7 @@ async function DetailBody({ params }: { params: Promise<{ id: string }> }) {
                   key={row.id}
                   className="rounded-lg border border-stone-200 bg-stone-50 p-3 sm:bg-white"
                 >
-                  <p className="tnum text-xs text-stone-500">
-                    {new Date(row.createdAt).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
+                  <p className="tnum text-xs text-stone-500">{formatJoinedDate(row.createdAt)}</p>
                   <p className="mt-1 text-sm font-medium text-stone-900">
                     {row.profession} <span className="font-normal text-stone-500">·</span>{" "}
                     {row.country} <span className="font-normal text-stone-500">·</span>{" "}

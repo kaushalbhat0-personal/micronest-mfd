@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AdminUnauthorized } from "@/lib/admin/auth";
 import { getSuggestionDetail } from "@/lib/admin/queries";
 import { formatQuotedAmount } from "@/features/admin/filters";
+import { formatAdminDateTime, formatJoinedDate } from "@/features/admin/users";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -45,11 +46,7 @@ async function DetailBody({ params }: { params: Promise<{ id: string }> }) {
   }
   if (!detail) notFound();
 
-  const submitted = new Date(detail.createdAt).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const submitted = formatJoinedDate(detail.createdAt);
   const quoted = formatQuotedAmount(detail.quotedPriceMinor, detail.quotedCurrency);
 
   return (
@@ -74,8 +71,8 @@ async function DetailBody({ params }: { params: Promise<{ id: string }> }) {
       <Card padding="compact">
         <h2 className="eyebrow">Submission</h2>
         <dl className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <DetailRow label="Submitted" value={new Date(detail.createdAt).toLocaleString("en-IN")} />
-          <DetailRow label="Updated" value={new Date(detail.updatedAt).toLocaleString("en-IN")} />
+          <DetailRow label="Submitted" value={formatAdminDateTime(detail.createdAt)} />
+          <DetailRow label="Updated" value={formatAdminDateTime(detail.updatedAt)} />
         </dl>
       </Card>
 

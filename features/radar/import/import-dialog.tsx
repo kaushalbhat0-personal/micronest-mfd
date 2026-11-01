@@ -607,8 +607,7 @@ export function ImportDialog({
                       activity · Last Contacted: the date you last spoke with the
                       client · Phone: include the country code for international
                       numbers (e.g. +44 7911 123456, +1 555 123 4567, +61 412 345 678);
-                      a plain 10-digit Indian mobile may be entered without +91. If a
-                      number can&apos;t be recognised we&apos;ll flag it as Check now — the
+                      If a number can&apos;t be recognised we&apos;ll flag it as Check now — the
                       client still imports, but Call and WhatsApp may not work until
                       it&apos;s corrected · Notes up to 200 characters · Blank optional
                       fields are fine. Re-uploading updates matching clients with only

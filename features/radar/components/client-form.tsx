@@ -184,11 +184,16 @@ export function ClientForm({
           id="client-mobile"
           label="Mobile number (optional)"
           error={errors.phone}
-          hint={phoneWarning ?? "Phone number, with country code when outside India."}
+          hint={
+            phoneWarning ??
+            (isMfd
+              ? "Phone number, with country code when outside India."
+              : "Phone number, with country code, e.g. +1 555 123 4567.")
+          }
         >
           <TextInput
             id="client-mobile"
-            placeholder="e.g. +91 9876543210"
+            placeholder={isMfd ? "e.g. +91 9876543210" : "e.g. +1 555 123 4567"}
             value={values.phone}
             onChange={set("phone")}
             error={errors.phone}

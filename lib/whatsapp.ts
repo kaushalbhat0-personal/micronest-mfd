@@ -47,7 +47,7 @@ export function normalizePhone(input: string | undefined, defaultRegion = "IN"):
     if (!isE164Digits(digits)) {
       return {
         ok: false,
-        error: "Enter a valid phone number, including the country code when outside India.",
+        error: "Enter a valid phone number, including the country code, e.g. +1 5551234567.",
       };
     }
     return { ok: true, digits };
@@ -86,7 +86,7 @@ export function normalizePhone(input: string | undefined, defaultRegion = "IN"):
   }
   return {
     ok: false,
-    error: "Enter a valid phone number, including the country code when outside India.",
+    error: "Enter a valid phone number, including the country code, e.g. +1 5551234567.",
   };
 }
 

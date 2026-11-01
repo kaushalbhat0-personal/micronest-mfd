@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdminUnauthorized } from "@/lib/admin/auth";
 import { getAdminOverview } from "@/lib/admin/queries";
+import { formatJoinedDate } from "@/features/admin/users";
 
 export const metadata: Metadata = {
   title: "Admin overview — MicroNest",
@@ -94,13 +95,7 @@ async function AdminBody() {
                   className="rounded-lg border border-stone-200 bg-stone-50 p-3 sm:bg-white"
                 >
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
-                    <span className="tnum">
-                      {new Date(row.createdAt).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
+                    <span className="tnum">{formatJoinedDate(row.createdAt)}</span>
                     <span aria-hidden="true">·</span>
                     <span>{row.userId ? "Signed-in user" : "Anonymous"}</span>
                     {row.email ? (

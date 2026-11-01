@@ -503,6 +503,10 @@ export default function Home() {
             </strong>{" "}
             know who needs attention, and stay on top of every follow-up.
           </p>
+          <p className="max-w-xl text-sm leading-relaxed text-stone-600">
+            Built for <strong className="font-semibold text-stone-900">mutual fund distributors</strong>{" "}
+            — and any professional who lives on client follow-ups.
+          </p>
           <Suspense fallback={<SignedOutCtas />}>
             <PrimaryCtas />
           </Suspense>
@@ -621,6 +625,44 @@ export default function Home() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      <section aria-labelledby="who-heading">
+        <div className="flex flex-col gap-3">
+          <p className="eyebrow">Who it&apos;s for</p>
+          <h2
+            id="who-heading"
+            className="max-w-2xl text-2xl font-semibold tracking-tight text-stone-900 lg:text-3xl"
+          >
+            Built for mutual fund distributors. Useful for any client professional.
+          </h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base">
+            MicroNest is built first for MFDs — the same simple relationship workflow also
+            fits insurance professionals, consultants, agencies, and coaches. MicroNest is
+            not a traditional CRM: it is a lightweight relationship workspace that works
+            alongside the software you already use, and never replaces it.
+          </p>
+          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+            {[
+              "Mutual fund distributors",
+              "Insurance professionals",
+              "Consultants",
+              "Agencies",
+              "Coaches",
+            ].map((audience) => (
+              <li
+                key={audience}
+                className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-600 shadow-sm"
+              >
+                {audience}
+              </li>
+            ))}
+          </ul>
+          <p className="max-w-2xl text-sm leading-relaxed text-stone-600">
+            MicroNest runs anywhere with an internet connection and works with international
+            phone numbers in E.164 format — include the country code, e.g. +1 5551234567.
+          </p>
         </div>
       </section>
 

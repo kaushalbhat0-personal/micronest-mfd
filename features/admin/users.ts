@@ -176,25 +176,33 @@ export function applyUserUsageFilter(
 }
 
 /** Join date for display, or an em dash when unparseable. */
-export function formatJoinedDate(iso: string | null | undefined): string {
+export function formatJoinedDate(iso: string | null | undefined, locale = "en-IN"): string {
   if (!iso) return "—";
   const time = Date.parse(iso);
   if (!Number.isFinite(time)) return "—";
-  return new Date(time).toLocaleDateString("en-IN", {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
-  });
+  }).format(new Date(time));
 }
 
 /** Last sign-in for display, or "Never" when absent. */
-export function formatLastSignIn(iso: string | null | undefined): string {
+export function formatLastSignIn(iso: string | null | undefined, locale = "en-IN"): string {
   if (!iso) return "Never";
   const time = Date.parse(iso);
   if (!Number.isFinite(time)) return "Never";
-  return new Date(time).toLocaleDateString("en-IN", {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
-  });
+  }).format(new Date(time));
+}
+
+/** Full timestamp for admin submission records, or an em dash when unparseable. */
+export function formatAdminDateTime(iso: string | null | undefined, locale = "en-IN"): string {
+  if (!iso) return "—";
+  const time = Date.parse(iso);
+  if (!Number.isFinite(time)) return "—";
+  return new Date(time).toLocaleString(locale);
 }

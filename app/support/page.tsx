@@ -9,6 +9,7 @@ export const metadata: Metadata = publicRouteMeta(
 );
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
+const OPERATOR_NAME = process.env.NEXT_PUBLIC_OPERATOR_NAME ?? "";
 
 export default function SupportPage() {
   return (
@@ -51,6 +52,11 @@ export default function SupportPage() {
           </li>
         </ul>
         <h2 className="text-base font-semibold text-stone-900">Contact us</h2>
+        {OPERATOR_NAME.length > 0 && (
+          <p>
+            MicroNest is operated by <strong className="font-semibold">{OPERATOR_NAME}</strong>.
+          </p>
+        )}
         {SUPPORT_EMAIL.length > 0 ? (
           <p>
             Email us at{" "}

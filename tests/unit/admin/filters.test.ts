@@ -146,4 +146,17 @@ describe("quoted amount formatting", () => {
     expect(formatQuotedAmount(505, "USD")).toBe("5.05 USD");
     expect(formatQuotedAmount(0, "EUR")).toBe("0 EUR");
   });
+
+  it("keeps legacy Indian grouping for INR", () => {
+    expect(formatQuotedAmount(123456700, "INR")).toBe("12,34,567 INR");
+  });
+
+  it("never applies Indian grouping to other currencies", () => {
+    expect(formatQuotedAmount(123456700, "USD")).toBe("1,234,567 USD");
+    expect(formatQuotedAmount(123456700, "EUR")).toBe("1,234,567 EUR");
+  });
+
+  it("accepts an explicit locale for non-INR amounts", () => {
+    expect(formatQuotedAmount(123456700, "USD", "de-DE")).toBe("1.234.567 USD");
+  });
 });

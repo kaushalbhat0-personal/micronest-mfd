@@ -4,6 +4,7 @@ import {
   applyUserUsageFilter,
   countByUserId,
   displayNameFromMetadata,
+  formatAdminDateTime,
   formatJoinedDate,
   formatLastSignIn,
   parseUserSearchParams,
@@ -141,5 +142,13 @@ describe("account date display", () => {
     expect(formatLastSignIn("2026-01-02T00:00:00Z")).toBe("2 Jan 2026");
     expect(formatLastSignIn(null)).toBe("Never");
     expect(formatLastSignIn(undefined)).toBe("Never");
+  });
+
+  it("accepts an explicit locale without changing the default", () => {
+    expect(formatJoinedDate("2026-01-02T00:00:00Z", "en-US")).toBe("Jan 2, 2026");
+    expect(formatLastSignIn("2026-01-02T00:00:00Z", "en-US")).toBe("Jan 2, 2026");
+    expect(formatAdminDateTime("2026-01-02T10:30:00Z")).toContain("2026");
+    expect(formatAdminDateTime(null)).toBe("—");
+    expect(formatAdminDateTime("garbage")).toBe("—");
   });
 });

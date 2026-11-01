@@ -17,6 +17,7 @@ import {
   suggestionFiltersToQuery,
   type SuggestionFilters,
 } from "@/features/admin/filters";
+import { formatJoinedDate } from "@/features/admin/users";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -241,13 +242,7 @@ async function SuggestionsBody({ searchParams }: { searchParams: Promise<SearchP
               <li key={row.id}>
                 <Card padding="compact">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
-                    <span className="tnum">
-                      {new Date(row.createdAt).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
+                    <span className="tnum">{formatJoinedDate(row.createdAt)}</span>
                     <span aria-hidden="true">·</span>
                     <span>{row.userId ? "Signed-in user" : "Anonymous"}</span>
                     {row.email ? (

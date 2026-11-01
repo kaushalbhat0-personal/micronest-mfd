@@ -16,7 +16,7 @@ export function PhoneField({ id, value, onChange, error }: PhoneFieldProps) {
         id={id}
         inputMode="tel"
         autoComplete="off"
-        placeholder="e.g. +91 98765 43210"
+        placeholder="e.g. +1 555 123 4567"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-describedby={error ? `${id}-error` : undefined}

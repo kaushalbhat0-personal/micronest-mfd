@@ -119,14 +119,20 @@ export function excerptMessage(message: string | null | undefined): string | nul
 /**
  * Format a stored minor-units amount + ISO currency for display.
  * No conversion, no exchange rates — the stored units rendered as major.
+ *
+ * INR keeps the legacy MFD presentation (en-IN digit grouping). Other
+ * currencies use the caller's locale (neutral `en-US` fallback) so e.g.
+ * USD 1,234,567 is never rendered with Indian grouping (12,34,567).
  */
 export function formatQuotedAmount(
   minor: number | null | undefined,
   currency: string | null | undefined,
+  locale?: string,
 ): string | null {
   if (minor === null || minor === undefined || !currency) return null;
   if (!Number.isFinite(minor) || minor < 0) return null;
-  const major = new Intl.NumberFormat("en-IN", {
+  const groupingLocale = currency === "INR" ? "en-IN" : (locale ?? "en-US");
+  const major = new Intl.NumberFormat(groupingLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(minor / 100);
