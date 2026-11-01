@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdminUnauthorized } from "@/lib/admin/auth";
-import { getOverviewMetrics, getRecentSuggestions } from "@/lib/admin/queries";
+import { getAdminOverview } from "@/lib/admin/queries";
 
 export const metadata: Metadata = {
   title: "Admin overview — MicroNest",
@@ -35,7 +35,7 @@ async function AdminBody() {
   let metrics;
   let recent;
   try {
-    [metrics, recent] = await Promise.all([getOverviewMetrics(), getRecentSuggestions(20)]);
+    ({ metrics, recent } = await getAdminOverview());
   } catch (error) {
     if (error instanceof AdminUnauthorized) notFound();
     throw error;

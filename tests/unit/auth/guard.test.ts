@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isProtectedPath, loginUrlFor, safeNextPath } from "@/lib/auth/guard";
+import {
+  isProtectedPath,
+  loginUrlFor,
+  resolvePostLoginDestination,
+  safeNextPath,
+} from "@/lib/auth/guard";
 
 describe("auth guard", () => {
   it("protects the workspace including nested client routes", () => {
@@ -54,5 +59,34 @@ describe("auth guard", () => {
       "/login?next=%2Fworkspace%2Fclients%3Fpage%3D2",
     );
     expect(loginUrlFor("https://evil.example")).toBe("/login?next=%2Fworkspace%2Ftoday");
+  });
+
+  it("routes admins to /admin when no explicit destination was requested", () => {
+    expect(resolvePostLoginDestination(null, true)).toBe("/admin");
+    expect(resolvePostLoginDestination("", true)).toBe("/admin");
+    expect(resolvePostLoginDestination(undefined, true)).toBe("/admin");
+  });
+
+  it("routes normal users to the workspace by default", () => {
+    expect(resolvePostLoginDestination(null, false)).toBe("/workspace/today");
+    expect(resolvePostLoginDestination("", false)).toBe("/workspace/today");
+  });
+
+  it("honors an explicit safe destination for admins and users", () => {
+    expect(resolvePostLoginDestination("/admin/users", true)).toBe("/admin/users");
+    expect(resolvePostLoginDestination("/workspace/clients", false)).toBe("/workspace/clients");
+    expect(resolvePostLoginDestination("/admin/users?page=2", true)).toBe("/admin/users?page=2");
+  });
+
+  it("ignores unsafe destinations and falls back by role", () => {
+    expect(resolvePostLoginDestination("https://evil.example", true)).toBe("/admin");
+    expect(resolvePostLoginDestination("https://evil.example", false)).toBe("/workspace/today");
+    expect(resolvePostLoginDestination("//evil.example", true)).toBe("/admin");
+    expect(resolvePostLoginDestination("/\\evil.example", false)).toBe("/workspace/today");
+  });
+
+  it("treats revoked admins as normal users", () => {
+    expect(resolvePostLoginDestination(null, false)).toBe("/workspace/today");
+    expect(resolvePostLoginDestination("/workspace/today", false)).toBe("/workspace/today");
   });
 });

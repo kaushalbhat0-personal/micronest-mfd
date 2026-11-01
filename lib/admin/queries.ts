@@ -76,9 +76,12 @@ interface WtpRow {
 }
 
 const MAX_WTP_ROWS = 1000;
-const MAX_USER_PAGES = 10;
-const USERS_PER_PAGE = 100;
-
+// Overview user enumeration: one 1000-row Auth page covers early-stage
+// scale in a single call (the Auth API documents perPage 1000); the loop
+// still stops at the first short page, so any server-side clamping stays
+// correct. 5 pages = the same 5000-account ceiling as the Users window.
+const MAX_OVERVIEW_USER_PAGES = 5;
+const OVERVIEW_USERS_PER_PAGE = 1000;
 function top(entries: Map<string, number>, limit: number): FrequencyEntry[] {
   return [...entries.entries()]
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
@@ -119,21 +122,19 @@ async function fetchAllWtpRows(service: ReturnType<typeof createAdminServiceClie
 }
 
 /**
- * Overview metrics computed only from reliably available data:
- * auth user counts/ages + wtp_interest rows. No DAU/MAU, retention, or
- * revenue claims — that data does not exist.
+ * Auth user counts for the overview. Independent of the WTP reads, so the
+ * overview bundle runs both concurrently.
  */
-export async function getOverviewMetrics(): Promise<OverviewMetrics> {
-  const service = await adminClient();
-
-  // Auth directory (paginated Admin API; P0 caps at 1000 users).
+async function fetchOverviewUserMetrics(
+  service: ReturnType<typeof createAdminServiceClient>,
+): Promise<{ totalUsers: number; newUsers7d: number }> {
   let totalUsers = 0;
   let newUsers7d = 0;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  for (let page = 1; page <= MAX_USER_PAGES; page += 1) {
+  for (let page = 1; page <= MAX_OVERVIEW_USER_PAGES; page += 1) {
     const { data, error } = await service.auth.admin.listUsers({
       page,
-      perPage: USERS_PER_PAGE,
+      perPage: OVERVIEW_USERS_PER_PAGE,
     });
     if (error) throw new Error("Could not load user directory.");
     const users = data.users ?? [];
@@ -142,10 +143,33 @@ export async function getOverviewMetrics(): Promise<OverviewMetrics> {
       const created = u.created_at ? Date.parse(u.created_at) : NaN;
       if (Number.isFinite(created) && created >= weekAgo) newUsers7d += 1;
     }
-    if (users.length < USERS_PER_PAGE) break;
+    if (users.length < OVERVIEW_USERS_PER_PAGE) break;
   }
+  return { totalUsers, newUsers7d };
+}
 
-  const rows = await fetchAllWtpRows(service);
+export interface AdminOverview {
+  metrics: OverviewMetrics;
+  recent: WtpSuggestionSummary[];
+}
+
+/**
+ * Overview bundle computed only from reliably available data:
+ * auth user counts/ages + wtp_interest rows. No DAU/MAU, retention, or
+ * revenue claims — that data does not exist.
+ *
+ * One WTP fetch serves both the metrics and the recent list (rows arrive
+ * newest-first, so the recent slice needs no second query), and the Auth
+ * user enumeration runs concurrently with it. Metric definitions are
+ * unchanged from P0.
+ */
+export async function getAdminOverview(): Promise<AdminOverview> {
+  const service = await adminClient();
+  const [{ totalUsers, newUsers7d }, rows] = await Promise.all([
+    fetchOverviewUserMetrics(service),
+    fetchAllWtpRows(service),
+  ]);
+
   let identified = 0;
   const perUser = new Map<string, number>();
   const features = new Map<string, number>();
@@ -170,31 +194,20 @@ export async function getOverviewMetrics(): Promise<OverviewMetrics> {
   }
 
   return {
-    totalUsers,
-    newUsers7d,
-    totalSubmissions: rows.length,
-    identifiedSubmissions: identified,
-    anonymousSubmissions: rows.length - identified,
-    multiSubmitters,
-    topFeatures: top(features, 8),
-    topProfessions: top(professions, 8),
-    topCountries: top(countries, 8),
-    priceBandMix: top(priceBands, 8),
+    metrics: {
+      totalUsers,
+      newUsers7d,
+      totalSubmissions: rows.length,
+      identifiedSubmissions: identified,
+      anonymousSubmissions: rows.length - identified,
+      multiSubmitters,
+      topFeatures: top(features, 8),
+      topProfessions: top(professions, 8),
+      topCountries: top(countries, 8),
+      priceBandMix: top(priceBands, 8),
+    },
+    recent: rows.slice(0, 20).map(toSummary),
   };
-}
-
-/** Most recent research submissions (read-only, newest first). */
-export async function getRecentSuggestions(limit = 20): Promise<WtpSuggestionSummary[]> {
-  const service = await adminClient();
-  const { data, error } = await service
-    .from("wtp_interest")
-    .select(
-      "id,created_at,user_id,email,country,profession,client_count_band,price_band,desired_features,message",
-    )
-    .order("created_at", { ascending: false })
-    .limit(Math.max(1, Math.min(limit, 100)));
-  if (error) throw new Error("Could not load recent submissions.");
-  return ((data ?? []) as WtpRow[]).map(toSummary);
 }
 
 export interface SuggestionListFilters {

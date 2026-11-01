@@ -67,4 +67,10 @@ test.describe("Auth foundation", () => {
       expect(stored).not.toMatch(/sb-.*-auth-token/);
     }
   });
+
+  test("callback without a code returns to login with a config error", async ({ page }) => {
+    await page.goto("/auth/callback?next=%2Fworkspace%2Ftoday");
+    await expect(page).toHaveURL(/\/login\?error=config/);
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+  });
 });

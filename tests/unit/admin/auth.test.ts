@@ -1,17 +1,22 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type MockedFunction } from "vitest";
 
 // `server-only` throws outside React Server Components; stub it so the
 // authorization logic itself stays unit-testable in Node.
 vi.mock("server-only", () => ({}));
 
-import { AdminUnauthorized, isAdmin, requireAdmin } from "@/lib/admin/auth";
-import { createServerSupabase } from "@/lib/supabase/server";
-
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(),
 }));
 
-const mockedServerSupabase = vi.mocked(createServerSupabase);
+import type { createServerSupabase } from "@/lib/supabase/server";
+
+// The gate memoizes session + membership per request (React `cache`), so
+// each test gets a fresh module registry — otherwise one test's membership
+// rows would leak into the next.
+let AdminUnauthorized: typeof import("@/lib/admin/auth").AdminUnauthorized;
+let isAdmin: typeof import("@/lib/admin/auth").isAdmin;
+let requireAdmin: typeof import("@/lib/admin/auth").requireAdmin;
+let mockedServerSupabase: MockedFunction<typeof createServerSupabase>;
 
 function mockSession(userId: string | null) {
   return {
@@ -39,8 +44,15 @@ function mockMembership(rows: Array<{ user_id: string }>) {
 }
 
 describe("admin auth gate", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules();
     vi.resetAllMocks();
+    const auth = await import("@/lib/admin/auth");
+    AdminUnauthorized = auth.AdminUnauthorized;
+    isAdmin = auth.isAdmin;
+    requireAdmin = auth.requireAdmin;
+    const server = await import("@/lib/supabase/server");
+    mockedServerSupabase = vi.mocked(server.createServerSupabase);
   });
 
   it("isAdmin returns true for an active member", async () => {
@@ -73,6 +85,15 @@ describe("admin auth gate", () => {
 
   it("requireAdmin resolves the user id for active admins", async () => {
     mockedServerSupabase.mockResolvedValue(mockMembership([{ user_id: "u-admin" }]) as never);
+    await expect(requireAdmin()).resolves.toBe("u-admin");
+  });
+
+  it("serves repeated gates in one request from the memoized session", async () => {
+    // React `cache()` dedupes per request in the server runtime (in plain
+    // Node it passes through, so this asserts functional repeatability
+    // while production collapses the repeated Supabase lookups).
+    mockedServerSupabase.mockResolvedValue(mockMembership([{ user_id: "u-admin" }]) as never);
+    await expect(requireAdmin()).resolves.toBe("u-admin");
     await expect(requireAdmin()).resolves.toBe("u-admin");
   });
 });

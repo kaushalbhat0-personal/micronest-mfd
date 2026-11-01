@@ -1,6 +1,8 @@
 import "server-only";
 
+import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
 /**
  * Server-side admin authorization gate (P0).
@@ -27,7 +29,7 @@ export class AdminUnauthorized extends Error {
 }
 
 /** Session user id from the anon server client, or null when signed out. */
-export async function getSessionUserId(): Promise<string | null> {
+export const getSessionUserId: () => Promise<string | null> = cache(async () => {
   const supabase = await createServerSupabase();
   if (!supabase) return null;
   try {
@@ -36,25 +38,67 @@ export async function getSessionUserId(): Promise<string | null> {
   } catch {
     return null;
   }
-}
+});
 
 /**
  * True only when `userId` has an active (non-revoked) `admin_users` row.
  * Uses the anon server client — never the service-role client.
+ *
+ * Memoized per request: every `requireAdmin()` in one render pays a single
+ * session + membership lookup instead of repeating both per query.
  */
-export async function isAdmin(userId: string | null | undefined): Promise<boolean> {
-  if (!userId) return false;
-  const supabase = await createServerSupabase();
-  if (!supabase) return false;
+export const isAdmin: (userId: string | null | undefined) => Promise<boolean> = cache(
+  async (userId) => {
+    if (!userId) return false;
+    const supabase = await createServerSupabase();
+    if (!supabase) return false;
+    try {
+      const { data, error } = await supabase
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", userId)
+        .is("revoked_at", null)
+        .limit(1);
+      if (error) return false;
+      return Array.isArray(data) && data.length > 0;
+    } catch {
+      return false;
+    }
+  },
+);
+
+/**
+ * Membership check for the OAuth callback, where the session exists only
+ * as the just-exchanged tokens (the cookie adapter cannot see them yet).
+ * Runs the same `admin_users` predicate over PostgREST with the anon key
+ * plus the server-observed user JWT — RLS stays the enforcement point,
+ * no service-role involved, no client input trusted.
+ */
+export async function isAdminWithToken(args: {
+  userId: string;
+  accessToken: string;
+}): Promise<boolean> {
+  const { userId, accessToken } = args;
+  if (!userId || !accessToken) return false;
+  const url = supabaseUrl();
+  const anonKey = supabaseAnonKey();
+  if (!url || !anonKey) return false;
   try {
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select("user_id")
-      .eq("user_id", userId)
-      .is("revoked_at", null)
-      .limit(1);
-    if (error) return false;
-    return Array.isArray(data) && data.length > 0;
+    const params = new URLSearchParams({
+      select: "user_id",
+      user_id: `eq.${userId}`,
+      revoked_at: "is.null",
+      limit: "1",
+    });
+    const response = await fetch(`${url}/rest/v1/admin_users?${params.toString()}`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!response.ok) return false;
+    const rows = (await response.json()) as unknown;
+    return Array.isArray(rows) && rows.length > 0;
   } catch {
     return false;
   }
