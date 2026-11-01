@@ -135,8 +135,8 @@ function identityMeta(
     StoredRadarClient,
     "investmentType" | "sipAmountPaise" | "lumpsumAmountPaise" | "lastContacted"
   >,
-): string {
   locale: string,
+): string {
   const amounts = formatInvestmentAmounts(
     record.investmentType,
     record.sipAmountPaise,
@@ -172,12 +172,12 @@ export function ClientDetail({
   // Explicit day boundary (Phase 2): the user's resolved timezone defines
   // "today", never the server's. Re-resolved at each interaction below.
   const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
-  const [record, setRecord] = React.useState(() =>
   // Display-only presentation context (MFD-76 Phase A): the browser locale
   // shapes date display and the browser-region vertical shapes copy verbs.
   // Both resolve post-hydration so SSR output stays byte-identical.
   const locale = useResolvedLocale();
   const vertical = useResolvedVertical();
+  const [record, setRecord] = React.useState(() =>
     toClientRecord(stored, 0, todayInTimezone(resolveTimeZone())),
   );
   const [messaging, setMessaging] = React.useState(false);

@@ -91,14 +91,14 @@ export function TodayWorkspace({
   // Explicit day boundary (Phase 2): the user's resolved timezone defines
   // "today", never the server's. Re-resolved at each interaction below.
   const [todayYMD, setTodayYMD] = React.useState(() => todayInTimezone(resolveTimeZone()));
-  const [records, setRecords] = React.useState(() =>
-    initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
-  );
   // Display-only presentation context (MFD-76 Phase A): the browser locale
   // shapes date display and the browser-region vertical shapes copy verbs.
   // Both resolve post-hydration so SSR output stays byte-identical.
   const locale = useResolvedLocale();
   const vertical = useResolvedVertical();
+  const [records, setRecords] = React.useState(() =>
+    initialClients.map((stored, i) => toClientRecord(stored, i, todayInTimezone(resolveTimeZone()))),
+  );
   const [followups] = React.useState<StoredFollowup[]>(initialFollowups);
   const [filter, setFilter] = React.useState<TodayFilter>(initialFilter);
   const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set());
