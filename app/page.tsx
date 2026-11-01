@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
+import { AndroidAppCta } from "@/components/android-app-cta";
 import { buttonClasses } from "@/components/ui/button";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { SignalBadge } from "@/components/ui/signal-badge";
@@ -525,6 +526,10 @@ export default function Home() {
           </ol>
         </div>
       </section>
+
+      {/* Early-access Android APK download. Renders nothing until
+          NEXT_PUBLIC_ANDROID_APK_URL is configured (see lib/download/config.ts). */}
+      <AndroidAppCta />
 
       <section aria-labelledby="problem-heading">
         <div className="flex flex-col gap-3">
