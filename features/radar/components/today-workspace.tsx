@@ -444,19 +444,21 @@ export function TodayWorkspace({
         </section>
 
         <div className="flex min-w-0 flex-col gap-4">
-          {upcoming.length > 0 && (
-            <section aria-labelledby="upcoming-heading">
-              <Card className="lg:p-5">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 id="upcoming-heading" className="eyebrow flex items-center gap-1.5">
-                      <CalendarIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                      Coming up
-                    </h2>
+          <section aria-labelledby="upcoming-heading">
+            <Card className="lg:p-5">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 id="upcoming-heading" className="eyebrow flex items-center gap-1.5">
+                    <CalendarIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                    Coming up
+                  </h2>
+                  {upcoming.length > 0 && (
                     <span className="tnum rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">
                       {upcoming.length}
                     </span>
-                  </div>
+                  )}
+                </div>
+                {upcoming.length > 0 ? (
                   <ul className="flex flex-col gap-1">
                     {upcoming.map((u) => (
                       <li key={`${u.clientId}-${u.dueDate}-${u.reason}`}>
@@ -483,17 +485,21 @@ export function TodayWorkspace({
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    href="/workspace/followups"
-                    className="inline-flex min-h-[44px] items-center self-start rounded-lg px-1 text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
-                  >
-                    View all follow-ups
-                    <ArrowRightIcon aria-hidden="true" className="ml-1 h-4 w-4" />
-                  </Link>
-                </div>
-              </Card>
-            </section>
-          )}
+                ) : (
+                  <p className="text-sm text-stone-500">
+                    Nothing coming up yet — planned follow-ups will appear here.
+                  </p>
+                )}
+                <Link
+                  href="/workspace/followups"
+                  className="inline-flex min-h-[44px] items-center self-start rounded-lg px-1 text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+                >
+                  View all follow-ups
+                  <ArrowRightIcon aria-hidden="true" className="ml-1 h-4 w-4" />
+                </Link>
+              </div>
+            </Card>
+          </section>
         </div>
       </div>
     </div>

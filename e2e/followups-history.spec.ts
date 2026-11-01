@@ -89,6 +89,19 @@ test.describe("Global follow-ups history", () => {
     await clearAll();
   });
 
+  test("today always links to follow-ups, even with nothing coming up", async ({ page }) => {
+    // Regression: the entry point must not vanish when there are no
+    // upcoming follow-ups (clearAll leaves the account empty).
+    await page.goto("/workspace/today");
+    await expect(page.getByRole("heading", { name: /^today$/i })).toBeVisible();
+    const entry = page.getByRole("link", { name: /view all follow-ups/i });
+    await expect(entry).toBeVisible();
+    await entry.click();
+    await expect(page).toHaveURL(/\/workspace\/followups$/);
+    await expect(page.getByRole("heading", { name: /^follow-ups$/i })).toBeVisible();
+    await expectAxeClean(page);
+  });
+
   test("global done → completed history → detail parity → reopen", async ({ page }) => {
     const clientId = await seedClient();
     const due = futureYMD(30);
