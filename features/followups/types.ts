@@ -79,3 +79,14 @@ export interface FollowupRecord extends StoredFollowup {
   clientPhone: string;
   clientPhoneValid: boolean;
 }
+
+/**
+ * Domain record for history: a COMPLETED stored follow-up plus client
+ * display fields joined at read time (never stored, never sent to the
+ * repository). The inverse of FollowupRecord — open rows must never be
+ * projected here (see toCompletedRecord).
+ */
+export interface CompletedFollowupRecord extends StoredFollowup {
+  clientName: string;
+  clientPhone: string;
+}

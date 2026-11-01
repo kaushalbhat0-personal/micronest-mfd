@@ -194,6 +194,43 @@ export async function listFollowupsForClient(
 }
 
 /**
+ * Loads completed follow-ups visible to the authenticated user, newest
+ * completion first. Bounded from day one: the limit is clamped to
+ * 1..MAX_COMPLETED_LIMIT so a global history view can never request an
+ * unbounded scan. RLS restricts visibility to owned rows.
+ */
+export const DEFAULT_COMPLETED_LIMIT = 100;
+export const MAX_COMPLETED_LIMIT = 500;
+
+export async function listCompletedFollowups(
+  supabase: SupabaseClient,
+  limit: number = DEFAULT_COMPLETED_LIMIT,
+): Promise<StoredFollowup[]> {
+  const bounded =
+    Number.isInteger(limit) && limit > 0
+      ? Math.min(limit, MAX_COMPLETED_LIMIT)
+      : DEFAULT_COMPLETED_LIMIT;
+  try {
+    const result = await supabase
+      .from(TABLE)
+      .select(FOLLOWUP_COLUMNS)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(bounded);
+    if (result.error) {
+      if (isAuthError(result.error)) {
+        throw toStoreError("auth", "Sign-in expired. Please sign in again.");
+      }
+      throw toStoreError("load", "We couldn't load your completed follow-ups.");
+    }
+    return ((result.data ?? []) as DbRow[]).map(toStoredFollowup);
+  } catch (error) {
+    if (error instanceof FollowupStoreError) throw error;
+    throw toStoreError("load", "We couldn't load your completed follow-ups.");
+  }
+}
+
+/**
  * Creates one follow-up for the authenticated user's client. Only the four
  * approved fields are sent — user_id is filled by the database default
  * (auth.uid()) and ownership is enforced by RLS, so a foreign client_id is

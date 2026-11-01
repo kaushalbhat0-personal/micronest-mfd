@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { reportPerf } from "@/lib/perf/report";
 import { dueWords } from "@/features/radar/today";
+import { revalidateWorkspace } from "@/features/radar/actions";
 import { splitStoredFollowups } from "../model";
 import { getFollowUpStatus } from "../dates";
 import type { FollowUpStatus } from "../types";
@@ -96,6 +99,7 @@ export function ClientFollowups({
    */
   initialFollowups?: StoredFollowup[];
 }) {
+  const router = useRouter();
   const [rows, setRows] = React.useState<StoredFollowup[] | null>(() => initialFollowups ?? null);
   const [loading, setLoading] = React.useState(() => initialFollowups === undefined);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -213,6 +217,10 @@ export function ClientFollowups({
         requeryMs: nowMs() - mutationStarted - writeMs,
         rows: refreshed.length,
       });
+      // Retire cached Today/Clients/Follow-ups representations so sibling
+      // routes cannot serve the pre-mutation payload after navigation.
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
       setFormOpen(false);
       resetForm();
       setSuccess("Follow-up planned.");
@@ -250,6 +258,8 @@ export function ClientFollowups({
         requeryMs: nowMs() - mutationStarted - writeMs,
         rows: refreshed.length,
       });
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
       setToastId(id);
     } catch (error) {
       reportPerf({
@@ -283,6 +293,8 @@ export function ClientFollowups({
         requeryMs: nowMs() - mutationStarted - writeMs,
         rows: refreshed.length,
       });
+      await revalidateWorkspace().catch(() => undefined);
+      router.refresh();
       setToastId(null);
     } catch (error) {
       reportPerf({
@@ -522,6 +534,15 @@ export function ClientFollowups({
                   ))}
                 </ul>
               </details>
+            )}
+
+            {completed.length > 0 && (
+              <Link
+                href="/workspace/followups?tab=completed"
+                className="inline-flex min-h-[44px] items-center self-start text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
+              >
+                View all completed
+              </Link>
             )}
           </div>
         )}

@@ -483,14 +483,13 @@ export function TodayWorkspace({
                       </li>
                     ))}
                   </ul>
-                  <button
-                    type="button"
-                    onClick={() => setFilter("followups")}
+                  <Link
+                    href="/workspace/followups"
                     className="inline-flex min-h-[44px] items-center self-start rounded-lg px-1 text-sm font-medium text-emerald-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-900"
                   >
                     View all follow-ups
                     <ArrowRightIcon aria-hidden="true" className="ml-1 h-4 w-4" />
-                  </button>
+                  </Link>
                 </div>
               </Card>
             </section>

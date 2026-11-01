@@ -5,7 +5,13 @@ import { hashString } from "@/lib/hash";
 import { normalizePhone } from "@/lib/whatsapp";
 import { getFollowUpStatus } from "./dates";
 import { parseCsv, type ParsedCsv } from "@/lib/csv";
-import type { FollowupRecord, FollowUpRow, ImportReport, StoredFollowup } from "./types";
+import type {
+  CompletedFollowupRecord,
+  FollowupRecord,
+  FollowUpRow,
+  ImportReport,
+  StoredFollowup,
+} from "./types";
 import { MAX_DATA_ROWS, validateFileHeaders, validateRow } from "./validation";
 
 /**
@@ -199,4 +205,70 @@ export function splitStoredFollowups(rows: StoredFollowup[]): {
     open: rows.filter((row) => row.completedAt === null),
     completed: rows.filter((row) => row.completedAt !== null),
   };
+}
+
+/** Tabs for the global Follow-ups route. Unknown values read as Active. */
+export type FollowupsTab = "active" | "completed";
+
+/** Parses the `?tab=` query value. Unknown/missing → "active". */
+export function parseFollowupsTab(value: unknown): FollowupsTab {
+  return value === "completed" ? "completed" : "active";
+}
+
+/**
+ * Projects a COMPLETED stored follow-up for the global history view. Open
+ * rows are rejected (null) — the inverse of toFollowupRecord, which rejects
+ * completed rows. The boundary stays explicit in both directions so an open
+ * follow-up can never render as history and vice versa.
+ */
+export function toCompletedRecord(
+  stored: StoredFollowup,
+  client: FollowupClientInfo,
+): CompletedFollowupRecord | null {
+  if (stored.completedAt === null) return null;
+  return {
+    ...stored,
+    clientName: client.name,
+    clientPhone: client.phone,
+  };
+}
+
+export interface GroupedActiveFollowups {
+  overdue: FollowupRecord[];
+  today: FollowupRecord[];
+  upcoming: FollowupRecord[];
+}
+
+function compareActiveRecords(a: FollowupRecord, b: FollowupRecord): number {
+  if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+  if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+  return 0;
+}
+
+/**
+ * Groups open follow-ups by derived status for the global Active view.
+ * Same semantics as the Today queue: status rank overdue → today →
+ * upcoming, earliest due first within a group (which also surfaces the
+ * most overdue first), earliest created as tie-break. Completed rows and
+ * unknown clients are skipped defensively — callers pass open lists, but
+ * the grouping never trusts that.
+ */
+export function groupActiveFollowups(
+  open: StoredFollowup[],
+  clients: Map<string, FollowupClientInfo>,
+  todayYMD: string = todayLocalYMD(),
+): GroupedActiveFollowups {
+  const groups: GroupedActiveFollowups = { overdue: [], today: [], upcoming: [] };
+  for (const stored of open) {
+    if (stored.completedAt !== null) continue;
+    const client = clients.get(stored.clientId);
+    if (!client) continue;
+    const record = toFollowupRecord(stored, client, todayYMD);
+    if (!record) continue;
+    groups[record.status].push(record);
+  }
+  groups.overdue.sort(compareActiveRecords);
+  groups.today.sort(compareActiveRecords);
+  groups.upcoming.sort(compareActiveRecords);
+  return groups;
 }
